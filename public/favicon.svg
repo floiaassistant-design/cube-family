@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="sky" cx="50%" cy="40%" r="78%">
+      <stop offset="0" stop-color="#243a63"/>
+      <stop offset="1" stop-color="#090e18"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#ffc45a" stop-opacity="0.85"/>
+      <stop offset="0.6" stop-color="#ff9a3c" stop-opacity="0.25"/>
+      <stop offset="1" stop-color="#ff9a3c" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="top" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff4cf"/>
+      <stop offset="1" stop-color="#ffc45a"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#sky)"/>
+  <circle cx="256" cy="260" r="232" fill="url(#glow)"/>
+  <!-- a lantern block: a lit core inside a dark iron frame -->
+  <polygon points="256,96 408,180 256,264 104,180" fill="#2a2f3d"/>
+  <polygon points="256,132 344,180 256,228 168,180" fill="url(#top)"/>
+  <polygon points="104,180 256,264 256,432 104,348" fill="#343a4b"/>
+  <polygon points="408,180 256,264 256,432 408,348" fill="#1f2330"/>
+  <polygon points="132,222 228,275 228,381 132,328" fill="#ffd27a"/>
+  <polygon points="284,275 380,222 380,328 284,381" fill="#ffab45"/>
+  <g stroke="#343a4b" stroke-width="12">
+    <line x1="180" y1="248" x2="180" y2="355"/>
+    <line x1="132" y1="275" x2="228" y2="328"/>
+  </g>
+  <g stroke="#1f2330" stroke-width="12">
+    <line x1="332" y1="248" x2="332" y2="355"/>
+    <line x1="284" y1="328" x2="380" y2="275"/>
+  </g>
+  <polygon points="256,96 408,180 256,264 104,180" fill="none" stroke="#4a5268" stroke-width="5" stroke-linejoin="round"/>
+</svg>

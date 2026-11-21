@@ -1,0 +1,67 @@
+import { treeCandidatesNear } from "./features";
+import { createCaveSampler, createColumnSampler, SEA_LEVEL, treeSpeciesAt } from "./terrain";
+
+const MAX_SPAWN_HEIGHT = SEA_LEVEL + 12;
+const SEARCH_STEP = 8;
+const SEARCH_LIMIT = 640; // world units in each direction — always finds something in practice
+
+export interface SpawnPoint {
+  readonly x: number;
+  readonly z: number;
+}
+
+/** A deterministic, *pleasant* place to start: a grassy column at a gentle
+ * height, level underfoot and clear of tree trunks, not a desert, not a
+ * windswept snow peak, not the roof of a cave about to swallow the player. Scans outward from the origin in growing
+ * rings so the same seed always spawns in the same spot. Falls back to
+ * (8, 8) if the seed is somehow all ocean and dunes within the search
+ * limit. */
+export function findPleasantSpawn(seed: number): SpawnPoint {
+  const sample = createColumnSampler(seed);
+  const isCave = createCaveSampler(seed);
+
+  for (let radius = 0; radius <= SEARCH_LIMIT; radius += SEARCH_STEP) {
+    const candidates: [number, number][] = radius === 0 ? [[0, 0]] : ringCoordinates(radius);
+    for (const [x, z] of candidates) {
+      const profile = sample(x, z);
+      if (profile.isDesert || profile.isSnowy) continue;
+      if (profile.terrainHeight <= SEA_LEVEL + 1) continue; // beach or ocean
+      if (profile.terrainHeight > MAX_SPAWN_HEIGHT) continue; // steep highlands
+      if (isCave(x, profile.terrainHeight, z)) continue; // cave mouth underfoot
+      // Level ground all around: the first steps shouldn't be into a wall.
+      if (!isLevel(sample, x, z, profile.terrainHeight)) continue;
+      // ...or straight into a tree trunk.
+      const crowded = treeCandidatesNear(seed, x - 2, x + 2, z - 2, z + 2).some(
+        (tree) =>
+          Math.abs(tree.x - x) <= 2 &&
+          Math.abs(tree.z - z) <= 2 &&
+          treeSpeciesAt(sample(tree.x, tree.z), tree) !== null,
+      );
+      if (crowded) continue;
+      return { x: x + 0.5, z: z + 0.5 };
+    }
+  }
+  return { x: 8, z: 8 };
+}
+
+function isLevel(
+  sample: (x: number, z: number) => { terrainHeight: number },
+  x: number,
+  z: number,
+  height: number,
+): boolean {
+  for (let dx = -1; dx <= 1; dx++) {
+    for (let dz = -1; dz <= 1; dz++) {
+      if (sample(x + dx, z + dz).terrainHeight !== height) return false;
+    }
+  }
+  return true;
+}
+
+function ringCoordinates(radius: number): [number, number][] {
+  const coords: [number, number][] = [];
+  for (let i = -radius; i <= radius; i += SEARCH_STEP) {
+    coords.push([i, -radius], [i, radius], [-radius, i], [radius, i]);
+  }
+  return coords;
+}

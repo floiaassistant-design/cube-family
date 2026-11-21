@@ -1,0 +1,8 @@
+# Native project (Gradle, XML, Java): not Prettier's to format.
+mobile/android
+mobile/ios
+desktop/release
+dist
+
+# Isolated browser test build
+dist-e2e/
