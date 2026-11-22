@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "game": "Minecraft Family",
+  "note": "Bibliothèque des assets à intégrer par Work ; la présence ici ne signifie pas présence dans le jeu.",
+  "assets": [
+    {
+      "id": "chaton-orange",
+      "type": "animal",
+      "folder": "assets/3d/chaton-orange/",
+      "latest": "v2",
+      "model_source": "assets/3d/chaton-orange/chaton_voxel_v2.glb.gz.b64",
+      "format": "base64(gzip(glb))",
+      "status": "asset_available_not_integrated"
+    },
+    {
+      "id": "zombie-mineur",
+      "type": "night_monster",
+      "folder": "assets/3d/zombie-mineur/",
+      "latest": "v1",
+      "model_source": "assets/3d/zombie-mineur/zombie_mineur_v1.glb.gz.b64",
+      "format": "base64(gzip(glb))",
+      "sha256_glb": "6fcbccb73551f11ce9e26e8ef4c4a2ad03b002285d3f382fefdb207f483612ab",
+      "animations": [
+        "Idle",
+        "Walk",
+        "Attack"
+      ],
+      "status": "asset_available_not_integrated"
+    }
+  ]
+}
