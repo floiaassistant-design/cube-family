@@ -26,6 +26,21 @@
         "Attack"
       ],
       "status": "asset_available_not_integrated"
+    },
+    {
+      "id": "vache-brune",
+      "type": "passive_animal",
+      "folder": "assets/3d/vache-brune/",
+      "latest": "v1",
+      "model_source": "assets/3d/vache-brune/vache_brune_v1.glb.gz.b64",
+      "format": "base64(gzip(glb))",
+      "sha256_glb": "96bf955f02c5c261960be52ff9711478a735453a6abab2033f48f01f3b5b9707",
+      "animations": [
+        "Idle",
+        "Walk",
+        "Graze"
+      ],
+      "status": "asset_available_not_integrated"
     }
   ]
 }
