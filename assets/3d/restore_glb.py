@@ -10,6 +10,7 @@ EXPECTED = {
     "chaton_voxel_v2.glb.gz.b64": ("9f0e1479b45d9bef789fce1e183bf21f0251102eb7f859ee887388a339ab8df8", 42248),
     "chaton_voxel_v1.glb.gz.b64": ("1633b8bb9913e6eddaf0669e6dab320e410a7eac95e208acd615b7af1330942f", 28604),
     "zombie_mineur_v1.glb.gz.b64": ("6fcbccb73551f11ce9e26e8ef4c4a2ad03b002285d3f382fefdb207f483612ab", 42040),
+    "vache_brune_v1.glb.gz.b64": ("96bf955f02c5c261960be52ff9711478a735453a6abab2033f48f01f3b5b9707", 57788),
 }
 
 def main() -> None:
