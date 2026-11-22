@@ -57,6 +57,7 @@ declare global {
       blockAt: (x: number, y: number, z: number) => number;
       target: () => { x: number; y: number; z: number } | null;
       pitch: () => number;
+      setLook: (yaw: number, pitch: number) => void;
       mode: () => string;
       renderer: () => "webgl" | "cpu";
       touch: () => boolean;
@@ -660,6 +661,9 @@ function boot(): void {
         return hit ? { x: hit.blockX, y: hit.blockY, z: hit.blockZ } : null;
       },
       pitch: () => player.eyePitch,
+      setLook: (yaw, pitch) => {
+        player.restore({ ...player.pose(), yaw, pitch });
+      },
       mode: () => player.mode,
       renderer: () => (webgl ? "webgl" : "cpu"),
       touch: () => touchControls !== null,

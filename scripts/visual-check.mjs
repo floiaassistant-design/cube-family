@@ -4,10 +4,11 @@
  * graphics tier compiles and renders, the world is playable with mouse and
  * keyboard, with a blocked pointer lock, with no WebGL at all, and on a
  * touchscreen; progress survives a reload; the installed build boots
- * offline. Screenshots land in the directory given by --out.
+ * offline. Use --no-screenshots to skip saving screenshots while keeping the
+ * assertions that sample rendered pixels.
  *
- *   npm run build:e2e && npm run preview -- --outDir dist-e2e --port 4173 &
- *   node scripts/visual-check.mjs [--url http://localhost:4173/] [--out dir]
+ *   npm run build && npm run build:e2e
+ *   bash scripts/run-browser-check.sh [out-dir] [--no-screenshots]
  *
  * Set PUPPETEER_EXECUTABLE_PATH to use an already-installed Chromium.
  */
@@ -26,6 +27,11 @@ const PRODUCTION_URL = argValue("--production-url", "http://127.0.0.1:4174/");
 const allowedOrigins = new Set([new URL(BASE_URL).origin, new URL(PRODUCTION_URL).origin]);
 const OUT_DIR = argValue("--out", "visual-check");
 mkdirSync(OUT_DIR, { recursive: true });
+
+async function saveScreenshot(page, filename) {
+  if (args.includes("--no-screenshots")) return;
+  await page.screenshot({ path: path.join(OUT_DIR, filename) });
+}
 
 /** Each scenario plays in its own world (seed), so the edits and the saved
  * position of one never leak into the next. The light tier keeps software
@@ -190,6 +196,18 @@ async function walk(page) {
   return Math.hypot(after.x - before.x, after.z - before.z);
 }
 
+/** Keep both taps inside the game's timing window even on a slow renderer. */
+async function doubleTapJump(page) {
+  return page.evaluate(() => {
+    const options = { code: "Space", key: " ", bubbles: true, cancelable: true };
+    for (let tap = 0; tap < 2; tap += 1) {
+      document.dispatchEvent(new window.KeyboardEvent("keydown", options));
+      document.dispatchEvent(new window.KeyboardEvent("keyup", options));
+    }
+    return window.__mc.flying();
+  });
+}
+
 try {
   // =====================================================================
   // 1. Desktop, WebGL, pointer lock
@@ -219,7 +237,7 @@ try {
     `y=${grounded.y.toFixed(2)}, block below=${grounded.below}`,
   );
 
-  await page.screenshot({ path: path.join(OUT_DIR, "01-menu.png") });
+  await saveScreenshot(page, "01-menu.png");
   const menuText = await page.evaluate(() => ({
     title: document.querySelector(".title")?.textContent ?? "",
     play: document.querySelector("#play-button")?.textContent ?? "",
@@ -233,7 +251,7 @@ try {
   // The world must be visible behind the menu, not a flat sky-only frame.
   await page.evaluate(() => document.querySelector("#overlay")?.classList.add("hidden"));
   await sleep(1500);
-  await page.screenshot({ path: path.join(OUT_DIR, "02-world.png") });
+  await saveScreenshot(page, "02-world.png");
   const variety = await colorVariety(page);
   await page.evaluate(() => document.querySelector("#overlay")?.classList.remove("hidden"));
   report(
@@ -247,24 +265,6 @@ try {
   const locked = await page.evaluate(() => document.pointerLockElement !== null);
   report("pointer lock engages from the play button", locked);
   await measureProfile(page, "desktop", desktopReadyMs);
-
-  // Sets an absolute view direction regardless of prior state: pitch first
-  // clamps fully up, then a fixed downward delta lands at a known angle;
-  // yaw is a pure delta (the harness starts at yaw 0 and tracks its own
-  // rotations). Synthetic MouseEvents because headless pointer-lock delta
-  // reporting through CDP-dispatched moves is unreliable.
-  const look = async (p, yawPixels, pitchPixels) => {
-    await p.evaluate(
-      ([yawPx, pitchPx]) => {
-        document.dispatchEvent(new MouseEvent("mousemove", { movementX: 0, movementY: -2000 }));
-        document.dispatchEvent(
-          new MouseEvent("mousemove", { movementX: yawPx, movementY: pitchPx }),
-        );
-      },
-      [yawPixels, pitchPixels],
-    );
-    await sleep(500);
-  };
 
   if (locked) {
     // ---- placing, on a solid neighboring column the test picks itself ----
@@ -303,24 +303,34 @@ try {
     );
 
     if (neighbor) {
-      // Face the neighbor, look ~55 degrees down: the ray crosses into its
-      // column below the player's eye and hits the surface block's top face.
-      await look(page, -neighbor.yaw / 0.0022, 1146);
+      // Stage the camera at an absolute angle. A fixed sleep after a mouse
+      // movement can read the previous camera frame on software WebGL.
+      await page.evaluate((n) => window.__mc.setLook(n.yaw, (-55 * Math.PI) / 180), neighbor);
+      const aimed = await until(
+        page,
+        (n) => {
+          const hit = window.__mc.target();
+          return hit?.x === n.x && hit.z === n.z && (hit.y === n.y || hit.y === n.y + 1);
+        },
+        neighbor,
+        10000,
+      );
       const placeTarget = await page.evaluate(() => window.__mc.target());
-      await page.mouse.down({ button: "right" });
-      await page.mouse.up({ button: "right" });
-      await sleep(600);
+      const slotBlock = await page.evaluate(() => window.__mc.hotbar()[0]);
+      if (aimed) {
+        await page.mouse.down({ button: "right" });
+        await page.mouse.up({ button: "right" });
+      }
       const placed = await page.evaluate((n) => window.__mc.blockAt(n.x, n.y + 1, n.z), neighbor);
       report(
         "right click places the selected block on the neighbor's top face",
-        placed === 1, // grass, the default hotbar selection
-        `aimed ${JSON.stringify(placeTarget)}, cell above is now id ${placed}`,
+        aimed && placed === slotBlock,
+        `aimed ${JSON.stringify(placeTarget)}, selected ${slotBlock}, cell above is now id ${placed}`,
       );
-      await look(page, neighbor.yaw / 0.0022, 709); // undo the yaw
     }
 
-    // ---- walking (before any digging: a pit would trap the player) ----
-    await look(page, 0, 709);
+    // The lane west of the seed 2026 spawn is flat and clear of the placed block.
+    await page.evaluate(() => window.__mc.setLook(Math.PI / 2, 0));
     const walked = await walk(page);
     report(
       "walking forward moves the player through the world",
@@ -329,7 +339,8 @@ try {
     );
 
     // ---- breaking, straight down at the block under the player's feet ----
-    await look(page, 0, 2000); // clamps to max pitch: straight down
+    await page.evaluate(() => window.__mc.setLook(0, -Math.PI / 2));
+    await until(page, () => window.__mc.target() !== null, undefined, 10000);
     const target = await page.evaluate(() => window.__mc.target());
     report("crosshair targets a block when looking down", target !== null, JSON.stringify(target));
     if (target) {
@@ -351,7 +362,7 @@ try {
     const opened = await page.evaluate(() => window.__mc.inventoryOpen());
     report("E opens the block inventory", opened);
     if (opened) {
-      await page.screenshot({ path: path.join(OUT_DIR, "03-inventory.png") });
+      await saveScreenshot(page, "03-inventory.png");
       // Pick a block that isn't in the selected slot yet (bricks, id 29).
       await page.click('.inventory-cell[data-block="29"]');
       await sleep(500);
@@ -368,11 +379,7 @@ try {
     }
 
     // ---- flight: double-tap jump takes off; then free movement up and down ----
-    await page.keyboard.press("Space");
-    await sleep(60);
-    await page.keyboard.press("Space");
-    await sleep(300);
-    const tookOff = await page.evaluate(() => window.__mc.flying());
+    const tookOff = await doubleTapJump(page);
     report("double-tapping jump takes off", tookOff === true);
 
     // Move to open sky (trees may roof the spawn) and fly there.
@@ -401,7 +408,7 @@ try {
       y1 > y0 + 3 && y2 < y1 - 3,
       `y ${y0.toFixed(1)} -> ${y1.toFixed(1)} -> ${y2.toFixed(1)}`,
     );
-    await page.screenshot({ path: path.join(OUT_DIR, "04-flying.png") });
+    await saveScreenshot(page, "04-flying.png");
 
     // ---- pause, change a setting, reload: both are remembered ----
     await page.evaluate(() => document.exitPointerLock());
@@ -417,7 +424,7 @@ try {
     );
     await page.click("#settings-button");
     await sleep(200);
-    await page.screenshot({ path: path.join(OUT_DIR, "05-settings.png") });
+    await saveScreenshot(page, "05-settings.png");
     const fovBefore = (await page.evaluate(() => window.__mc.settings())).fov;
     await page.evaluate(() => {
       const sliders = document.querySelectorAll('[data-screen="settings"] input[type="range"]');
@@ -475,7 +482,7 @@ try {
       french.slot === "herbe",
     JSON.stringify(french),
   );
-  await frenchPage.screenshot({ path: path.join(OUT_DIR, "05b-french.png") });
+  await saveScreenshot(frenchPage, "05b-french.png");
   await frenchPage.close();
 
   // =====================================================================
@@ -491,7 +498,7 @@ try {
     await tierPage.evaluate(() => document.querySelector("#overlay")?.classList.add("hidden"));
     await sleep(4000);
     const tierVariety = await colorVariety(tierPage);
-    await tierPage.screenshot({ path: path.join(OUT_DIR, `06-tier-${tier}.png`) });
+    await saveScreenshot(tierPage, `06-tier-${tier}.png`);
     const errors = consoleErrors.length - before;
     report(
       `the ${tier} tier compiles and renders`,
@@ -563,7 +570,7 @@ try {
     } else {
       report("tap breaks a block in fallback mode", false, "no target under crosshair");
     }
-    await fallbackPage.screenshot({ path: path.join(OUT_DIR, "07-fallback-mode.png") });
+    await saveScreenshot(fallbackPage, "07-fallback-mode.png");
   }
   await fallbackPage.close();
 
@@ -588,7 +595,7 @@ try {
     await sleep(1500); // a few frames of rendering
     await cpuPage.evaluate(() => document.querySelector("#overlay")?.classList.add("hidden"));
     await sleep(800);
-    await cpuPage.screenshot({ path: path.join(OUT_DIR, "08-cpu-renderer.png") });
+    await saveScreenshot(cpuPage, "08-cpu-renderer.png");
     const cpuVariety = await colorVariety(cpuPage);
     await cpuPage.evaluate(() => document.querySelector("#overlay")?.classList.remove("hidden"));
     report(
@@ -623,7 +630,7 @@ try {
     } else {
       report("breaking works on the CPU renderer", false, "no target under crosshair");
     }
-    await cpuPage.screenshot({ path: path.join(OUT_DIR, "09-cpu-playing.png") });
+    await saveScreenshot(cpuPage, "09-cpu-playing.png");
   }
   await cpuPage.close();
 
@@ -686,7 +693,7 @@ try {
     phone.touch === true && phone.quality !== "ultra" && phone.autoJump === true,
     JSON.stringify(phone),
   );
-  await mobilePage.screenshot({ path: path.join(OUT_DIR, "10-mobile-menu.png") });
+  await saveScreenshot(mobilePage, "10-mobile-menu.png");
 
   await mobilePage.click("#play-button");
   await mobilePage
@@ -775,7 +782,7 @@ try {
   } else {
     report("tap breaks the targeted block on touch", false, "no target under crosshair");
   }
-  await mobilePage.screenshot({ path: path.join(OUT_DIR, "11-mobile-playing.png") });
+  await saveScreenshot(mobilePage, "11-mobile-playing.png");
 
   await press(".touch-fly");
   await sleep(200);
@@ -786,7 +793,7 @@ try {
   await sleep(300);
   const mobileInventory = await mobilePage.evaluate(() => window.__mc.inventoryOpen());
   report("the inventory button opens the block panel on touch", mobileInventory === true);
-  await mobilePage.screenshot({ path: path.join(OUT_DIR, "12-mobile-inventory.png") });
+  await saveScreenshot(mobilePage, "12-mobile-inventory.png");
   await mobilePage.click('.inventory-cell[data-block="18"]'); // a lantern
   await sleep(300);
 
@@ -874,36 +881,39 @@ try {
     JSON.stringify(startMode),
   );
 
-  // Digging takes time: hold the button on the ground until it gives way.
-  await adventure.evaluate(() => {
-    document.dispatchEvent(new MouseEvent("mousemove", { movementX: 0, movementY: 2000 }));
-  });
-  await sleep(500);
+  // Headless pointer lock can recenter the synthetic mouse. Hold the button
+  // from inside the page so a CDP mouse move cannot shift this exact target.
   const ground = await adventure.evaluate(() => {
-    const p = window.__mc.position();
-    const x = Math.floor(p.x);
-    const z = Math.floor(p.z);
-    return { x, y: Math.floor(p.y) - 1, z, id: window.__mc.blockAt(x, Math.floor(p.y) - 1, z) };
+    const canvas = document.pointerLockElement;
+    if (!canvas) return null;
+    window.__mc.setLook(0, -Math.PI / 2);
+    const target = window.__mc.target();
+    if (!target) return null;
+    const { x, y, z } = target;
+    const id = window.__mc.blockAt(x, y, z);
+    canvas.dispatchEvent(new MouseEvent("mousedown", { button: 0, buttons: 1, bubbles: true }));
+    return { ...target, id, partWay: window.__mc.blockAt(x, y, z) };
   });
-  await adventure.mouse.down({ button: "left" });
-  await sleep(150);
-  const partWay = await adventure.evaluate((g) => window.__mc.blockAt(g.x, g.y, g.z), ground);
-  const dug = await until(adventure, (g) => window.__mc.blockAt(g.x, g.y, g.z) === 0, ground);
-  await adventure.mouse.up({ button: "left" });
+  const dug =
+    ground !== null &&
+    (await until(adventure, (g) => window.__mc.blockAt(g.x, g.y, g.z) === 0, ground));
+  await adventure.evaluate(() => {
+    document.dispatchEvent(new MouseEvent("mouseup", { button: 0, bubbles: true }));
+  });
   const afterDig = await adventure.evaluate(() => window.__mc.bag());
   const gathered = Object.values(afterDig).reduce((a, b) => a + b, 0);
   report(
     "holding the button digs through the ground, and the blocks land in the bag",
-    partWay === ground.id && dug && gathered >= 1,
-    `ground id ${ground.id} still there at first: ${partWay === ground.id}, bag ${JSON.stringify(afterDig)}`,
+    ground !== null &&
+      !NOT_GROUND.includes(ground.id) &&
+      ground.partWay === ground.id &&
+      dug &&
+      gathered >= 1,
+    `target ${JSON.stringify(ground)}, dug=${dug}, bag ${JSON.stringify(afterDig)}`,
   );
 
   // Flight is a Creative thing.
-  await adventure.keyboard.press("Space");
-  await sleep(60);
-  await adventure.keyboard.press("Space");
-  await sleep(300);
-  const tookFlight = await adventure.evaluate(() => window.__mc.flying());
+  const tookFlight = await doubleTapJump(adventure);
   report("double-tapping jump does not take off in Adventure", tookFlight === false);
 
   // Crafting: two logs in the bag, one becomes four planks.
@@ -912,7 +922,7 @@ try {
   await sleep(400);
   await adventure.click('.tab[data-tab="craft"]');
   await sleep(200);
-  await adventure.screenshot({ path: path.join(OUT_DIR, "13-crafting.png") });
+  await saveScreenshot(adventure, "13-crafting.png");
   const disabledBefore = await adventure.evaluate(
     () => document.querySelector('.recipe[data-recipe="lantern"]')?.disabled ?? null,
   );
@@ -927,7 +937,7 @@ try {
 
   await adventure.click('.tab[data-tab="journal"]');
   await sleep(200);
-  await adventure.screenshot({ path: path.join(OUT_DIR, "14-journal.png") });
+  await saveScreenshot(adventure, "14-journal.png");
   const found = await adventure.evaluate(() => ({
     list: window.__mc.discoveries(),
     shown: document.querySelectorAll(".journal-entry.found").length,

@@ -2,6 +2,9 @@
 set -euo pipefail
 
 output=${1:-visual-check}
+if [ "$#" -gt 0 ]; then
+  shift
+fi
 mkdir -p "$output"
 preview() {
   node node_modules/vite/bin/vite.js preview --outDir "$1" --host 127.0.0.1 --port "$2" --strictPort
@@ -21,4 +24,4 @@ for port in 4173 4174; do
   done
   curl --noproxy '*' --fail --silent --show-error "http://127.0.0.1:$port/" >/dev/null
 done
-npm run e2e -- --out "$output"
+npm run e2e -- --out "$output" "$@"
