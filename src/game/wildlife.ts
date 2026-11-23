@@ -112,7 +112,16 @@ export function nextMorning(seconds: number): number {
 }
 
 export function creatureCenter(creature: Creature): Vec3 {
-  const height = creature.kind === "roamer" ? 0.92 : creature.kind === "siege-zombie" ? (creature.variant === "boss" ? 1.2 : 0.92) : creature.growsIn > 0 ? 0.27 : 0.43;
+  const height =
+    creature.kind === "roamer"
+      ? 0.92
+      : creature.kind === "siege-zombie"
+        ? creature.variant === "boss"
+          ? 1.2
+          : 0.92
+        : creature.growsIn > 0
+          ? 0.27
+          : 0.43;
   return { ...creature.position, y: creature.position.y + height };
 }
 
