@@ -1164,7 +1164,7 @@ try {
     const crystalReady = await until(
       fortressPage,
       () => {
-        const raw = localStorage.getItem("voxel-world:fortress:v1:2026");
+        const raw = window.localStorage.getItem("voxel-world:fortress:v1:2026");
         if (!raw) return false;
         const site = JSON.parse(raw);
         return window.__mc.blockAt(site.x + 47, site.y + 3, site.z + 47) === 21;
@@ -1178,7 +1178,7 @@ try {
     const persisted = await until(
       fortressPage,
       () => {
-        const raw = localStorage.getItem("voxel-world:fortress:v1:2026");
+        const raw = window.localStorage.getItem("voxel-world:fortress:v1:2026");
         if (!raw || window.__mc.siege() === null) return false;
         const site = JSON.parse(raw);
         return window.__mc.blockAt(site.x + 47, site.y + 3, site.z + 47) === 21;
