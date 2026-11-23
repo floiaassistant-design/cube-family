@@ -1,6 +1,6 @@
-# Bibliothèque 3D — Minecraft Family
+# Bibliothèque 3D — Cube Family
 
-Dossier de dépôt des créations 3D destinées à Minecraft Family. **Cette bibliothèque n'est pas chargée automatiquement dans le jeu.** Work doit d'abord valider et intégrer les modèles.
+Dossier de dépôt des créations 3D destinées à Cube Family. **Cette bibliothèque n'est pas chargée automatiquement dans le jeu.** Work doit d'abord valider et intégrer les modèles.
 
 ## Organisation
 
@@ -16,7 +16,7 @@ Les fichiers attendus sont le modèle `.glb` (ou une représentation compressée
 Ne jamais remplacer silencieusement un modèle déjà utilisé : créer une nouvelle version (`v2`, `v3`, etc.).
 Toutes les créations sont originales. Éviter de recopier des ressources protégées d'autres jeux.
 
-Les ressources sont préparées ici pour Work, mais **aucun ajout dans ce dossier ne signifie qu'il est déjà publié dans Minecraft Family**.
+Les ressources sont préparées ici pour Work, mais **aucun ajout dans ce dossier ne signifie qu'il est déjà publié dans Cube Family**.
 
 ## Règles d'intégration Work
 

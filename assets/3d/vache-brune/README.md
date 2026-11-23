@@ -1,4 +1,4 @@
-# Vache brune voxel 3D — Minecraft Family
+# Vache brune voxel 3D — Cube Family
 
 **État : modèle original disponible pour intégration par ChatGPT Work. Non intégré au jeu ni publié automatiquement.**
 

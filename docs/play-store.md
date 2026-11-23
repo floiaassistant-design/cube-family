@@ -1,4 +1,4 @@
-# Publier Lumenwild sur Google Play
+# Publier Cube Family sur Google Play
 
 Ce qui est prêt dans le dépôt, et ce que seul le titulaire du compte peut
 faire. Les étapes sont dans l'ordre où Google les demande.
@@ -27,7 +27,7 @@ en pause au lieu de le quitter.
   `mobile/capacitor.config.json`, `mobile/android/app/build.gradle`
   (`namespace` et `applicationId`), `strings.xml` et le dossier du
   `MainActivity.java`. Après le premier envoi, il est définitif.
-- **Le nom.** « Lumenwild » est un titre de travail : vérifiez qu'il est
+- **Le nom.** « Cube Family » est un titre de travail : vérifiez qu'il est
   libre (INPI, EUIPO, recherche sur Google Play). N'utilisez jamais
   « Minecraft » dans le titre, la description, les mots-clés ou les
   images : c'est une marque déposée et un motif de retrait immédiat.

@@ -1,4 +1,4 @@
-# Shipping Lumenwild
+# Shipping Cube Family
 
 What exists in this repository, and what still stands between it and a
 store page. The technical parts are done or scripted; the rest is a
@@ -29,7 +29,7 @@ the step-by-step guide in [`play-store.md`](play-store.md) (in French).
 
 ### Identity
 
-- **The name.** "Lumenwild" is a working title set in one place
+- **The name.** "Cube Family" is the official public name, configured in one place
   (`src/branding.ts`, plus `index.html`, `public/manifest.webmanifest` and
   the two shell configs). Before publishing, run a trademark search
   (EUIPO / INPI / USPTO) and check the stores for collisions.

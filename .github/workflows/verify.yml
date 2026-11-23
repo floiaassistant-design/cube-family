@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: minecraft-family-ci-${{ github.ref }}
+  group: cube-family-ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

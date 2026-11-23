@@ -94,7 +94,7 @@ try {
        <div>
          <div style="font-size:86px;font-weight:800;letter-spacing:2px;line-height:1;
               background:linear-gradient(180deg,#fff3cf 10%,#ffc45a 55%,#ff8f4a 100%);
-              -webkit-background-clip:text;color:transparent">Lumenwild</div>
+              -webkit-background-clip:text;color:transparent">Cube Family</div>
          <div style="font-size:27px;margin-top:20px;opacity:.85">Explore. Dig. Build. Light up the night.</div>
        </div>
      </div>`,

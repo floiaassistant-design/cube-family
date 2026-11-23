@@ -1,6 +1,6 @@
-# Feuille de route Minecraft Family
+# Feuille de route Cube Family
 
-Le mode Créatif et le mode Aventure de Lumenwild restent disponibles pendant le développement. L’Aventure offre déjà collecte, fabrication limitée et journal. Les étapes ci-dessous décrivent les ajouts futurs.
+Le mode Créatif et le mode Aventure de Cube Family restent disponibles pendant le développement. L’Aventure offre déjà collecte, fabrication limitée et journal. Les étapes ci-dessous décrivent les ajouts futurs.
 
 | Étape                                | Travail prévu                                                                                                | Validation attendue                                                                                 |
 | ------------------------------------ | ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |

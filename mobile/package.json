@@ -1,8 +1,8 @@
 {
-  "name": "lumenwild-mobile",
+  "name": "cube-family-mobile",
   "version": "1.0.0",
   "private": true,
-  "description": "Android and iOS shells for Lumenwild (Capacitor).",
+  "description": "Android and iOS shells for Cube Family (Capacitor).",
   "author": "Vincent Plessy",
   "scripts": {
     "sync": "cap sync",

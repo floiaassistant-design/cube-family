@@ -1,8 +1,8 @@
-# Zombie mineur — modèle 3D Minecraft Family
+# Zombie mineur — modèle 3D Cube Family
 
 **Statut : prêt pour intégration par ChatGPT Work ; pas encore placé dans le jeu.**
 
-Monstre voxel original et familial, peau vert mousse, veste bleu ardoise, écharpe ocre, cheveux en cubes, yeux asymétriques et dents irrégulières. Modèle réalisé spécialement pour Minecraft Family ; aucune ressource extraite du jeu Minecraft.
+Monstre voxel original et familial, peau vert mousse, veste bleu ardoise, écharpe ocre, cheveux en cubes, yeux asymétriques et dents irrégulières. Modèle réalisé spécialement pour Cube Family ; aucune ressource extraite du jeu Minecraft.
 
 ## Fichier principal
 
@@ -29,7 +29,7 @@ Le script contrôle la taille et le SHA-256, puis crée un vrai fichier `.glb`, 
 1. Lire `AGENTS.md` et inspecter le moteur Three.js existant sans remplacer son architecture.
 2. Restaurer puis charger le zombie comme une ressource locale (copie possible dans `public/models/zombie_mineur_v1.glb` après validation).
 3. Conserver les matériaux et couleurs de sommets. Piloter `Idle`, `Walk` et `Attack` au moyen d’un `THREE.AnimationMixer`; vérifier le comportement de chaque clip.
-4. Créer les collisions et l’IA du monstre en **respectant l’apparition nocturne** demandée pour Minecraft Family. Aucun monstre agressif le jour, sauf règle existante explicite.
+4. Créer les collisions et l’IA du monstre en **respectant l’apparition nocturne** demandée pour Cube Family. Aucun monstre agressif le jour, sauf règle existante explicite.
 5. Vérifier les performances sur PC et tablette, les sauvegardes, les contrôles et le jeu hors ligne.
 6. Faire une PR avec tests ; ne pas déployer le site sans validation.
 

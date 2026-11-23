@@ -54,7 +54,7 @@ function createWindow() {
     backgroundColor: "#05080d",
     autoHideMenuBar: true,
     show: false,
-    title: "Lumenwild",
+    title: "Cube Family",
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
       contextIsolation: true,
