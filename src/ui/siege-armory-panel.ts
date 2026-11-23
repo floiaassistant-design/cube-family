@@ -61,7 +61,9 @@ export class SiegeArmoryPanel {
   update(report: SiegeReport | null, canPurchase: boolean): void {
     if (!this.expanded) return;
     if (!report) {
-      this.summary.textContent = this.french ? "Lance une partie pour acheter." : "Start a siege to buy.";
+      this.summary.textContent = this.french
+        ? "Lance une partie pour acheter."
+        : "Start a siege to buy.";
     } else {
       const { coins, swordTier, bowTier } = report.armory;
       this.summary.textContent = this.french
@@ -76,7 +78,9 @@ export class SiegeArmoryPanel {
       const label = NAMES[item][this.french ? 0 : 1];
       const unavailable = price === null;
       const suffix = unavailable
-        ? (this.french ? "indisponible" : "unavailable")
+        ? this.french
+          ? "indisponible"
+          : "unavailable"
         : `${price} ${this.french ? "pièces" : "coins"}`;
       const next = `${label} — ${suffix}`;
       if (button.textContent !== next) button.textContent = next;
