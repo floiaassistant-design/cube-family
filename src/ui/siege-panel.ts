@@ -156,7 +156,11 @@ export class SiegePanel {
         ? ` · ${report.armory.coins} pièces`
         : ` · ${report.armory.coins} coins`;
     }
-    if (report?.phase === "wave" || report?.phase === "preparation" || report?.phase === "intermission") {
+    if (
+      report?.phase === "wave" ||
+      report?.phase === "preparation" ||
+      report?.phase === "intermission"
+    ) {
       const gateLabel = this.french ? "Assaut sud" : "South assault";
       const intact = (health: number): string =>
         health > 0 ? health.toString() : this.french ? "brisée" : "breached";
