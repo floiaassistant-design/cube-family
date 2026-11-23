@@ -1025,10 +1025,7 @@ function boot(): void {
       else if (e.code === "KeyX") siege?.stop();
       else if (e.code === "KeyH") repairSiege();
       else if (e.code === "KeyG") shootSiege();
-      else if (e.code !== "KeyF") {
-        // Keep the normal world keyboard shortcuts unchanged.
-      } else return;
-      if (["KeyB", "KeyV", "KeyN", "KeyX", "KeyH", "KeyG"].includes(e.code)) {
+       if (["KeyB", "KeyV", "KeyN", "KeyX", "KeyH", "KeyG"].includes(e.code)) {
         e.preventDefault();
         return;
       }
