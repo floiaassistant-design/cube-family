@@ -861,26 +861,33 @@ function boot(): void {
       sound.breakBlock(BlockId.WOOD);
     }
   };
+  const startSiege = (): void => {
+    if (!siege || !player.isActive || player.riding || siege.active || !fortress) return;
+    const distance = Math.hypot(
+      player.position.x - (fortress.x + FORTRESS_CENTER),
+      player.position.z - (fortress.z + FORTRESS_CENTER),
+    );
+    if (distance > 72) return;
+    siege.start();
+    hud.announce(
+      t.locale === "fr"
+        ? "Prépare-toi : attaque dans 20 secondes !"
+        : "Get ready: attack in 20 seconds!",
+    );
+  };
+  const repairSiege = (): void => {
+    if (siege?.repair())
+      hud.announce(t.locale === "fr" ? "Cristal réparé !" : "Crystal repaired!");
+  };
   const siegePanel = new SiegePanel(
     app,
     {
       build: buildFortress,
       visit: visitFortress,
-      start: () => {
-        if (!siege || !player.isActive) return;
-        siege.start();
-        hud.announce(
-          t.locale === "fr"
-            ? "Prépare-toi : attaque dans 20 secondes !"
-            : "Get ready: attack in 20 seconds!",
-        );
-      },
+      start: startSiege,
       stop: () => siege?.stop(),
       shoot: shootSiege,
-      repair: () => {
-        if (siege?.repair())
-          hud.announce(t.locale === "fr" ? "Cristal réparé !" : "Crystal repaired!");
-      },
+      repair: repairSiege,
     },
     t.locale === "fr",
   );
@@ -1003,10 +1010,28 @@ function boot(): void {
 
   window.addEventListener("keydown", (e) => {
     if (e.repeat) return;
-    if (e.code === "KeyF" && siege?.active && player.isActive && !inventory.isOpen) {
+    // A desktop pointer-lock player can open the mini-game panel with M.
+    // F is reserved for flying in PlayerController; G fires event arrows.
+    if (e.code === "KeyM" && player.isActive && !inventory.isOpen && mode === "creative") {
       e.preventDefault();
-      shootSiege();
+      if (player.isUiOpen) player.closeUi();
+      else player.openUi();
       return;
+    }
+    if (player.isActive && !inventory.isOpen && mode === "creative") {
+      if (e.code === "KeyB") buildFortress();
+      else if (e.code === "KeyV") visitFortress();
+      else if (e.code === "KeyN") startSiege();
+      else if (e.code === "KeyX") siege?.stop();
+      else if (e.code === "KeyH") repairSiege();
+      else if (e.code === "KeyG") shootSiege();
+      else if (e.code !== "KeyF") {
+        // Keep the normal world keyboard shortcuts unchanged.
+      } else return;
+      if (["KeyB", "KeyV", "KeyN", "KeyX", "KeyH", "KeyG"].includes(e.code)) {
+        e.preventDefault();
+        return;
+      }
     }
     if (e.code === "KeyR" && !e.altKey && !e.ctrlKey && !e.metaKey && toggleRide()) {
       e.preventDefault();
@@ -1368,7 +1393,7 @@ function boot(): void {
         { use },
       );
     } else if (targetedCreature?.kind === "siege-zombie") {
-      digHint = `${t.locale === "fr" ? "Zombie" : "Zombie"} · ${targetedCreature.health.toString()} PV · ${t.locale === "fr" ? "Attaquer ou tirer (F)" : "Attack or fire (F)"}`;
+      digHint = `${t.locale === "fr" ? "Zombie" : "Zombie"} · ${targetedCreature.health.toString()} PV · ${t.locale === "fr" ? "Attaquer ou tirer (G)" : "Attack or fire (G)"}`;
     } else if (targetedCreature?.kind === "roamer") {
       const attack = t(
         padDriving ? "attackPad" : touch && !player.isLocked ? "attackTouch" : "attackMouse",
