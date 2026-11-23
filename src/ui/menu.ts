@@ -3,6 +3,7 @@ import { type LanguageSetting, type TextKey, type Translator } from "../i18n";
 import { QUALITY_LEVELS, type QualityLevel } from "../render/renderer";
 import { FOV_RANGE, type SettingsStore, VIEW_DISTANCE_RANGE } from "../settings";
 import type { WorldEntry, WorldMode } from "../world/world-registry";
+import { MAX_WORLD_FILE_BYTES, type ImportWorldResult } from "../world/world-transfer";
 
 /** Turns whatever the player typed into a world seed: a plain number is
  * used as-is, anything else is hashed, and nothing at all rolls a random
@@ -26,6 +27,8 @@ export interface MenuHandlers {
   readonly onCreateWorld: (name: string, mode: WorldMode, seed?: number) => boolean;
   readonly onRenameWorld: (seed: number, name: string) => boolean;
   readonly onDeleteWorld: (seed: number) => boolean;
+  readonly onExportWorld: (seed: number) => string | null;
+  readonly onImportWorld: (text: string) => ImportWorldResult;
   /** Forget every edit made to the current world. */
   readonly onResetWorld: () => void;
   readonly onClick: () => void;
@@ -333,6 +336,31 @@ export class Menu {
         });
         actions.append(open, rename);
 
+        const exportButton = el("button", "btn", this.t("worldExport"));
+        exportButton.type = "button";
+        exportButton.addEventListener("click", () => {
+          const contents = this.handlers.onExportWorld(world.seed);
+          if (!contents) {
+            feedback.textContent = this.t("worldExportFailed");
+            return;
+          }
+          try {
+            const blob = new Blob([contents], { type: "application/json" });
+            const objectUrl = URL.createObjectURL(blob);
+            const link = el("a");
+            link.href = objectUrl;
+            link.download = `cube-family-${world.seed.toString()}.json`;
+            link.click();
+            window.setTimeout(() => {
+              URL.revokeObjectURL(objectUrl);
+            }, 1000);
+            feedback.textContent = this.t("worldExportStarted");
+          } catch {
+            feedback.textContent = this.t("worldExportFailed");
+          }
+        });
+        actions.append(exportButton);
+
         // Never delete the currently loaded world: it can be autosaved again.
         if (world.seed !== this.handlers.seed) {
           const remove = el("button", "btn danger", this.t("worldDelete"));
@@ -361,6 +389,46 @@ export class Menu {
     };
     screen.append(list, feedback);
     refresh();
+
+    const transfer = el("section", "world-transfer");
+    transfer.append(el("h3", "world-section-title", this.t("worldImport")));
+    const fileInput = el("input");
+    fileInput.type = "file";
+    fileInput.accept = ".json,application/json";
+    fileInput.setAttribute("aria-label", this.t("worldImport"));
+    fileInput.addEventListener("change", () => {
+      const file = fileInput.files?.item(0);
+      if (!file) return;
+      if (file.size > MAX_WORLD_FILE_BYTES) {
+        feedback.textContent = this.t("worldImportInvalid");
+        fileInput.value = "";
+        return;
+      }
+      void file.text()
+        .then((contents) => {
+          const result = this.handlers.onImportWorld(contents);
+          if (result.ok) {
+            refresh();
+            feedback.textContent = this.t("worldImportSuccess");
+          } else {
+            feedback.textContent = this.t(
+              result.reason === "conflict"
+                ? "worldImportConflict"
+                : result.reason === "storage"
+                  ? "worldSaveFailed"
+                  : "worldImportInvalid",
+            );
+          }
+        })
+        .catch(() => {
+          feedback.textContent = this.t("worldImportInvalid");
+        })
+        .finally(() => {
+          fileInput.value = "";
+        });
+    });
+    transfer.append(fileInput, el("p", "panel-hint", this.t("worldImportHint")));
+    screen.append(transfer);
 
     // A newly created world gets a distinct unused seed; its mode is separate
     // from the current world's mode until the player actually opens it.
