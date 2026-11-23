@@ -18,7 +18,10 @@ export class FortressStore {
       const data: unknown = JSON.parse(raw);
       if (!data || typeof data !== "object" || Array.isArray(data)) return null;
       const location = data as Record<string, unknown>;
-      if (![location.x, location.z, location.y].every(Number.isInteger)) return null;
+      if (typeof location.x !== "number" || typeof location.z !== "number" ||
+          typeof location.y !== "number" ||
+          !Number.isInteger(location.x) || !Number.isInteger(location.z) ||
+          !Number.isInteger(location.y)) return null;
       const { x, z, y } = location as unknown as FortressLocation;
       if (y < 18 || y + 20 >= CHUNK_HEIGHT || Math.abs(x) > 1e7 || Math.abs(z) > 1e7)
         return null;
