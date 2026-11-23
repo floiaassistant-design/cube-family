@@ -65,6 +65,7 @@ import { CHUNK_HEIGHT, worldToChunk } from "./world/coords";
 import { EditStore, type KeyValueStorage } from "./world/edit-store";
 import { loadPlayerSave, storePlayerSave } from "./world/player-save";
 import { WorldRegistry } from "./world/world-registry";
+import { exportWorldArchive, importWorldArchive } from "./world/world-transfer";
 import { findPleasantSpawn } from "./world/spawn";
 import {
   type ChunkGenerator,
@@ -960,6 +961,11 @@ function boot(): void {
     },
     onRenameWorld: (seed, name) => worldRegistry.rename(seed, name),
     onDeleteWorld: (seed) => worldRegistry.remove(seed, SEED),
+    onExportWorld: (seed) => {
+      if (seed === SEED) persist();
+      return exportWorldArchive(storage, worldRegistry.get(seed));
+    },
+    onImportWorld: (contents) => importWorldArchive(storage, worldRegistry, contents),
     onLanguageChange: () => {
       persist();
       window.location.reload();

@@ -32,6 +32,14 @@ const EN = {
   worldSeedNotSharing:
     "A seed shares the terrain, not saved builds or multiplayer. Shared worlds are coming later.",
   worldCurrentSettings: "Current world settings",
+  worldExport: "Export backup",
+  worldExportStarted: "Backup file prepared for download.",
+  worldExportFailed: "Cannot export this world. Its save may be invalid or too large.",
+  worldImport: "Restore a world from a file",
+  worldImportHint: "JSON backups only, up to 6 MB. Existing worlds are never overwritten.",
+  worldImportSuccess: "World restored. Select it above to play.",
+  worldImportConflict: "This world's seed is already on this device. No data was replaced.",
+  worldImportInvalid: "The backup file is invalid or too large.",
 
   fullscreen: "Fullscreen",
   back: "Back",
@@ -182,6 +190,14 @@ const FR: Record<TextKey, string> = {
   worldSeedNotSharing:
     "Une graine partage le terrain, pas les constructions ni une partie en ligne. Le partage arrive plus tard.",
   worldCurrentSettings: "Réglages du monde actuel",
+  worldExport: "Exporter",
+  worldExportStarted: "Fichier de sauvegarde prêt à télécharger.",
+  worldExportFailed: "Impossible d'exporter ce monde : sauvegarde invalide ou trop volumineuse.",
+  worldImport: "Restaurer un monde depuis un fichier",
+  worldImportHint: "Fichiers de sauvegarde JSON, 6 Mo maximum. Aucun monde existant n'est écrasé.",
+  worldImportSuccess: "Monde restauré. Sélectionnez-le dans la liste pour jouer.",
+  worldImportConflict: "Cette graine existe déjà sur cet appareil. Aucune donnée remplacée.",
+  worldImportInvalid: "Le fichier de sauvegarde est invalide ou trop volumineux.",
 
   fullscreen: "Plein écran",
   back: "Retour",

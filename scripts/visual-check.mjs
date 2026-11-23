@@ -1327,6 +1327,52 @@ try {
       );
     });
     report("world library keeps the earlier save after creating a second world", savesKept);
+    const transfer = await library.evaluate(() => {
+      const input = document.querySelector('.world-transfer input[type="file"]');
+      if (!input) return false;
+      const archive = {
+        format: "cube-family-world",
+        version: 1,
+        world: { seed: 991293, name: "Restored forest", mode: "adventure" },
+        saves: {
+          player: JSON.stringify({
+            x: 5,
+            y: 70,
+            z: 5,
+            yaw: 0,
+            pitch: 0,
+            flying: false,
+            time: 24,
+            hotbar: [],
+            slot: 0,
+            mode: "adventure",
+          }),
+          edits: "{}",
+          fortress: null,
+        },
+      };
+      Object.defineProperty(input, "files", {
+        configurable: true,
+        value: [
+          new window.File([JSON.stringify(archive)], "backup.json", { type: "application/json" }),
+        ],
+      });
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      return true;
+    });
+    const restored =
+      transfer &&
+      (await until(library, () => {
+        const registry = JSON.parse(window.localStorage.getItem("cube-family:world-registry:v1"));
+        return (
+          registry.worlds.some(
+            (world) => world.seed === 991293 && world.name === "Restored forest",
+          ) &&
+          window.localStorage.getItem("voxel-world:edits:v2:991293") === "{}" &&
+          document.querySelectorAll(".world-card").length >= 3
+        );
+      }));
+    report("importing a valid world backup adds a third playable world", Boolean(restored));
   }
   await library.browserContext().close();
 

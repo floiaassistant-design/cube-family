@@ -575,6 +575,28 @@ kbd {
   border: 1px solid var(--line);
   border-radius: 8px;
 }
+.world-transfer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.world-transfer input[type="file"] {
+  max-width: 100%;
+  padding: 8px;
+  font: inherit;
+  font-size: 0.82rem;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.world-transfer input[type="file"]::file-selector-button {
+  margin-right: 8px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.08);
+}
 .world-feedback {
   margin: 0;
   font-size: 0.82rem;

@@ -1,5 +1,7 @@
 # Feuille de route Cube Family
 
+**Plan directeur V1.0 et liste des tâches complète :** [Notion — Cube Family, plan directeur](https://app.notion.com/p/4216633072a8818980defc41fe28c114) et [vue GitHub](PLAN_VERSION_1_0.md). Les statuts de publication sont différents des statuts de code.
+
 Le mode Créatif et le mode Aventure de Cube Family restent disponibles pendant le développement. L’Aventure offre déjà collecte, fabrication limitée et journal. Les étapes ci-dessous décrivent les ajouts futurs.
 
 | Étape                                | Travail prévu                                                                                                | Validation attendue                                                                                 |
