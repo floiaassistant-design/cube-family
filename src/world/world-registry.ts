@@ -64,11 +64,18 @@ function readEntry(value: unknown): WorldEntry | null {
 export class WorldRegistry {
   private readonly worlds = new Map<number, WorldEntry>();
 
+  private readonly storage: IndexedStorage | null;
+  private readonly now: () => number;
+  private readonly random: () => number;
+
   constructor(
-    private readonly storage: IndexedStorage | null,
-    private readonly now: () => number = Date.now,
-    private readonly random: () => number = Math.random,
+    storage: IndexedStorage | null,
+    now: () => number = Date.now,
+    random: () => number = Math.random,
   ) {
+    this.storage = storage;
+    this.now = now;
+    this.random = random;
     this.load();
     this.discoverExistingSaves();
   }

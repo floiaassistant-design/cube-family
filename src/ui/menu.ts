@@ -328,7 +328,9 @@ export class Menu {
           });
           const cancel = el("button", "btn", this.t("close"));
           cancel.type = "button";
-          cancel.addEventListener("click", () => refresh());
+          cancel.addEventListener("click", () => {
+            refresh();
+          });
           edit.append(input, save, cancel);
           actions.replaceChildren(edit);
           input.focus();
