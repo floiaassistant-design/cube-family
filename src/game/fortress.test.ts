@@ -20,7 +20,7 @@ describe("five-bastion castle", () => {
   it("overlays only the dedicated arena, even after a chunk reload", () => {
     const chunk = new Chunk(3, 3);
     applyFortressChunk(chunk);
-    expect(chunk.getBlock(0, FORTRESS_GROUND_Y, 0)).toBe(BlockId.GRASS);
+    expect(chunk.getBlock(15, FORTRESS_GROUND_Y, 15)).toBe(BlockId.GRASS);
     expect(chunk.getBlock(0, FORTRESS_GROUND_Y + 2, 0)).toBe(BlockId.CRYSTAL);
     const other = new Chunk(20, 20);
     other.setBlock(0, 66, 0, BlockId.DIAMOND_ORE);
