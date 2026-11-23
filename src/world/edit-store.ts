@@ -45,8 +45,14 @@ export class EditStore {
   /** Batch structure edits: persist once rather than once per voxel. */
   recordMany(edits: readonly { x: number; y: number; z: number; id: BlockId }[]): void {
     for (const edit of edits) {
-      if (!Number.isInteger(edit.x) || !Number.isInteger(edit.y) || !Number.isInteger(edit.z) ||
-          edit.y < 0 || edit.y >= CHUNK_HEIGHT || !Object.hasOwn(BLOCKS, edit.id)) {
+      if (
+        !Number.isInteger(edit.x) ||
+        !Number.isInteger(edit.y) ||
+        !Number.isInteger(edit.z) ||
+        edit.y < 0 ||
+        edit.y >= CHUNK_HEIGHT ||
+        !Object.hasOwn(BLOCKS, edit.id)
+      ) {
         throw new Error("Invalid block in edit batch");
       }
     }
