@@ -26,7 +26,7 @@ PC et mobile, plutôt que de maintenir des versions du gameplay divergentes.
 - `assets/3d/` : fichiers de modèles, fiches, scripts et `INDEX.json`.
 - `docs/catalogues/` : listes descriptives des créatures et équipements.
 - `desktop/` et `mobile/` : emballages natifs, pas des forks du moteur.
-- `scripts/` et `.github/workflows/` : vérifications et contrôle qualité.
+- `scripts/` et `.github/workflows/` : vérifications et contrôle qualité, dont `scripts/device-layout-check.mjs` pour les formats tactiles simulés. Le statut des plateformes et limites des émulations sont consignés dans [TESTS_MULTISUPPORT.md](TESTS_MULTISUPPORT.md).
 
 ## Règles de conception
 

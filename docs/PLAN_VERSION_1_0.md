@@ -32,3 +32,7 @@ Exporter en JSON une copie locale du monde choisi, avec son nom, sa graine, son 
 Chaque tâche est marquée « idée », « validé », « asset prêt », « en développement », « codé », « testé » ou « publié » selon l'étape effectivement vérifiée. Chaque PR renvoie au plan Notion, inclut tests, modules concernés, bugs connus et compatibilité des sauvegardes. Après fusion, mettre à jour Notion. Après publication autorisée, vérifier l'URL et le commit sur le site. Ne jamais confondre modèle 3D stocké, fonctionnalité codée et fonctionnalité publiée.
 
 Voir [AGENTS.md](../AGENTS.md), [architecture](ARCHITECTURE.md), [processus GitHub-Notion](PROCESSUS_GITHUB_NOTION.md) et [feuille de route historique](feuille-de-route.md).
+
+## Contrôles multisupport simulés
+
+La matrice d'écrans tactiles (téléphone et tablette, portrait et paysage) est décrite dans [TESTS_MULTISUPPORT.md](TESTS_MULTISUPPORT.md). Les contrôles sont automatisés dans le scénario navigateur et restent distincts des essais physiques Android, iOS, tablettes et PC. Aucune optimisation « validée sur tablette réelle » ne doit être annoncée à partir de ces émulations.

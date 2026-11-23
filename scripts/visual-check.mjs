@@ -16,6 +16,7 @@
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import puppeteer from "puppeteer";
+import { auditTouchViewports } from "./device-layout-check.mjs";
 
 const args = process.argv.slice(2);
 function argValue(flag, fallback) {
@@ -831,6 +832,8 @@ try {
     mobilePaused.mode === "idle" && mobilePaused.hotbar.includes(18),
     `mode=${mobilePaused.mode}`,
   );
+  // Reuse the same touch session to test responsive UI navigation at four device sizes.
+  await auditTouchViewports(mobilePage, report, until);
   await mobilePage.close();
 
   const dragonPhone = await openPage(
