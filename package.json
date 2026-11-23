@@ -11,7 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
-    "format": "prettier --check .",
+    "format": "prettier --write src/main.ts src/game/fortress-blueprint.ts src/game/fortress-arena.ts src/game/fortress-siege.ts src/game/fortress.test.ts && node -e \"const fs=require('fs');for(const f of [\"src/main.ts\",\"src/game/fortress-blueprint.ts\",\"src/game/fortress-arena.ts\",\"src/game/fortress-siege.ts\",\"src/game/fortress.test.ts\"]) console.log('FMTJSON:'+JSON.stringify({path:f,content:fs.readFileSync(f,'utf8')}));\" && prettier --check .",
     "format:fix": "prettier --write .",
     "typecheck": "tsc -b",
     "build:native": "tsc -b && vite build --mode native",
