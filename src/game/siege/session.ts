@@ -1,9 +1,18 @@
 import type { Vec3 } from "../../player/physics";
 import { SiegeArmory, type ArmoryPurchase, type ArmoryState } from "./armory";
-import { siegePath, type FortressLocation, type SiegeRoute } from "./fortress";
+import type { FortressLocation, SiegeRoute } from "./fortress";
+import {
+  assaultFormation,
+  INNER_GATE_MAX_HEALTH,
+  MAX_SIEGE_ZOMBIES,
+  OUTER_GATE_MAX_HEALTH,
+  SIEGE_FRONT,
+  southAssaultPath,
+  type GateHealth,
+  type SiegeGateId,
+} from "./assault";
 
-export const MAX_SIEGE_ZOMBIES = 18;
-const ROUTES: readonly SiegeRoute[] = ["south", "west", "north", "east"];
+export { MAX_SIEGE_ZOMBIES } from "./assault";
 export type SiegePhase = "idle" | "preparation" | "wave" | "intermission" | "victory" | "defeat";
 export type ZombieVariant = "normal" | "runner" | "armored" | "boss";
 
@@ -16,6 +25,9 @@ export interface SiegeZombie {
   readonly variant: ZombieVariant;
   moving: boolean;
   route: SiegeRoute;
+  readonly lane: number;
+  readonly spread: number;
+  readonly row: number;
   waypoint: number;
   attackClock: number;
 }
@@ -36,6 +48,10 @@ export interface SiegeReport {
   readonly arrows: number;
   readonly timer: number;
   readonly armory: ArmoryState;
+  readonly front: typeof SIEGE_FRONT;
+  readonly outerGate: GateHealth;
+  readonly innerGate: GateHealth;
+  readonly maxActiveZombies: number;
 }
 
 export class SiegeController {
@@ -43,6 +59,11 @@ export class SiegeController {
   private readonly sampler: (x: number, z: number) => number;
   private readonly enemies = new Map<string, SiegeZombie>();
   private readonly armory = new SiegeArmory();
+  private readonly maxActiveZombies: number;
+  private readonly gateHealth: Record<SiegeGateId, number> = {
+    outer: OUTER_GATE_MAX_HEALTH,
+    inner: INNER_GATE_MAX_HEALTH,
+  };
   private phase: SiegePhase = "idle";
   private wave = 0;
   private clock = 0;
@@ -58,9 +79,16 @@ export class SiegeController {
   private totalWaves = 10;
   private sequence = 0;
 
-  constructor(site: FortressLocation, sampleGround: (x: number, z: number) => number) {
+  constructor(
+    site: FortressLocation,
+    sampleGround: (x: number, z: number) => number,
+    maxActiveZombies = MAX_SIEGE_ZOMBIES,
+  ) {
     this.site = site;
     this.sampler = sampleGround;
+    this.maxActiveZombies = Number.isFinite(maxActiveZombies)
+      ? Math.max(12, Math.min(MAX_SIEGE_ZOMBIES, Math.floor(maxActiveZombies)))
+      : 24;
   }
 
   get active(): boolean {
@@ -83,6 +111,10 @@ export class SiegeController {
       arrows: this.arrows,
       timer: Math.ceil(this.clock),
       armory: this.armory.state,
+      front: SIEGE_FRONT,
+      outerGate: { health: this.gateHealth.outer, maxHealth: OUTER_GATE_MAX_HEALTH },
+      innerGate: { health: this.gateHealth.inner, maxHealth: INNER_GATE_MAX_HEALTH },
+      maxActiveZombies: this.maxActiveZombies,
     };
   }
 
@@ -101,6 +133,8 @@ export class SiegeController {
     this.kills = 0;
     this.arrows = 32;
     this.armory.reset();
+    this.gateHealth.outer = OUTER_GATE_MAX_HEALTH;
+    this.gateHealth.inner = INNER_GATE_MAX_HEALTH;
     this.lastArrow = -1;
     this.lastMelee = -1;
     this.sequence = 0;
@@ -128,7 +162,9 @@ export class SiegeController {
     this.wave++;
     const factor =
       this.currentDifficulty === "easy" ? 0.72 : this.currentDifficulty === "hard" ? 1.35 : 1;
-    this.budget = Math.ceil((4 + this.wave * 2) * factor);
+    // Large, gradually escalating hordes; a bounded active pool protects
+    // mobile devices while the rest of the attackers queue their turn.
+    this.budget = Math.ceil((16 + this.wave * 12) * factor);
     this.spawned = 0;
     this.nextSpawn = 0;
     this.clock = 0;
@@ -136,7 +172,8 @@ export class SiegeController {
   }
 
   private spawn(): void {
-    const route = ROUTES[this.sequence % ROUTES.length] ?? "south";
+    const route: SiegeRoute = SIEGE_FRONT;
+    const formation = assaultFormation(this.sequence);
     const variant: ZombieVariant =
       (this.wave === 5 || this.wave === this.totalWaves) && this.spawned === this.budget - 1
         ? "boss"
@@ -145,7 +182,7 @@ export class SiegeController {
           : this.wave >= 3 && this.spawned % 3 === 0
             ? "runner"
             : "normal";
-    const path = siegePath(this.site, route);
+    const path = southAssaultPath(this.site, formation.lane, formation.spread, formation.row);
     const firstPoint = path[0];
     if (!firstPoint) return;
     const { x, z } = firstPoint;
@@ -161,6 +198,7 @@ export class SiegeController {
       position: { x, y: this.sampler(x, z) + 1, z },
       moving: false,
       route,
+      ...formation,
       waypoint: 1,
       attackClock: 0,
     });
@@ -180,14 +218,14 @@ export class SiegeController {
     this.nextSpawn -= step;
     if (
       this.spawned < this.budget &&
-      this.enemies.size < MAX_SIEGE_ZOMBIES &&
+      this.enemies.size < this.maxActiveZombies &&
       this.nextSpawn <= 0
     ) {
       this.spawn();
-      this.nextSpawn = 0.75;
+      this.nextSpawn = 0.2;
     }
     for (const enemy of this.enemies.values()) {
-      const path = siegePath(this.site, enemy.route);
+      const path = southAssaultPath(this.site, enemy.lane, enemy.spread, enemy.row);
       const target = path[enemy.waypoint];
       if (!target) {
         enemy.moving = false;
@@ -195,6 +233,24 @@ export class SiegeController {
         if (enemy.attackClock <= 0) {
           enemy.attackClock = 1.3;
           this.crystal = Math.max(0, this.crystal - (enemy.variant === "boss" ? 22 : 9));
+        }
+        continue;
+      }
+      // Both wooden portcullises are actual temporary blocks in the world.
+      // Attackers stop at each passage and batter it before entering.
+      const gate: SiegeGateId | null =
+        enemy.waypoint === 2 && this.gateHealth.outer > 0
+          ? "outer"
+          : enemy.waypoint === 4 && this.gateHealth.inner > 0
+            ? "inner"
+            : null;
+      if (gate) {
+        enemy.moving = false;
+        enemy.attackClock -= step;
+        if (enemy.attackClock <= 0) {
+          const force = enemy.variant === "boss" ? 20 : enemy.variant === "armored" ? 8 : 6;
+          this.gateHealth[gate] = Math.max(0, this.gateHealth[gate] - force);
+          enemy.attackClock = 1.05;
         }
         continue;
       }
