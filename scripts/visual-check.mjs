@@ -1230,6 +1230,25 @@ try {
       JSON.stringify(siegeDebug),
     );
     if (siegeStarted) {
+      await fortressPage.click('#siege-panel button[aria-controls="siege-armory"]');
+      const shopVisible = await until(
+        fortressPage,
+        () =>
+          document.querySelector("#siege-armory")?.hidden === false &&
+          document.querySelectorAll("#siege-armory [data-offer]").length === 5 &&
+          window.__mc.siege()?.armory.coins === 100,
+      );
+      report("fortress armory is available during preparation with starting coins", shopVisible);
+      if (shopVisible) {
+        await fortressPage.click('#siege-armory [data-offer="sword"]');
+        const purchased = await until(
+          fortressPage,
+          () =>
+            window.__mc.siege()?.armory.swordTier === 1 &&
+            window.__mc.siege()?.armory.coins === 0,
+        );
+        report("buying a siege sword spends coins and increases its rank", purchased);
+      }
       await fortressPage.keyboard.press("KeyX");
       const stopped = await until(fortressPage, () => window.__mc.siege()?.phase === "idle");
       await fortressPage.keyboard.press("KeyN");
@@ -1238,6 +1257,11 @@ try {
         () => window.__mc.siege()?.phase === "preparation",
       );
       report("keyboard controls can stop and restart the fortress waves", stopped && restarted);
+      const freshShop = await fortressPage.evaluate(() => {
+        const report = window.__mc.siege();
+        return report?.armory.coins === 100 && report?.armory.swordTier === 0;
+      });
+      report("a new siege run resets only temporary shop purchases", freshShop);
     }
   }
   await fortressPage.browserContext().close();
