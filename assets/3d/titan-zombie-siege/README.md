@@ -2,6 +2,10 @@
 
 **Statut : asset V2 pret pour revue ; non integre au jeu, site non modifie.**
 
+## Apercu du vrai modele
+
+[Voir la projection face et trois-quarts de la V2](apercu_v2.svg) — image SVG obtenue par projection des triangles du fichier GLB; elle ne remplace pas un test en moteur 3D.
+
 ## Version V2 (concept de siege detaille)
 
 - Fichier : `titan_zombie_siege_v2.glb` (GLB 2.0, couleur et animations integrees).
