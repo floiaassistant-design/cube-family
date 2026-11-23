@@ -16,10 +16,9 @@ async function measureMenu(page, selector) {
     if (!screen || screen.hidden) {
       return { fits: false, controlsFit: false, verticallyReachable: false };
     }
-    const box = screen.getBoundingClientRect();
     const horizontalBounds = (element) => {
       const r = element.getBoundingClientRect();
-      return r.width > 0 && r.left >= -2 && r.right <= innerWidth + 2;
+      return r.width > 0 && r.left >= -2 && r.right <= window.innerWidth + 2;
     };
     const controls = [...screen.querySelectorAll("button, input, select")].filter(
       (element) => element.getClientRects().length > 0,
@@ -37,7 +36,7 @@ async function measureMenu(page, selector) {
       fits:
         horizontalBounds(screen) &&
         screen.scrollWidth <= screen.clientWidth + 2 &&
-        document.documentElement.scrollWidth <= innerWidth + 2,
+        document.documentElement.scrollWidth <= window.innerWidth + 2,
       controlsFit: controls.every(horizontalBounds),
       verticallyReachable,
     };
@@ -55,8 +54,8 @@ async function measureTouchHud(page) {
         box.height > 0 &&
         box.left >= -2 &&
         box.top >= -2 &&
-        box.right <= innerWidth + 2 &&
-        box.bottom <= innerHeight + 2
+        box.right <= window.innerWidth + 2 &&
+        box.bottom <= window.innerHeight + 2
       );
     };
     return {
