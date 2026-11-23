@@ -27,3 +27,7 @@ Les ressources sont préparées ici pour Work, mais **aucun ajout dans ce dossie
 5. Ajouter le modèle au monde, dimensionner les collisions et animer les parties prévues.
 6. Tester la vitesse, le rendu, PC et tactile ; ne pas supprimer les fonctions existantes.
 7. Préparer les changements sur une branche/PR et ne publier le site qu'après validation.
+
+Les listes de créatures et équipements sont tenues dans
+[les catalogues de suivi](../../docs/catalogues/README.md).
+L'intégration réelle reste décrite par les fichiers du moteur et les tests.

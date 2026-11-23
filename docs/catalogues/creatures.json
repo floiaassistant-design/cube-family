@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "catalogue": "creatures",
+  "note": "Inventaire documentaire. Le code et les tests font foi pour le gameplay; une fiche ne prouve jamais une publication du site.",
+  "entries": [
+    {
+      "id": "chat",
+      "name": "Chats et chatons",
+      "kind": "animal",
+      "status": "integrated_in_code",
+      "asset_id": null,
+      "source_files": ["src/game/wildlife.ts", "src/render/cat-model.ts"],
+      "notes": "Adoption et chatons dans le code. Le GLB chaton-orange de la bibliothèque est suivi séparément."
+    },
+    {
+      "id": "roamer",
+      "name": "Rôdeur de schiste",
+      "kind": "night_monster",
+      "status": "integrated_in_code",
+      "asset_id": null,
+      "source_files": ["src/game/wildlife.ts", "src/render/roamer-model.ts"],
+      "notes": "Créature hostile nocturne; modèle généré en code. Apparitions, combats et disparition à l'aube."
+    },
+    {
+      "id": "dragon-rouge",
+      "name": "Dragon rouge montable",
+      "kind": "mount",
+      "status": "integrated_in_code",
+      "asset_id": "dragon-rouge",
+      "source_files": ["src/game/dragon.ts", "src/render/dragon-model.ts"],
+      "notes": "Montée en selle et vol dans le moteur web. Vérifier les commandes et la visibilité du cavalier sur les appareils réels."
+    },
+    {
+      "id": "zombie-mineur",
+      "name": "Zombie mineur",
+      "kind": "night_monster",
+      "status": "asset_only",
+      "asset_id": "zombie-mineur",
+      "source_files": [],
+      "notes": "GLB préparé pour Work; aucune intégration gameplay déduite de cette présence."
+    },
+    {
+      "id": "vache-brune",
+      "name": "Vache brune",
+      "kind": "animal",
+      "status": "asset_only",
+      "asset_id": "vache-brune",
+      "source_files": [],
+      "notes": "GLB disponible; comportements et apparition restent à programmer."
+    },
+    {
+      "id": "chaton-orange",
+      "name": "Chaton orange — modèle GLB",
+      "kind": "animal_variant",
+      "status": "asset_only",
+      "asset_id": "chaton-orange",
+      "source_files": [],
+      "notes": "Modèle exporté de la bibliothèque 3D, distinct des chats déjà rendus par le moteur."
+    }
+  ]
+}

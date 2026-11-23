@@ -15,9 +15,10 @@
     "format:fix": "prettier --write .",
     "typecheck": "tsc -b",
     "build:native": "tsc -b && vite build --mode native",
-    "check": "npm run lint && npm run format && npm run typecheck && npm run test",
+    "check": "npm run lint && npm run format && npm run typecheck && npm run test && npm run check:catalogues",
     "e2e": "node scripts/visual-check.mjs",
-    "build:e2e": "tsc -b && vite build --mode e2e --outDir dist-e2e"
+    "build:e2e": "tsc -b && vite build --mode e2e --outDir dist-e2e",
+    "check:catalogues": "node scripts/check-catalogues.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

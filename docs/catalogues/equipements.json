@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "catalogue": "equipements",
+  "note": "Inventaire documentaire des objets d'équipement existants, sans modification des identifiants de sauvegarde.",
+  "entries": [
+    {
+      "id": "mining-pick",
+      "name": "Pioche d'éclat",
+      "kind": "tool",
+      "status": "integrated_in_code",
+      "asset_id": null,
+      "source_files": ["src/game/items.ts", "src/ui/inventory.ts"],
+      "notes": "Recette et minage dans le mode Aventure; visibilité en main à vérifier sur les différentes interfaces."
+    },
+    {
+      "id": "copper-pick",
+      "name": "Pioche de cuivre",
+      "kind": "tool",
+      "status": "integrated_in_code",
+      "asset_id": null,
+      "source_files": ["src/game/items.ts", "src/ui/inventory.ts"],
+      "notes": "Pioche améliorable avec le cuivre; vitesse de minage gérée dans items.ts."
+    },
+    {
+      "id": "copper-armor",
+      "name": "Plastron de cuivre",
+      "kind": "armor",
+      "status": "integrated_in_code",
+      "asset_id": null,
+      "source_files": ["src/game/items.ts", "src/game/wildlife.ts", "src/ui/inventory.ts"],
+      "notes": "Réduction des dégâts via la protection en cuivre; pas de modèle d'armure en 3D répertorié."
+    }
+  ],
+  "future_ideas": ["épées", "haches", "armures supplémentaires", "équipements propres aux montures"]
+}
