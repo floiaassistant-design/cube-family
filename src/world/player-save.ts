@@ -1,3 +1,5 @@
+import type { DragonParking } from "../game/dragon";
+import { CHUNK_HEIGHT } from "./coords";
 import type { KeyValueStorage } from "./edit-store";
 
 /** Where the player was, which way they were looking, what time it was
@@ -19,9 +21,20 @@ export interface PlayerSave {
   /** Raw saved bag and journal; validated by the classes that own them. */
   readonly bag?: unknown;
   readonly journal?: unknown;
+  readonly dragon?: DragonParking | undefined;
 }
 
 const finite = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
+
+function readDragon(value: unknown): DragonParking | undefined {
+  if (typeof value !== "object" || value === null) return undefined;
+  const { x, y, z, yaw } = value as Partial<Record<keyof DragonParking, unknown>>;
+  if (!finite(x) || !finite(y) || !finite(z) || !finite(yaw)) return undefined;
+  if (Math.abs(x) > 2 ** 30 || Math.abs(z) > 2 ** 30 || y < 1 || y > CHUNK_HEIGHT + 48) {
+    return undefined;
+  }
+  return { x, y, z, yaw };
+}
 
 export function playerSaveKey(seed: number): string {
   return `voxel-world:player:v2:${seed.toString()}`;
@@ -50,6 +63,7 @@ export function loadPlayerSave(storage: KeyValueStorage | null, seed: number): P
       mode: p.mode === "adventure" ? "adventure" : "creative",
       bag: p.bag,
       journal: p.journal,
+      dragon: readDragon(p.dragon),
     };
   } catch {
     return null; // a corrupt save just means a fresh start

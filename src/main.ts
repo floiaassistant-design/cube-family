@@ -3,11 +3,13 @@ import * as THREE from "three";
 import { SoundEngine } from "./audio/sound";
 import { GAME_NAME } from "./branding";
 import { type DiscoveryId, Journal } from "./game/discoveries";
+import { DragonMount } from "./game/dragon";
 import { Bag, craft, digSeconds, dropFor } from "./game/items";
 import { createTranslator, resolveLocale, type Translator } from "./i18n";
 import { GamepadInput } from "./input/gamepad";
 import { ChunkMeshManager } from "./render/chunk-mesh-manager";
 import { CpuRenderer } from "./render/cpu-renderer";
+import { DragonModel } from "./render/dragon-model";
 import { environmentAt } from "./render/environment";
 import { HeldBlock } from "./render/held-block";
 import { Particles } from "./render/particles";
@@ -74,6 +76,13 @@ declare global {
       stats: () => Record<string, number | undefined>;
       hotbar: () => number[];
       flying: () => boolean;
+      dragon: () => {
+        position: { x: number; y: number; z: number } | null;
+        ready: boolean;
+        mounted: boolean;
+        flying: boolean;
+        grounded: boolean;
+      };
       inventoryOpen: () => boolean;
       gameMode: () => string;
       setMode: (mode: string) => void;
@@ -187,6 +196,7 @@ function boot(): void {
   let chunkMeshes: ChunkMeshManager | null = null;
   let particles: Particles | null = null;
   let heldBlock: HeldBlock | null = null;
+  let dragonModel: DragonModel | null = null;
   let rain: Rain | null = null;
   let highlight: THREE.LineSegments | null = null;
   let digVeil: THREE.Mesh | null = null;
@@ -209,14 +219,17 @@ function boot(): void {
     // The camera carries the held block, so it has to be part of the scene.
     renderer.scene.add(renderer.camera);
     const hand = new HeldBlock(renderer.camera, renderer.uniforms, directOutput());
+    const dragonView = new DragonModel(renderer.scene, renderer.uniforms, directOutput());
     const shower = new Rain(renderer.scene, directOutput());
     renderer.onMaterialsChanged = () => {
       meshes.setMaterials({ terrain: renderer.terrainMaterial, water: renderer.waterMaterial });
       sparks.setDirect(directOutput());
       hand.setDirect(directOutput());
+      dragonView.setDirect(directOutput());
       shower.setDirect(directOutput());
     };
     heldBlock = hand;
+    dragonModel = dragonView;
     rain = shower;
     highlight = new THREE.LineSegments(
       new THREE.EdgesGeometry(new THREE.BoxGeometry(1.004, 1.004, 1.004)),
@@ -303,6 +316,27 @@ function boot(): void {
     if (!stuck && saved.y > 0 && saved.y < CHUNK_HEIGHT + 64) player.restore(saved);
   }
 
+  const dragon = new DragonMount(world);
+  const dragonOrigin = saved?.dragon ?? spawn;
+  const terrainSurface = (x: number, z: number): number => sampleColumn(x, z).terrainHeight + 1;
+  const spawnDragon = (): void => {
+    const p = player.position;
+    if (
+      !dragonModel ||
+      dragon.position ||
+      Math.hypot(p.x - dragonOrigin.x, p.z - dragonOrigin.z) > 35
+    ) {
+      return;
+    }
+    dragon.spawn(saved?.dragon ?? spawn, terrainSurface, saved?.dragon);
+  };
+  spawnDragon();
+  if (!saved && dragon.position) {
+    const pose = player.pose();
+    const yaw = Math.atan2(pose.x - dragon.position.x, pose.z - dragon.position.z);
+    player.restore({ ...pose, yaw });
+  }
+
   const hotbar = new Hotbar(hotbarContainer, atlas.canvas, sanitizeHotbar(saved?.hotbar), (name) =>
     t.block(name),
   );
@@ -327,6 +361,10 @@ function boot(): void {
   };
   const hud = new Hud(app);
   hud.setStatsVisible(settings.values.showStats);
+  const dragonHint = document.createElement("div");
+  dragonHint.id = "dragon-hint";
+  dragonHint.hidden = true;
+  app.append(dragonHint);
 
   const interaction = new BlockInteraction(
     camera,
@@ -357,6 +395,7 @@ function boot(): void {
       celebrate(journal.built(edit.id));
     }
   };
+  interaction.occupiedByEntity = (x, y, z) => dragon.occupiesBlock(x, y, z);
   interaction.onDigTick = (block) => {
     sound.step(block);
   };
@@ -370,7 +409,6 @@ function boot(): void {
     interaction.canPlace = adventure ? (block) => bag.count(block) > 0 : undefined;
     hotbar.setCounts(adventure ? (block) => bag.count(block) : null);
     player.setFlightAllowed(!adventure);
-    touchControls?.setFlightAllowed(!adventure);
   };
   interaction.onPick = (id) => {
     hotbar.pick(id);
@@ -391,8 +429,13 @@ function boot(): void {
   let nextStrike = 20;
 
   const persist = (): void => {
+    if (player.riding) dragon.recordParking();
+    const pose = player.pose();
+    const safeReturn = player.riding ? dragon.savedRiderPosition : undefined;
     storePlayerSave(storage, SEED, {
-      ...player.pose(),
+      ...pose,
+      ...(safeReturn ? { ...safeReturn, flying: false } : {}),
+      dragon: dragon.parking ?? saved?.dragon,
       // Absolute, not wrapped to a day: the weather is a function of it.
       time: gameTime,
       hotbar: [...hotbar.contents],
@@ -414,7 +457,7 @@ function boot(): void {
     if (open && !player.isActive) return;
     if (open) inventory.show(inventoryState());
     else inventory.hide();
-    interaction.enabled = !open;
+    interaction.enabled = !open && !player.riding;
     if (open) player.openUi();
     else player.closeUi();
     sound.click();
@@ -437,6 +480,27 @@ function boot(): void {
   };
   inventory.onClose = () => {
     setInventory(false);
+  };
+
+  const canMountDragon = (): boolean =>
+    dragonModel?.ready === true && dragon.canMount(player.position);
+
+  const toggleRide = (): boolean => {
+    if (!player.isActive || inventory.isOpen) return false;
+    if (player.riding) {
+      if (player.dismount()) {
+        interaction.enabled = true;
+        app.classList.remove("riding");
+        persist();
+      } else {
+        hud.announce(t(dragon.grounded ? "dragonExitBlocked" : "dragonLandingRequired"));
+      }
+      return true;
+    }
+    if (!dragonModel?.ready || !player.mount(dragon)) return false;
+    interaction.enabled = false;
+    app.classList.add("riding");
+    return true;
   };
 
   // ---- on-screen controls for touch devices ----
@@ -464,6 +528,7 @@ function boot(): void {
         onToggleFly: () => {
           player.toggleFlight();
         },
+        onRide: toggleRide,
       })
     : null;
   let touchVisible = false;
@@ -545,7 +610,7 @@ function boot(): void {
   };
   player.onPause = () => {
     inventory.hide();
-    interaction.enabled = true;
+    interaction.enabled = !player.riding;
     menu.show("main");
     sound.setPaused(true);
     persist();
@@ -587,7 +652,9 @@ function boot(): void {
 
   window.addEventListener("keydown", (e) => {
     if (e.repeat) return;
-    if (e.code === "KeyE") {
+    if (e.code === "KeyR" && !e.altKey && !e.ctrlKey && !e.metaKey && toggleRide()) {
+      e.preventDefault();
+    } else if (e.code === "KeyE") {
       setInventory(!inventory.isOpen);
     } else if (e.code === "Escape" && inventory.isOpen) {
       // Escape already released the pointer; leave play cleanly.
@@ -709,6 +776,13 @@ function boot(): void {
       }),
       hotbar: () => [...hotbar.contents],
       flying: () => player.isFlying,
+      dragon: () => ({
+        position: dragon.position,
+        ready: dragonModel?.ready === true,
+        mounted: player.riding,
+        flying: dragon.flying,
+        grounded: dragon.grounded,
+      }),
       inventoryOpen: () => inventory.isOpen,
       gameMode: () => mode,
       setMode: (next) => {
@@ -743,6 +817,7 @@ function boot(): void {
   let lastTime = performance.now();
   let lastSave = lastTime;
   let lastLook = lastTime;
+  let nextDragonSpawnTry = lastTime;
   const frame = (time: number): void => {
     const frameDelta = time - lastTime;
     const dt = Math.min(frameDelta / 1000, 0.1); // clamp to avoid a huge step after a tab switch
@@ -762,6 +837,10 @@ function boot(): void {
     hotbar.enabled = player.isActive && !inventory.isOpen;
 
     const pad = gamepad.poll(dt);
+    if (!pad && padDriving) {
+      padDriving = false;
+      player.setExternalInput(null);
+    }
     if (pad) {
       if (pad.pause) {
         if (player.isActive) player.releaseControl();
@@ -790,13 +869,41 @@ function boot(): void {
           if (pad.breakBlock) interaction.breakTargetedBlock();
           if (pad.placeBlock) interaction.placeTargetedBlock();
           if (pad.hotbarStep !== 0) hotbar.cycle(pad.hotbarStep);
-          if (pad.toggleFlight) player.toggleFlight();
+          if (pad.toggleFlight && !toggleRide()) player.toggleFlight();
         }
       }
     }
 
     streamer.update(player.position.x, player.position.z);
+    if (time >= nextDragonSpawnTry) {
+      spawnDragon();
+      nextDragonSpawnTry = time + 1000;
+    }
     player.update(dt);
+    const dragonPosition = player.dragonRenderPosition ?? dragon.position;
+    if (dragonPosition && dragonModel) {
+      const { x, z } = player.position;
+      const distance = Math.hypot(x - dragonPosition.x, z - dragonPosition.z);
+      if (!player.riding && player.isActive && distance < 25)
+        dragon.step(Math.min(dt, 1 / 30), null);
+      dragonModel.update(player.isActive ? dt : 0, dragon, dragonPosition, distance, player.riding);
+    }
+    const rideAvailable = controlsVisible && (player.riding || canMountDragon());
+    if (touchControls) {
+      touchControls.setRide(
+        rideAvailable ? t(player.riding ? "dragonDismount" : "dragonMount") : "",
+        player.riding,
+        player.flightAllowed,
+      );
+      touchControls.setFlying(player.riding ? dragon.flying : player.isFlying);
+    }
+    if (!touch && rideAvailable) {
+      const hint = player.riding
+        ? t(dragon.flying ? "dragonFlyingHint" : "dragonTakeoffHint")
+        : `[R] ${t("dragonMount")}`;
+      if (dragonHint.textContent !== hint) dragonHint.textContent = hint;
+    }
+    dragonHint.hidden = touch || !rideAvailable;
 
     if (chunkMeshes) {
       chunkMeshes.setFocus(player.position.x, player.position.z);
@@ -892,7 +999,7 @@ function boot(): void {
           environment.ambientSky[1] * open + environment.lightColor[1] * 0.45 * open + 0.15,
           environment.ambientSky[2] * open + environment.lightColor[2] * 0.45 * open + 0.13,
         ],
-        player.isActive && !hudHidden,
+        player.isActive && !hudHidden && !player.riding,
       );
       particles?.update(
         dt,

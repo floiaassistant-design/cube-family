@@ -60,6 +60,7 @@ export class BlockInteraction {
   digSeconds: ((block: BlockId) => number) | undefined;
   /** Adventure mode: whether the player actually has this block to place. */
   canPlace: ((block: BlockId) => boolean) | undefined;
+  occupiedByEntity: ((x: number, y: number, z: number) => boolean) | undefined;
   /** Fired a few times a second while digging, for the tapping sound. */
   onDigTick: ((block: BlockId) => void) | undefined;
 
@@ -234,6 +235,7 @@ export class BlockInteraction {
   }
 
   raycastFromCamera(maxDistance = REACH): RaycastHit | null {
+    if (this.controller.riding) return null;
     const origin: Vec3 = {
       x: this.camera.position.x,
       y: this.camera.position.y,
@@ -293,7 +295,10 @@ export class BlockInteraction {
       : { x: hit.placeX, y: hit.placeY, z: hit.placeZ };
     if (into.y < 1 || into.y >= CHUNK_HEIGHT) return;
     if (!BLOCKS[this.world.getBlock(into.x, into.y, into.z)].replaceable) return;
-    if (isSolid(block) && this.overlapsPlayer(into.x, into.y, into.z)) return;
+    if (isSolid(block) || block === BlockId.WATER) {
+      if (this.occupiedByEntity?.(into.x, into.y, into.z)) return;
+      if (isSolid(block) && this.overlapsPlayer(into.x, into.y, into.z)) return;
+    }
     // Plants need something to root in.
     if (isPlant(block) && !isSolid(this.world.getBlock(into.x, into.y - 1, into.z))) return;
 

@@ -29,11 +29,15 @@ const COLLISION_EPSILON = 1e-4;
 const BISECTION_ITERATIONS = 16;
 
 /** The player's bounding box for a given feet position (bottom-center). */
-export function aabbFromFeetPosition(pos: Vec3): AABB {
-  const half = PLAYER_WIDTH / 2;
+export function aabbFromFeetPosition(
+  pos: Vec3,
+  width = PLAYER_WIDTH,
+  height = PLAYER_HEIGHT,
+): AABB {
+  const half = width / 2;
   return {
     min: { x: pos.x - half, y: pos.y, z: pos.z - half },
-    max: { x: pos.x + half, y: pos.y + PLAYER_HEIGHT, z: pos.z + half },
+    max: { x: pos.x + half, y: pos.y + height, z: pos.z + half },
   };
 }
 
@@ -75,12 +79,11 @@ function resolveAxis(
   base: Vec3,
   axis: "x" | "y" | "z",
   delta: number,
-  isSolid: SolidQuery,
+  collides: (position: Vec3) => boolean,
 ): number {
   if (delta === 0) return base[axis];
 
-  const at = (d: number): boolean =>
-    aabbIntersectsSolid(aabbFromFeetPosition({ ...base, [axis]: base[axis] + d }), isSolid);
+  const at = (d: number): boolean => collides({ ...base, [axis]: base[axis] + d });
 
   if (!at(delta)) return base[axis] + delta;
 
@@ -113,6 +116,7 @@ export function moveAndCollide(
   dy: number,
   dz: number,
   isSolid: SolidQuery,
+  bounds = aabbFromFeetPosition,
 ): MoveResult {
   let cur: Vec3 = position;
   let vx = velocity.x;
@@ -120,15 +124,16 @@ export function moveAndCollide(
   let vz = velocity.z;
   let onGround = false;
 
-  const nx = resolveAxis(cur, "x", dx, isSolid);
+  const collides = (p: Vec3): boolean => aabbIntersectsSolid(bounds(p), isSolid);
+  const nx = resolveAxis(cur, "x", dx, collides);
   if (Math.abs(nx - (cur.x + dx)) > COLLISION_EPSILON) vx = 0;
   cur = { ...cur, x: nx };
 
-  const nz = resolveAxis(cur, "z", dz, isSolid);
+  const nz = resolveAxis(cur, "z", dz, collides);
   if (Math.abs(nz - (cur.z + dz)) > COLLISION_EPSILON) vz = 0;
   cur = { ...cur, z: nz };
 
-  const ny = resolveAxis(cur, "y", dy, isSolid);
+  const ny = resolveAxis(cur, "y", dy, collides);
   if (Math.abs(ny - (cur.y + dy)) > COLLISION_EPSILON) {
     vy = 0;
     if (dy < 0) onGround = true;
