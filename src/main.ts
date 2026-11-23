@@ -4,6 +4,8 @@ import { SoundEngine } from "./audio/sound";
 import { GAME_NAME } from "./branding";
 import { type DiscoveryId, Journal } from "./game/discoveries";
 import { DragonMount } from "./game/dragon";
+import { applyFortressChunk, FORTRESS_WORLD_SEED } from "./game/fortress-arena";
+import { FortressSiege } from "./game/fortress-siege";
 import { attackDamage } from "./game/equipment";
 import {
   Bag,
@@ -168,6 +170,7 @@ function boot(): void {
   // A shareable world: ?seed=1234 loads the same terrain for everyone.
   // Without one, return to the world played last.
   const params = new URLSearchParams(window.location.search);
+  const fortressActive = params.get("fortress") === "1";
   const parseSeed = (text: string | null): number =>
     text === null ? NaN : Number.parseInt(text, 10);
   const fromUrl = parseSeed(params.get("seed"));
@@ -178,13 +181,13 @@ function boot(): void {
   } catch {
     // Storage may be blocked by browser or iframe policy.
   }
-  const SEED = Number.isFinite(fromUrl)
+  const SEED = fortressActive ? FORTRESS_WORLD_SEED : Number.isFinite(fromUrl)
     ? fromUrl
     : Number.isFinite(fromLast)
       ? fromLast
       : DEFAULT_SEED;
   try {
-    storage?.setItem(LAST_SEED_KEY, SEED.toString());
+    if (!fortressActive) storage?.setItem(LAST_SEED_KEY, SEED.toString());
   } catch {
     // Private browsing: the world just won't be remembered.
   }
@@ -300,7 +303,7 @@ function boot(): void {
     app.appendChild(cpuHand);
   }
 
-  const editStore = new EditStore(storage, SEED);
+  const editStore = new EditStore(fortressActive ? null : storage, SEED);
   const streamer = new ChunkStreamer(world, {
     // One extra ring of data beyond what's drawn: lighting a chunk reads
     // all eight of its neighbors.
@@ -309,6 +312,8 @@ function boot(): void {
     shape: webgl ? "disc" : "square",
     meshWhenSurrounded: webgl !== null,
     onLoad: (cx, cz) => {
+      const chunk = world.getChunk(cx, cz);
+      if (fortressActive && chunk) applyFortressChunk(chunk);
       chunkMeshes?.chunkLoaded(cx, cz);
     },
     onUnload: (cx, cz) => {
@@ -330,8 +335,8 @@ function boot(): void {
   streamer.attachGenerator(generator);
 
   // Start where the player left off, or somewhere pleasant.
-  const saved = loadPlayerSave(storage, SEED);
-  const spawn = findPleasantSpawn(SEED);
+  const saved = loadPlayerSave(fortressActive ? null : storage, SEED);
+  const spawn = fortressActive ? { x: 48.5, z: 68.5 } : findPleasantSpawn(SEED);
   const startX = saved?.x ?? spawn.x;
   const startZ = saved?.z ?? spawn.z;
   // Ground under the player's feet before the first frame; the rest streams in.
@@ -381,6 +386,11 @@ function boot(): void {
   let mode: "creative" | "adventure" =
     modeParam === "adventure" || modeParam === "creative" ? modeParam : (saved?.mode ?? "creative");
   const bag = new Bag(saved?.bag);
+  if (fortressActive) {
+    bag.add(COPPER_SWORD);
+    bag.add(WOOD_SHIELD);
+    bag.add(COPPER_ARMOR);
+  }
   const standNear = (x: number, z: number, y: number, tall: boolean): number | null => {
     const bx = Math.floor(x);
     const bz = Math.floor(z);
@@ -417,6 +427,15 @@ function boot(): void {
   );
   wildlife.spawnStarterCat(player.position, player.pose().yaw);
   const creatureView = new CreatureView(app, camera, clearSight, webgl?.scene ?? null);
+  const fortressSiege = fortressActive ? new FortressSiege() : null;
+  const fortressStatus = fortressActive ? document.createElement("div") : null;
+  if (fortressStatus) {
+    fortressStatus.id = "fortress-status";
+    fortressStatus.setAttribute("role", "status");
+    fortressStatus.style.cssText = "position:absolute;top:72px;left:50%;transform:translateX(-50%);z-index:5;background:#18222ddd;color:white;padding:10px 14px;border-radius:12px;font:600 14px system-ui;text-align:center;pointer-events:none;max-width:calc(100% - 30px)";
+    fortressStatus.textContent = "Forteresse des Cinq Bastions";
+    app.appendChild(fortressStatus);
+  }
   let nearbyCreatures: Creature[] = [];
   const forward = new THREE.Vector3();
   const sight = new THREE.Vector3();
@@ -441,7 +460,7 @@ function boot(): void {
   // Old saves only know pickInHand; new saves preserve the exact held tool.
   const previousEquipment = saved?.heldEquipment;
   let heldEquipment: HandEquipment | null =
-    previousEquipment === undefined
+    fortressActive ? COPPER_SWORD : previousEquipment === undefined
       ? saved?.pickInHand === false
         ? null
         : bag.pick
@@ -553,7 +572,7 @@ function boot(): void {
 
   // ---- time of day ----
   let gameTime = saved?.time ?? STARTUP_PHASE * DAY_LENGTH_SECONDS;
-  let frozenTime: number | null = null;
+  let frozenTime: number | null = fortressActive ? 0.85 * DAY_LENGTH_SECONDS : null;
   let forcedWeather: Weather | null = null;
   /** Lightning: a flash that decays, and when the next strike is due. */
   let flash = 0;
@@ -563,7 +582,7 @@ function boot(): void {
     if (player.riding) dragon.recordParking();
     const pose = player.pose();
     const safeReturn = player.riding ? dragon.savedRiderPosition : undefined;
-    storePlayerSave(storage, SEED, {
+    storePlayerSave(fortressActive ? null : storage, SEED, {
       ...pose,
       ...(safeReturn ? { ...safeReturn, flying: false } : {}),
       dragon: dragon.parking ?? saved?.dragon,
@@ -585,15 +604,17 @@ function boot(): void {
     if (!creature) return false;
     // Cats and kittens are companions and never take damage.
     if (creature.kind === "cat") return true;
-    const result = wildlife.strike(creature, attackDamage(heldEquipment));
+    const result = fortressSiege && creature.id.startsWith("siege:")
+      ? fortressSiege.strike(creature.id, attackDamage(heldEquipment))
+      : wildlife.strike(creature, attackDamage(heldEquipment));
     if (result !== "recovering") {
       swingHand();
       sound.breakBlock(BlockId.STONE);
     }
     if (result === "struck") hud.announce(t("roamerStruck"));
     if (result === "defeated") {
-      bag.add(BlockId.COAL_ORE);
-      nearbyCreatures = wildlife.nearby(player.position);
+      if (!fortressActive) bag.add(BlockId.COAL_ORE);
+      nearbyCreatures = [...wildlife.nearby(player.position), ...(fortressSiege?.creatures ?? [])];
       hud.announce(t("roamerFell"));
       persist();
     }
@@ -784,6 +805,30 @@ function boot(): void {
       window.location.reload();
     },
   });
+
+  // Fortress sessions are isolated and transient; normal world saves are untouched.
+  const mainScreen = menuRoot.querySelector<HTMLElement>('[data-screen="main"]');
+  if (mainScreen) {
+    const fortressButton = document.createElement("button");
+    fortressButton.className = "secondary-button";
+    fortressButton.textContent = fortressActive
+      ? (t.locale === "fr" ? "Retour au monde libre" : "Return to free world")
+      : (t.locale === "fr" ? "Forteresse : siège des zombies" : "Fortress: zombie siege");
+    fortressButton.addEventListener("click", () => {
+      persist();
+      const url = new URL(window.location.href);
+      if (fortressActive) {
+        url.searchParams.delete("fortress");
+        url.searchParams.delete("mode");
+        url.searchParams.delete("seed");
+      } else {
+        url.searchParams.set("fortress", "1");
+        url.searchParams.set("mode", "adventure");
+      }
+      window.location.href = url.toString();
+    });
+    mainScreen.appendChild(fortressButton);
+  }
 
   const applySetting = (values: Settings, key: keyof Settings): void => {
     switch (key) {
@@ -1154,12 +1199,23 @@ function boot(): void {
     const wildlifeEvent = wildlife.update(
       dt,
       player.position,
-      adventure ? night : null,
+      adventure && !fortressActive ? night : null,
       controlsVisible,
       bag.count(COPPER_ARMOR) > 0,
       heldEquipment === WOOD_SHIELD && bag.count(WOOD_SHIELD) > 0,
     );
-    nearbyCreatures = wildlife.nearby(player.position);
+    if (fortressSiege && controlsVisible && fortressSiege.phase === "idle") fortressSiege.start();
+    fortressSiege?.update(controlsVisible ? dt : 0, standNear);
+    nearbyCreatures = [...wildlife.nearby(player.position), ...(fortressSiege?.creatures ?? [])];
+    if (fortressStatus && fortressSiege) {
+      const phase = fortressSiege.phase;
+      const status = phase === "preparation" || phase === "intermission"
+        ? `Préparation : ${Math.ceil(fortressSiege.countdown)} s`
+        : phase === "victory" ? "Victoire !" : phase === "defeat" ? "Défaite"
+          : phase === "wave" ? `${fortressSiege.creatures.length} zombies` : "En attente";
+      const message = `Vague ${fortressSiege.wave}/10 · Cristal ${fortressSiege.crystalHealth}/800 · ${status}`;
+      if (fortressStatus.textContent !== message) fortressStatus.textContent = message;
+    }
     if (wildlifeEvent === "hurt") hud.announce(t("playerHurt"));
     if (wildlifeEvent === "blocked") hud.announce(t("shieldBlocked"));
     if (wildlifeEvent === "retreat") {
