@@ -9,10 +9,7 @@
       "kind": "animal",
       "status": "integrated_in_code",
       "asset_id": null,
-      "source_files": [
-        "src/game/wildlife.ts",
-        "src/render/cat-model.ts"
-      ],
+      "source_files": ["src/game/wildlife.ts", "src/render/cat-model.ts"],
       "notes": "Adoption et chatons dans le code. Le GLB chaton-orange de la bibliothèque est suivi séparément."
     },
     {
@@ -21,10 +18,7 @@
       "kind": "night_monster",
       "status": "integrated_in_code",
       "asset_id": null,
-      "source_files": [
-        "src/game/wildlife.ts",
-        "src/render/roamer-model.ts"
-      ],
+      "source_files": ["src/game/wildlife.ts", "src/render/roamer-model.ts"],
       "notes": "Créature hostile nocturne; modèle généré en code. Apparitions, combats et disparition à l'aube."
     },
     {
@@ -33,10 +27,7 @@
       "kind": "mount",
       "status": "integrated_in_code",
       "asset_id": "dragon-rouge",
-      "source_files": [
-        "src/game/dragon.ts",
-        "src/render/dragon-model.ts"
-      ],
+      "source_files": ["src/game/dragon.ts", "src/render/dragon-model.ts"],
       "notes": "Montée en selle et vol dans le moteur web. Vérifier les commandes et la visibilité du cavalier sur les appareils réels."
     },
     {
