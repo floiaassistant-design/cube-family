@@ -726,6 +726,29 @@ try {
     JSON.stringify(controlsShown),
   );
 
+  // A fortress is an in-world activity: its panel must be reachable
+  // without stealing the phone's right-side aiming and top ride controls.
+  const siegeMobile = await mobilePage.evaluate(() => {
+    const panel = document.querySelector("#siege-panel");
+    const controls = document.querySelector(".touch-top");
+    const build = [...(panel?.querySelectorAll("button") ?? [])].find((button) =>
+      button.textContent?.includes("Build"),
+    );
+    if (!panel || !controls) return { visible: false, build: false, overlap: true };
+    const a = panel.getBoundingClientRect();
+    const b = controls.getBoundingClientRect();
+    return {
+      visible: !panel.hidden && a.width > 0 && a.height > 0,
+      build: !!build && !build.hidden,
+      overlap: a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top,
+    };
+  });
+  report(
+    "fortress is offered inside Creative without covering phone controls",
+    siegeMobile.visible && siegeMobile.build && !siegeMobile.overlap,
+    JSON.stringify(siegeMobile),
+  );
+
   // Joystick: press bottom-left, push up (forward), hold, release.
   const beforeMove = await mobilePage.evaluate(() => window.__mc.position());
   await touch("pointerdown", 110, 560, 1);
