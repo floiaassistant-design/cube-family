@@ -1185,19 +1185,41 @@ try {
     );
     report("the fortress survives a reload in the same free world", persisted);
     await fortressPage.click("#play-button");
-    await fortressPage.evaluate(() => {
-      const start = [...document.querySelectorAll("#siege-panel button")].find((b) =>
-        b.textContent?.startsWith("Start waves"),
-      );
-      start?.click();
-    });
+    const canStart = await until(
+      fortressPage,
+      () =>
+        window.__mc.mode() !== "idle" &&
+        document.querySelector("#siege-panel button:nth-of-type(3)")?.hidden === false,
+      undefined,
+      10000,
+    );
+    if (canStart) await fortressPage.click("#siege-panel button:nth-of-type(3)");
     const siegeStarted = await until(
       fortressPage,
       () => window.__mc.siege()?.phase === "preparation",
       undefined,
       6000,
     );
-    report("players launch zombie waves from inside their free world", siegeStarted);
+    const siegeDebug = await fortressPage.evaluate(() => {
+      const raw = window.localStorage.getItem("voxel-world:fortress:v1:2026");
+      const site = raw ? JSON.parse(raw) : null;
+      const position = window.__mc.position();
+      const start = document.querySelector("#siege-panel button:nth-of-type(3)");
+      return {
+        mode: window.__mc.mode(),
+        phase: window.__mc.siege()?.phase,
+        distance: site
+          ? Math.hypot(position.x - (site.x + 47), position.z - (site.z + 47))
+          : null,
+        startHidden: start?.hidden,
+        panelHidden: document.querySelector("#siege-panel")?.hidden,
+      };
+    });
+    report(
+      "players launch zombie waves from inside their free world",
+      siegeStarted,
+      JSON.stringify(siegeDebug),
+    );
   }
   await fortressPage.browserContext().close();
 
