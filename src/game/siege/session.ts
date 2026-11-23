@@ -1,5 +1,5 @@
 import type { Vec3 } from "../../player/physics";
-import { FORTRESS_CRYSTAL, siegePath, type FortressLocation, type SiegeRoute } from "./fortress";
+import { siegePath, type FortressLocation, type SiegeRoute } from "./fortress";
 
 export const MAX_SIEGE_ZOMBIES = 18;
 const ROUTES: readonly SiegeRoute[] = ["south", "west", "north", "east"];
@@ -119,7 +119,7 @@ export class SiegeController {
   }
 
   private spawn(): void {
-    const route = ROUTES[this.sequence % ROUTES.length];
+    const route = ROUTES[this.sequence % ROUTES.length] ?? "south";
     const variant: ZombieVariant =
       (this.wave === 5 || this.wave === this.totalWaves) && this.spawned === this.budget - 1
         ? "boss"
@@ -129,7 +129,9 @@ export class SiegeController {
             ? "runner"
             : "normal";
     const path = siegePath(this.site, route);
-    const { x, z } = path[0];
+    const firstPoint = path[0];
+    if (!firstPoint) return;
+    const { x, z } = firstPoint;
     const maxHealth = variant === "boss" ? 35 : variant === "armored" ? 12 : variant === "runner" ? 5 : 8;
     const id = `siege:${(this.sequence++).toString()}`;
     this.enemies.set(id, {
