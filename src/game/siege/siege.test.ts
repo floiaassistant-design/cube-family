@@ -78,7 +78,7 @@ describe("solo zombie defense", () => {
     session.start({ waves: 5, difficulty: "easy" });
     for (let i = 0; i < 210; i++) session.update(0.1);
     const enemy = session.zombies[0];
-    expect(enemy).toBeDefined();
+    if (!enemy) throw new Error("Expected a spawned zombie");
     const origin = { x: enemy.position.x, y: enemy.position.y + 0.95, z: enemy.position.z - 5 };
     const direction = { x: 0, y: 0, z: 1 };
     expect(session.shoot(origin, direction, 2, () => true)).toBe(true);
