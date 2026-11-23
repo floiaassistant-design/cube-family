@@ -1,4 +1,4 @@
-# Mode d’emploi — ChatGPT Work, Minecraft Family
+# Mode d’emploi — ChatGPT Work, Cube Family
 
 Ce dossier centralise les créations destinées au jeu. Chaque ajout doit posséder son propre sous-dossier.
 

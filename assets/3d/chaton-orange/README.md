@@ -1,6 +1,6 @@
 # Chaton voxel orange — bibliothèque 3D
 
-Personnage original créé pour Minecraft Family. Modèle en volumes 3D réels (gltf 2.0), destiné au moteur Three.js. Conserver l'aspect voxel ; ne jamais remplacer le modèle sans comparaison visuelle.
+Personnage original créé pour Cube Family. Modèle en volumes 3D réels (gltf 2.0), destiné au moteur Three.js. Conserver l'aspect voxel ; ne jamais remplacer le modèle sans comparaison visuelle.
 
 ## État des fichiers
 
