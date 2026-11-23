@@ -97,10 +97,27 @@ export async function auditTouchViewports(page, report, until) {
 
     await page.click("#play-button");
     const active = await until(page, () => window.__mc?.mode() === "drag", undefined, 10_000);
+    // The controls are updated on the next animation frame, not immediately
+    // in the click handler. Wait for actual visibility before measuring.
+    const hudReady = await until(
+      page,
+      () => {
+        const actions = document.querySelector(".touch-buttons");
+        const top = document.querySelector(".touch-top");
+        return (
+          actions &&
+          top &&
+          getComputedStyle(actions).display !== "none" &&
+          getComputedStyle(top).display !== "none"
+        );
+      },
+      undefined,
+      10_000,
+    );
     const hud = await measureTouchHud(page);
     report(
       `responsive ${device.name}: play, hotbar, touch actions and pause fit the viewport`,
-      active && Object.values(hud).every(Boolean),
+      active && hudReady && Object.values(hud).every(Boolean),
       JSON.stringify(hud),
     );
     await page.evaluate(() => {
