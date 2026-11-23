@@ -1,4 +1,5 @@
 import { incomingDamage } from "./equipment";
+import type { SiegeZombie } from "./siege/session";
 import { forwardVector, PLAYER_EYE_HEIGHT, type Vec3 } from "../player/physics";
 import { DAY_LENGTH_SECONDS, SUNSET_PHASE } from "../render/sky";
 import { CHUNK_HEIGHT } from "../world/coords";
@@ -32,7 +33,7 @@ export interface NightCreature {
   health: number;
   moving: boolean;
 }
-export type Creature = Cat | NightCreature;
+export type Creature = Cat | NightCreature | SiegeZombie;
 
 export type CatResult = "adopted" | "purr" | "kitten" | "full" | "resting";
 export type StrikeResult = "struck" | "defeated" | "recovering";
@@ -111,7 +112,7 @@ export function nextMorning(seconds: number): number {
 }
 
 export function creatureCenter(creature: Creature): Vec3 {
-  const height = creature.kind === "roamer" ? 0.92 : creature.growsIn > 0 ? 0.27 : 0.43;
+  const height = creature.kind === "roamer" ? 0.92 : creature.kind === "siege-zombie" ? (creature.variant === "boss" ? 1.2 : 0.92) : creature.growsIn > 0 ? 0.27 : 0.43;
   return { ...creature.position, y: creature.position.y + height };
 }
 
