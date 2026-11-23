@@ -6,7 +6,9 @@ import { SiegeController } from "./session";
 
 const site = { x: 128, z: -64, y: 62 } as const;
 const at = (x: number, y: number, z: number) =>
-  createFortressBlueprint(site).find((b) => b.x === site.x + x && b.y === site.y + y && b.z === site.z + z)?.id;
+  createFortressBlueprint(site).find(
+    (b) => b.x === site.x + x && b.y === site.y + y && b.z === site.z + z,
+  )?.id;
 
 describe("five-bastion fortress", () => {
   it("builds distinct stone corner bastions and a fifth gatehouse", () => {
@@ -38,7 +40,9 @@ describe("five-bastion fortress", () => {
 describe("fortress world metadata and placement", () => {
   it("chooses an untouched, dry site rather than replacing a player's blocks", () => {
     const s = findFortressSite(
-      0, 0, () => ({ terrainHeight: 60 }),
+      0,
+      0,
+      () => ({ terrainHeight: 60 }),
       (minX) => minX > 100,
     );
     expect(s).not.toBeNull();
@@ -48,7 +52,12 @@ describe("fortress world metadata and placement", () => {
 
   it("stores a fortress per seed and clears it without touching player data", () => {
     const map = new Map<string, string>();
-    const storage = { getItem: (key: string) => map.get(key) ?? null, setItem: (key: string, value: string) => { map.set(key, value); } };
+    const storage = {
+      getItem: (key: string) => map.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        map.set(key, value);
+      },
+    };
     const saved = new FortressStore(storage, 42);
     saved.write(site);
     expect(new FortressStore(storage, 42).read()).toEqual(site);
