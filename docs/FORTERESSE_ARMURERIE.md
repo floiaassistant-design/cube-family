@@ -13,13 +13,13 @@ Le joueur reçoit 100 pièces en début de partie. Les éliminations rapportent
 vague terminée rapporte 40 pièces supplémentaires. Aucun paiement réel,
 aucune publicité ni aucun accès à un service extérieur.
 
-| Offre | Prix | Effet |
-| --- | ---: | --- |
-| Épée renforcée | 100 | Dégâts de siège 4 → 6 |
-| Épée, niveaux 2–4 | 75 / 125 / 175 | 8 / 10 / 12 dégâts |
-| Arc renforcé | 150 | Dégâts 4 → 6 ; tir plus rapide |
-| Arc, niveaux 2–4 | 100 / 150 / 200 | 7 / 8 / 9 dégâts ; cadence accrue |
-| 32 flèches | 30 | Stock maximal 128 |
+| Offre             |            Prix | Effet                             |
+| ----------------- | --------------: | --------------------------------- |
+| Épée renforcée    |             100 | Dégâts de siège 4 → 6             |
+| Épée, niveaux 2–4 |  75 / 125 / 175 | 8 / 10 / 12 dégâts                |
+| Arc renforcé      |             150 | Dégâts 4 → 6 ; tir plus rapide    |
+| Arc, niveaux 2–4  | 100 / 150 / 200 | 7 / 8 / 9 dégâts ; cadence accrue |
+| 32 flèches        |              30 | Stock maximal 128                 |
 
 Les pièces et les achats sont limités à **la partie de siège en cours**. Tout
 revient à l'état initial lorsqu'une nouvelle partie démarre. Les sauvegardes,
