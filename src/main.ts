@@ -4,15 +4,21 @@ import { SoundEngine } from "./audio/sound";
 import { GAME_NAME } from "./branding";
 import { type DiscoveryId, Journal } from "./game/discoveries";
 import { DragonMount } from "./game/dragon";
+import { attackDamage } from "./game/equipment";
 import {
   Bag,
   COPPER_ARMOR,
+  COPPER_AXE,
   COPPER_PICK,
+  COPPER_SWORD,
   craft,
   digSeconds,
   dropFor,
   type HeldItem,
+  type HandEquipment,
+  isHandEquipment,
   isMiningPick,
+  WOOD_SHIELD,
 } from "./game/items";
 import {
   creatureCenter,
@@ -432,13 +438,25 @@ function boot(): void {
     }
     return closest;
   };
-  let pickInHand = saved?.pickInHand ?? true;
+  // Old saves only know pickInHand; new saves preserve the exact held tool.
+  const previousEquipment = saved?.heldEquipment;
+  let heldEquipment: HandEquipment | null =
+    previousEquipment === undefined
+      ? saved?.pickInHand === false
+        ? null
+        : bag.pick
+      : previousEquipment !== null && bag.count(previousEquipment) > 0
+        ? previousEquipment
+        : null;
   const journal = new Journal(saved?.journal as { found?: unknown; placed?: unknown } | undefined);
   const inventoryState = (): InventoryState => ({
     bag: mode === "adventure" ? bag : null,
     journal,
     get pickInHand() {
       return pickEquipped();
+    },
+    get heldEquipment() {
+      return mode === "adventure" ? heldEquipment : null;
     },
   });
   const celebrate = (found: DiscoveryId[]): void => {
@@ -456,7 +474,8 @@ function boot(): void {
   app.append(dragonHint);
 
   const hasMiningPick = (): boolean => bag.pick !== null;
-  const pickEquipped = (): boolean => mode === "adventure" && hasMiningPick() && pickInHand;
+  const pickEquipped = (): boolean =>
+    mode === "adventure" && heldEquipment !== null && isMiningPick(heldEquipment);
   const swingHand = (): void => {
     heldBlock?.use();
     if (
@@ -507,14 +526,14 @@ function boot(): void {
   interaction.occupiedByEntity = (x, y, z) => dragon.occupiesBlock(x, y, z);
   interaction.onDigTick = (block) => {
     sound.step(block);
-    if (pickEquipped()) swingHand();
+    if (heldEquipment !== null) swingHand();
   };
   bag.onChange = () => {
     hotbar.refresh();
     inventory.refresh();
   };
   const adventureDigSeconds = (block: BlockId): number =>
-    digSeconds(block, hasMiningPick(), bag.pick === COPPER_PICK);
+    digSeconds(block, hasMiningPick(), bag.pick === COPPER_PICK, heldEquipment === COPPER_AXE);
   const applyMode = (): void => {
     const adventure = mode === "adventure";
     interaction.digSeconds = adventure ? adventureDigSeconds : undefined;
@@ -552,7 +571,8 @@ function boot(): void {
       time: gameTime,
       hotbar: [...hotbar.contents],
       slot: hotbar.selectedSlot,
-      pickInHand,
+      pickInHand: pickEquipped(),
+      heldEquipment,
       mode,
       bag: bag.toJSON(),
       journal: journal.toJSON(),
@@ -565,7 +585,7 @@ function boot(): void {
     if (!creature) return false;
     // Cats and kittens are companions and never take damage.
     if (creature.kind === "cat") return true;
-    const result = wildlife.strike(creature);
+    const result = wildlife.strike(creature, attackDamage(heldEquipment));
     if (result !== "recovering") {
       swingHand();
       sound.breakBlock(BlockId.STONE);
@@ -616,7 +636,7 @@ function boot(): void {
     return true;
   };
   hotbar.onSelect = () => {
-    pickInHand = false;
+    heldEquipment = null;
   };
   hotbar.onChange = () => {
     hud.announce(t.block(BLOCKS[hotbar.selectedBlock].name));
@@ -634,11 +654,23 @@ function boot(): void {
     else player.closeUi();
     sound.click();
   };
+  const nameEquipment = (item: HandEquipment): string =>
+    t(
+      item === COPPER_SWORD
+        ? "copperSword"
+        : item === COPPER_AXE
+          ? "copperAxe"
+          : item === WOOD_SHIELD
+            ? "woodShield"
+            : item === COPPER_PICK
+              ? "copperPick"
+              : "miningPick",
+    );
   inventory.onChoose = (item) => {
-    if (isMiningPick(item)) {
-      if (mode !== "adventure" || bag.pick !== item) return;
-      pickInHand = true;
-      hud.announce(t("miningPickEquipped"));
+    if (isHandEquipment(item)) {
+      if (mode !== "adventure" || bag.count(item) === 0) return;
+      heldEquipment = item;
+      hud.announce(t("equipmentSelected", { name: nameEquipment(item) }));
     } else if (typeof item === "number") {
       hotbar.assign(item);
     }
@@ -647,10 +679,10 @@ function boot(): void {
   inventory.onCraft = (recipe) => {
     if (mode !== "adventure" || !craft(bag, recipe)) return;
     const output = recipe.output;
-    if (isMiningPick(output)) {
-      pickInHand = true;
+    if (isHandEquipment(output)) {
+      heldEquipment = output;
       sound.select();
-      hud.announce(t("miningPickEquipped"));
+      hud.announce(t("equipmentSelected", { name: nameEquipment(output) }));
     } else if (output === COPPER_ARMOR) {
       sound.select();
       hud.announce(t("copperArmorReady"));
@@ -1080,6 +1112,7 @@ function boot(): void {
     if (dragonPosition) {
       if (!player.riding && player.isActive && dragonDistance < 25)
         dragon.step(Math.min(dt, 1 / 30), null);
+      dragonModel.setArmored(bag.count(COPPER_ARMOR) > 0);
       dragonModel.update(
         player.isActive ? dt : 0,
         dragon,
@@ -1124,9 +1157,11 @@ function boot(): void {
       adventure ? night : null,
       controlsVisible,
       bag.count(COPPER_ARMOR) > 0,
+      heldEquipment === WOOD_SHIELD && bag.count(WOOD_SHIELD) > 0,
     );
     nearbyCreatures = wildlife.nearby(player.position);
     if (wildlifeEvent === "hurt") hud.announce(t("playerHurt"));
+    if (wildlifeEvent === "blocked") hud.announce(t("shieldBlocked"));
     if (wildlifeEvent === "retreat") {
       if (player.riding) {
         dragon.returnToParking();
@@ -1264,16 +1299,19 @@ function boot(): void {
     });
 
     const handVisible = controlsVisible && !hudHidden && !player.riding;
-    const heldItem = (pickEquipped() ? bag.pick : null) ?? hotbar.selectedBlock;
+    const heldItem =
+      (mode === "adventure" && heldEquipment && bag.count(heldEquipment) > 0
+        ? heldEquipment
+        : null) ?? hotbar.selectedBlock;
     if (cpuHand) {
       const hideHand = !handVisible || mode !== "adventure";
       if (cpuHand.hidden !== hideHand) cpuHand.hidden = hideHand;
       if (!hideHand && cpuHeldItem !== heldItem) {
-        const showPick = isMiningPick(heldItem);
-        const icon = showPick
+        const showEquipment = typeof heldItem === "string";
+        const icon = showEquipment
           ? renderEquipmentIcon(64, heldItem)
           : renderBlockIcon(atlas.canvas, heldItem, 64);
-        cpuHand.classList.toggle("holding-pick", showPick);
+        cpuHand.classList.toggle("holding-pick", showEquipment);
         cpuHand.replaceChildren(icon);
         cpuHeldItem = heldItem;
       }
