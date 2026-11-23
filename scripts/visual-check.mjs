@@ -1266,18 +1266,15 @@ try {
       }
       await fortressPage.keyboard.press("KeyX");
       const stopped = await until(fortressPage, () => window.__mc.siege()?.phase === "idle");
-      const restoredGate = await until(
-        fortressPage,
-        () => {
-          const raw = window.localStorage.getItem("voxel-world:fortress:v1:2026");
-          if (!raw) return false;
-          const site = JSON.parse(raw);
-          return (
-            window.__mc.blockAt(site.x + 47, site.y + 3, site.z + 2) === 0 &&
-            window.__mc.blockAt(site.x + 47, site.y + 3, site.z + 15) === 0
-          );
-        },
-      );
+      const restoredGate = await until(fortressPage, () => {
+        const raw = window.localStorage.getItem("voxel-world:fortress:v1:2026");
+        if (!raw) return false;
+        const site = JSON.parse(raw);
+        return (
+          window.__mc.blockAt(site.x + 47, site.y + 3, site.z + 2) === 0 &&
+          window.__mc.blockAt(site.x + 47, site.y + 3, site.z + 15) === 0
+        );
+      });
       report("stopping the siege restores both doors without permanent damage", restoredGate);
       await fortressPage.keyboard.press("KeyN");
       const restarted = await until(
