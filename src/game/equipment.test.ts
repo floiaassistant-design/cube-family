@@ -43,9 +43,7 @@ describe("new adventure equipment", () => {
     expect(attackDamage(COPPER_SWORD)).toBe(4);
     expect(attackDamage(COPPER_AXE)).toBe(3);
     expect(attackDamage(WOOD_SHIELD)).toBe(2);
-    expect(digSeconds(BlockId.WOOD, false, false, true)).toBeLessThan(
-      digSeconds(BlockId.WOOD),
-    );
+    expect(digSeconds(BlockId.WOOD, false, false, true)).toBeLessThan(digSeconds(BlockId.WOOD));
     expect(digSeconds(BlockId.STONE, false, false, true)).toBe(digSeconds(BlockId.STONE));
   });
 

@@ -1,4 +1,10 @@
-import { COPPER_AXE, COPPER_SWORD, isNewEquipment, type NewEquipment, WOOD_SHIELD } from "./equipment";
+import {
+  COPPER_AXE,
+  COPPER_SWORD,
+  isNewEquipment,
+  type NewEquipment,
+  WOOD_SHIELD,
+} from "./equipment";
 import { BLOCKS, BlockId, INVENTORY_BLOCKS } from "../world/blocks";
 
 export { COPPER_AXE, COPPER_SWORD, WOOD_SHIELD } from "./equipment";

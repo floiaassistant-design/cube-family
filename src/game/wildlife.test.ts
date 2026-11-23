@@ -70,9 +70,7 @@ describe("adventure wildlife", () => {
     const guarded = new Wildlife(2026, flat, undefined);
     guarded.update(0.15, home, true, true, true, true);
     const roamer = findRoamer(guarded);
-    expect(guarded.update(0.15, { ...roamer.position }, true, true, true, true)).toBe(
-      "blocked",
-    );
+    expect(guarded.update(0.15, { ...roamer.position }, true, true, true, true)).toBe("blocked");
     expect(guarded.health).toBe(MAX_HEALTH);
   });
 
