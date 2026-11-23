@@ -48,8 +48,9 @@ export class CreatureView {
     this.models.beginFrame(this.camera, this.creatureIds);
     const overlayVisible = this.webgl
       ? creatures.some(
-          (creature) => (creature.kind === "roamer" && creature.health < ROAMER_MAX_HEALTH) ||
-          (creature.kind === "siege-zombie" && creature.health < creature.maxHealth),
+          (creature) =>
+            (creature.kind === "roamer" && creature.health < ROAMER_MAX_HEALTH) ||
+            (creature.kind === "siege-zombie" && creature.health < creature.maxHealth),
         )
       : creatures.length > 0;
     if (this.canvas.hidden === overlayVisible) this.canvas.hidden = !overlayVisible;
@@ -79,7 +80,8 @@ export class CreatureView {
       const center = creatureCenter(creature);
       this.projected.copy(center).project(this.camera);
       if (Math.abs(this.projected.x) > 1.35 || Math.abs(this.projected.y) > 1.35) continue;
-      const injured = (creature.kind === "roamer" && creature.health < ROAMER_MAX_HEALTH) ||
+      const injured =
+        (creature.kind === "roamer" && creature.health < ROAMER_MAX_HEALTH) ||
         (creature.kind === "siege-zombie" && creature.health < creature.maxHealth);
       const unobstructed = (!this.webgl || injured) && this.clear(this.camera.position, center);
       if (this.webgl || unobstructed) this.models.draw(this.ctx, creature, time, dt, shade);
