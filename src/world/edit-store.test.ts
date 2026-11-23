@@ -134,12 +134,12 @@ describe("fortress batch safety", () => {
 
   it("rejects invalid batches without committing partial edits", () => {
     const store = new EditStore(memoryStorage(), 987);
-    expect(() =>
+    expect(() => {
       store.recordMany([
         { x: 1, y: 40, z: 1, id: BlockId.STONE_BRICK },
         { x: 2, y: -1, z: 1, id: BlockId.STONE_BRICK },
-      ]),
-    ).toThrow();
+      ]);
+    }).toThrow();
     expect(store.totalEdits).toBe(0);
   });
 });
