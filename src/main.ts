@@ -7,6 +7,7 @@ import { DragonMount } from "./game/dragon";
 import { attackDamage } from "./game/equipment";
 import { createFortressBlueprint, FORTRESS_CENTER } from "./game/siege/fortress";
 import { findFortressSite, FortressStore } from "./game/siege/fortress-store";
+import type { ArmoryPurchase } from "./game/siege/armory";
 import { SiegeController, type SiegeReport } from "./game/siege/session";
 import {
   Bag,
@@ -878,6 +879,15 @@ function boot(): void {
   const repairSiege = (): void => {
     if (siege?.repair()) hud.announce(t.locale === "fr" ? "Cristal réparé !" : "Crystal repaired!");
   };
+  const buySiege = (item: ArmoryPurchase): void => {
+    if (!siege || !fortress || !player.isActive || inventory.isOpen || player.riding) return;
+    const distance = Math.hypot(
+      player.position.x - (fortress.x + FORTRESS_CENTER),
+      player.position.z - (fortress.z + FORTRESS_CENTER),
+    );
+    if (distance > 72 || !siege.buy(item)) return;
+    hud.announce(t.locale === "fr" ? "Achat effectué dans l’armurerie." : "Armory purchase complete.");
+  };
   const siegePanel = new SiegePanel(
     app,
     {
@@ -887,6 +897,7 @@ function boot(): void {
       stop: () => siege?.stop(),
       shoot: shootSiege,
       repair: repairSiege,
+      buy: buySiege,
     },
     t.locale === "fr",
   );
