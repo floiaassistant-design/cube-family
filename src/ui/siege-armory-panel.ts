@@ -32,7 +32,9 @@ export class SiegeArmoryPanel {
       const button = document.createElement("button");
       button.type = "button";
       button.dataset.offer = item;
-      button.addEventListener("pointerdown", (event) => event.stopPropagation());
+      button.addEventListener("pointerdown", (event) => {
+        event.stopPropagation();
+      });
       button.addEventListener("click", (event) => {
         event.stopPropagation();
         onBuy(item);
