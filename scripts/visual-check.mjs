@@ -1185,6 +1185,15 @@ try {
     );
     report("the fortress survives a reload in the same free world", persisted);
     await fortressPage.click("#play-button");
+    // Desktop uses pointer lock for camera steering. Press M to free the
+    // cursor before interacting with the siege panel (not a game bug).
+    await fortressPage.keyboard.press("KeyM");
+    const pointerUnlocked = await until(
+      fortressPage,
+      () => document.pointerLockElement === null && window.__mc.mode() !== "idle",
+      undefined,
+      10000,
+    );
     const canStart = await until(
       fortressPage,
       () =>
@@ -1193,7 +1202,8 @@ try {
       undefined,
       10000,
     );
-    if (canStart) await fortressPage.click("#siege-panel button:nth-of-type(3)");
+    if (pointerUnlocked && canStart)
+      await fortressPage.click("#siege-panel button:nth-of-type(3)");
     const siegeStarted = await until(
       fortressPage,
       () => window.__mc.siege()?.phase === "preparation",
@@ -1210,6 +1220,7 @@ try {
         phase: window.__mc.siege()?.phase,
         distance: site ? Math.hypot(position.x - (site.x + 47), position.z - (site.z + 47)) : null,
         startHidden: start?.hidden,
+        pointerUnlocked,
         panelHidden: document.querySelector("#siege-panel")?.hidden,
       };
     });
