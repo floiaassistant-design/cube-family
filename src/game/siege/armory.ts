@@ -34,7 +34,11 @@ const MAX_COINS = 99_999;
 
 /** Returns null when an offer is no longer available (not purchased yet,
  * already owned, or maximum rank reached). No hidden escalating prices. */
-export function armoryPrice(state: ArmoryState, item: ArmoryPurchase, arrows: number): number | null {
+export function armoryPrice(
+  state: ArmoryState,
+  item: ArmoryPurchase,
+  arrows: number,
+): number | null {
   switch (item) {
     case "sword":
       return state.swordTier === 0 ? 100 : null;
