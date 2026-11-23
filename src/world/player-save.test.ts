@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { COPPER_SWORD, WOOD_SHIELD } from "../game/items";
 import type { KeyValueStorage } from "./edit-store";
 import { loadPlayerSave, type PlayerSave, playerSaveKey, storePlayerSave } from "./player-save";
 
@@ -33,6 +34,16 @@ describe("player save", () => {
     const storage = memory();
     storePlayerSave(storage, 7, save);
     expect(loadPlayerSave(storage, 7)).toEqual(save);
+  });
+
+  it("round-trips equipped items and ignores untrusted item ids", () => {
+    const storage = memory();
+    for (const heldEquipment of [COPPER_SWORD, WOOD_SHIELD, null]) {
+      storePlayerSave(storage, 7, { ...save, heldEquipment });
+      expect(loadPlayerSave(storage, 7)?.heldEquipment).toBe(heldEquipment);
+    }
+    storage.data.set(playerSaveKey(7), JSON.stringify({ ...save, heldEquipment: "evil" }));
+    expect(loadPlayerSave(storage, 7)?.heldEquipment).toBeUndefined();
   });
 
   it("keeps worlds apart by seed", () => {

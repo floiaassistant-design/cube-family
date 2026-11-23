@@ -60,6 +60,22 @@ describe("adventure wildlife", () => {
     expect(world.nearby(home).every((entity) => entity.kind === "cat")).toBe(true);
   });
 
+  it("shield and armor protect the player when both are equipped", () => {
+    const shield = new Wildlife(2026, flat, undefined);
+    shield.update(0.15, home, true, true, false, true);
+    const hostile = findRoamer(shield);
+    expect(shield.update(0.15, { ...hostile.position }, true, true, false, true)).toBe("hurt");
+    expect(shield.health).toBe(MAX_HEALTH - 1);
+
+    const guarded = new Wildlife(2026, flat, undefined);
+    guarded.update(0.15, home, true, true, true, true);
+    const roamer = findRoamer(guarded);
+    expect(guarded.update(0.15, { ...roamer.position }, true, true, true, true)).toBe(
+      "blocked",
+    );
+    expect(guarded.health).toBe(MAX_HEALTH);
+  });
+
   it("only damages a player the roamer can reach in sight", () => {
     const world = new Wildlife(2026, { ...flat, clear: () => false }, undefined);
     world.update(0.15, home, true, true, false);
