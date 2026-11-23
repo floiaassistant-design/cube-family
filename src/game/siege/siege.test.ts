@@ -97,6 +97,43 @@ describe("solo zombie defense", () => {
     expect(session.zombies.length).toBe(0);
   });
 
+  it("can finish all five waves with a victory and restart cleanly", () => {
+    const session = new SiegeController(site, () => 60);
+    session.start({ waves: 5, difficulty: "easy" });
+    let attackTime = 1;
+    for (let frame = 0; frame < 5000 && session.report.phase !== "victory"; frame++) {
+      session.update(0.1);
+      for (const zombie of session.zombies) {
+        while (zombie.health > 0) {
+          attackTime += 1;
+          expect(session.melee(zombie, 6, attackTime)).toBe(true);
+        }
+      }
+    }
+    expect(session.report.phase).toBe("victory");
+    expect(session.report.wave).toBe(5);
+    expect(session.report.kills).toBeGreaterThan(25);
+    expect(session.zombies).toHaveLength(0);
+
+    session.start({ waves: 10, difficulty: "normal" });
+    expect(session.report.phase).toBe("preparation");
+    expect(session.report.wave).toBe(0);
+    expect(session.report.crystal).toBe(600);
+    expect(session.report.kills).toBe(0);
+  });
+
+  it("ends in defeat when attackers reach the unprotected crystal", () => {
+    const session = new SiegeController(site, () => 60);
+    session.start({ waves: 10, difficulty: "normal" });
+    for (let frame = 0; frame < 6000 && session.report.phase !== "defeat"; frame++) {
+      session.update(0.1);
+    }
+    expect(session.report.phase).toBe("defeat");
+    expect(session.report.crystal).toBe(0);
+    expect(session.zombies).toHaveLength(0);
+    expect(session.repair()).toBe(false);
+  });
+
   it("an arrow consumes ammunition, hits visible zombies and cannot be spammed", () => {
     const session = new SiegeController(site, () => 60);
     session.start({ waves: 5, difficulty: "easy" });
