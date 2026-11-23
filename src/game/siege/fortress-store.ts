@@ -79,7 +79,16 @@ export function findFortressSite(
     [-320, 0],
     [0, 224],
     [0, -320],
+    [512, 0],
+    [-608, 0],
+    [0, 512],
+    [0, -608],
+    [512, 512],
+    [-608, -608],
+    [512, -608],
+    [-608, 512],
   ];
+  let fallback: { site: FortressLocation; relief: number } | null = null;
   for (const [dx, dz] of candidates) {
     const x = px + dx;
     const z = pz + dz;
@@ -95,8 +104,13 @@ export function findFortressSite(
         high = Math.max(high, elevation);
       }
     }
-    if (low <= SEA_LEVEL + 2 || high - low > 7 || high + 20 >= CHUNK_HEIGHT) continue;
-    return { x, z, y: high + 2 };
+    const relief = high - low;
+    if (low <= SEA_LEVEL + 2 || relief > 20 || high + 20 >= CHUNK_HEIGHT) continue;
+    const site = { x, z, y: high + 2 };
+    if (relief <= 7) return site;
+    // A level platform on supporting piers is preferable to failing to
+    // build on every slightly hilly world. Prefer the gentlest safe site.
+    if (!fallback || relief < fallback.relief) fallback = { site, relief };
   }
-  return null;
+  return fallback?.site ?? null;
 }
