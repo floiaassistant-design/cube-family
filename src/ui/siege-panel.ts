@@ -54,15 +54,15 @@ export class SiegePanel {
       return b;
     };
     this.buildButton = button(
-      french ? "Construire la forteresse" : "Build fortress",
+      french ? "Construire (B)" : "Build (B)",
       callbacks.build,
     );
-    this.visitButton = button(french ? "Visiter la forteresse" : "Visit fortress", callbacks.visit);
-    this.startButton = button(french ? "Lancer les 10 vagues" : "Start 10 waves", callbacks.start);
-    this.stopButton = button(french ? "Arrêter la partie" : "Stop siege", callbacks.stop);
-    this.shootButton = button(french ? "Tirer (F)" : "Fire (F)", callbacks.shoot);
+    this.visitButton = button(french ? "Visiter (V)" : "Visit (V)", callbacks.visit);
+    this.startButton = button(french ? "Lancer les vagues (N)" : "Start waves (N)", callbacks.start);
+    this.stopButton = button(french ? "Arrêter (X)" : "Stop (X)", callbacks.stop);
+    this.shootButton = button(french ? "Tirer (G)" : "Fire (G)", callbacks.shoot);
     this.repairButton = button(
-      french ? "Réparer : 5 éliminations" : "Repair: 5 kills",
+      french ? "Réparer (H) : 5 éliminations" : "Repair (H): 5 kills",
       callbacks.repair,
     );
     this.root.append(
