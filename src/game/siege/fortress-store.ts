@@ -20,13 +20,17 @@ export class FortressStore {
       const data: unknown = JSON.parse(raw);
       if (!data || typeof data !== "object" || Array.isArray(data)) return null;
       const location = data as Record<string, unknown>;
-      if (typeof location.x !== "number" || typeof location.z !== "number" ||
-          typeof location.y !== "number" ||
-          !Number.isInteger(location.x) || !Number.isInteger(location.z) ||
-          !Number.isInteger(location.y)) return null;
-      const { x, z, y } = location as unknown as FortressLocation;
-      if (y < 18 || y + 20 >= CHUNK_HEIGHT || Math.abs(x) > 1e7 || Math.abs(z) > 1e7)
+      if (
+        typeof location.x !== "number" ||
+        typeof location.z !== "number" ||
+        typeof location.y !== "number" ||
+        !Number.isInteger(location.x) ||
+        !Number.isInteger(location.z) ||
+        !Number.isInteger(location.y)
+      )
         return null;
+      const { x, z, y } = location as unknown as FortressLocation;
+      if (y < 18 || y + 20 >= CHUNK_HEIGHT || Math.abs(x) > 1e7 || Math.abs(z) > 1e7) return null;
       return { x, z, y };
     } catch {
       return null;
@@ -63,15 +67,23 @@ export function findFortressSite(
   const px = Math.floor(playerX);
   const pz = Math.floor(playerZ);
   const candidates: readonly (readonly [number, number])[] = [
-    [128, -48], [128, 96], [-224, -48], [-224, 96],
-    [-48, 128], [96, 128], [-48, -224], [96, -224],
-    [224, 0], [-320, 0], [0, 224], [0, -320],
+    [128, -48],
+    [128, 96],
+    [-224, -48],
+    [-224, 96],
+    [-48, 128],
+    [96, 128],
+    [-48, -224],
+    [96, -224],
+    [224, 0],
+    [-320, 0],
+    [0, 224],
+    [0, -320],
   ];
   for (const [dx, dz] of candidates) {
     const x = px + dx;
     const z = pz + dz;
-    if (hasEdits(x - 12, x + FORTRESS_SIZE + 11, z - 12, z + FORTRESS_SIZE + 11))
-      continue;
+    if (hasEdits(x - 12, x + FORTRESS_SIZE + 11, z - 12, z + FORTRESS_SIZE + 11)) continue;
     let low = Infinity;
     let high = -Infinity;
     // Sample the full footprint, not just the center, so tall cliffs and
