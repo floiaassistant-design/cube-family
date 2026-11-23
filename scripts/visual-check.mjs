@@ -1185,8 +1185,9 @@ try {
     );
     report("the fortress survives a reload in the same free world", persisted);
     await fortressPage.click("#play-button");
+    await until(fortressPage, () => window.__mc.mode() !== "idle", undefined, 10000);
     // Desktop uses pointer lock for camera steering. Press M to free the
-    // cursor before interacting with the siege panel (not a game bug).
+    // cursor before interacting with the siege panel.
     await fortressPage.keyboard.press("KeyM");
     const pointerUnlocked = await until(
       fortressPage,
@@ -1229,6 +1230,22 @@ try {
       siegeStarted,
       JSON.stringify(siegeDebug),
     );
+    if (siegeStarted) {
+      await fortressPage.keyboard.press("KeyX");
+      const stopped = await until(
+        fortressPage,
+        () => window.__mc.siege()?.phase === "idle",
+      );
+      await fortressPage.keyboard.press("KeyN");
+      const restarted = await until(
+        fortressPage,
+        () => window.__mc.siege()?.phase === "preparation",
+      );
+      report(
+        "keyboard controls can stop and restart the fortress waves",
+        stopped && restarted,
+      );
+    }
   }
   await fortressPage.browserContext().close();
 
