@@ -51,7 +51,7 @@ export function createFortressBlueprint(site: FortressLocation): FortressBlock[]
   fill(2, 93, 43, 52, 0, 0, BlockId.COBBLE);
   fill(31, 64, 31, 64, 0, 0, BlockId.STONE_BRICK);
   // Four-direction approach roads, gently supported on stone piers.
-  for (const [dx, dz] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const {
+  for (const [dx, dz] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) {
     for (let r = 1; r <= 10; r++) {
       for (let n = 44; n <= 51; n++) {
         const x = dx === 0 ? n : dx < 0 ? -r : S + r;
@@ -102,7 +102,7 @@ export function createFortressBlueprint(site: FortressLocation): FortressBlock[]
   for (let x = 40; x <= 56; x += 3) put(x, 15, 1, BlockId.COBBLE);
   for (const x of [40, 55]) for (let z = 1; z < 9; z += 2) put(x, 15, z, BlockId.LANTERN);
   // Both outer and inner walls have four 6-block-high open gates.
-  for (const [a, b] of [[0, 5], [15, 16], [79, 80], [90, 95]] as const {
+  for (const [a, b] of [[0, 5], [15, 16], [79, 80], [90, 95]] as const) {
     for (let side = a; side <= b; side++) {
       for (let y = 1; y <= 6; y++) {
         for (let p = 44; p <= 51; p++) {
@@ -146,7 +146,7 @@ export function createFortressBlueprint(site: FortressLocation): FortressBlock[]
   fill(46, 49, 46, 49, 2, 2, BlockId.COPPER_BLOCK);
   put(FORTRESS_CRYSTAL, 3, FORTRESS_CRYSTAL, BlockId.CRYSTAL);
   // Courtyard lighting and supply stalls are visual landmarks.
-  for (const [x, z] of [[27, 27], [68, 27], [27, 68], [68, 68]] as const {
+  for (const [x, z] of [[27, 27], [68, 27], [27, 68], [68, 68]] as const) {
     fill(x, x, z, z, 1, 3, BlockId.WOOD);
     put(x, 4, z, BlockId.LANTERN);
     fill(x - 3, x + 3, z - 2, z + 2, 1, 1, BlockId.PLANKS);
