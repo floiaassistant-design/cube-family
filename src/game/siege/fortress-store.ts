@@ -6,8 +6,10 @@ import { FORTRESS_SIZE, type FortressLocation } from "./fortress";
 /** Metadata lives outside player saves: old worlds keep exactly the same save format. */
 export class FortressStore {
   private readonly key: string;
+  private readonly storage: KeyValueStorage | null;
 
-  constructor(private readonly storage: KeyValueStorage | null, seed: number) {
+  constructor(storage: KeyValueStorage | null, seed: number) {
+    this.storage = storage;
     this.key = `voxel-world:fortress:v1:${seed.toString()}`;
   }
 
@@ -60,7 +62,7 @@ export function findFortressSite(
   if (!Number.isFinite(playerX) || !Number.isFinite(playerZ)) return null;
   const px = Math.floor(playerX);
   const pz = Math.floor(playerZ);
-  const candidates = [
+  const candidates: readonly (readonly [number, number])[] = [
     [128, -48], [128, 96], [-224, -48], [-224, 96],
     [-48, 128], [96, 128], [-48, -224], [96, -224],
     [224, 0], [-320, 0], [0, 224], [0, -320],
