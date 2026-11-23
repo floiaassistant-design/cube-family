@@ -1143,10 +1143,7 @@ try {
   );
   await waitForWorld(fortressPage, 9);
   await fortressPage.click("#play-button");
-  await until(
-    fortressPage,
-    () => document.querySelector("#siege-panel")?.hidden === false,
-  );
+  await until(fortressPage, () => document.querySelector("#siege-panel")?.hidden === false);
   await fortressPage.evaluate(() => {
     window.confirm = () => true;
     document.querySelector("#siege-panel button")?.click();
