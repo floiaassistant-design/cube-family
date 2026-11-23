@@ -31,10 +31,5 @@
       "notes": "Réduction des dégâts via la protection en cuivre; pas de modèle d'armure en 3D répertorié."
     }
   ],
-  "future_ideas": [
-    "épées",
-    "haches",
-    "armures supplémentaires",
-    "équipements propres aux montures"
-  ]
+  "future_ideas": ["épées", "haches", "armures supplémentaires", "équipements propres aux montures"]
 }
