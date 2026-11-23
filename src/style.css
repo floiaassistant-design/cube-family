@@ -982,9 +982,19 @@ kbd {
   font-size: 0.85rem;
   touch-action: manipulation;
 }
-#siege-panel[hidden], #siege-panel button[hidden] { display: none; }
-.siege-title { font-size: 0.94rem; font-weight: 750; color: var(--accent); }
-.siege-status { color: var(--ink-dim); line-height: 1.35; }
+#siege-panel[hidden],
+#siege-panel button[hidden] {
+  display: none;
+}
+.siege-title {
+  font-size: 0.94rem;
+  font-weight: 750;
+  color: var(--accent);
+}
+.siege-status {
+  color: var(--ink-dim);
+  line-height: 1.35;
+}
 #siege-panel button {
   min-height: 38px;
   border: 1px solid var(--line);
@@ -995,8 +1005,14 @@ kbd {
   font-weight: 600;
   cursor: pointer;
 }
-#siege-panel button:disabled { opacity: 0.5; cursor: default; }
-#siege-panel button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#siege-panel button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+#siege-panel button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 @media (max-width: 700px) {
   #siege-panel {
     top: max(12px, env(safe-area-inset-top));
@@ -1007,6 +1023,10 @@ kbd {
     max-height: 54dvh;
     overflow-y: auto;
   }
-  .siege-title { font-size: 0.79rem; }
-  #siege-panel button { min-height: 34px; }
+  .siege-title {
+    font-size: 0.79rem;
+  }
+  #siege-panel button {
+    min-height: 34px;
+  }
 }
