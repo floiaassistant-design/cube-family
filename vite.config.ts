@@ -82,7 +82,7 @@ self.addEventListener("fetch", (event) => {
 }
 
 export default defineConfig(({ mode }) => ({
-  base: process.env.GITHUB_PAGES ? "/minecraft-family/" : mode === "native" ? "./" : "/",
+  base: process.env.GITHUB_PAGES ? "/cube-family/" : mode === "native" ? "./" : "/",
   plugins: mode === "native" ? [] : [offlineServiceWorker()],
   worker: {
     format: "es",
