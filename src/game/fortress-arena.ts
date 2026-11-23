@@ -29,8 +29,13 @@ for (const cell of fortressBlueprint()) {
 export function applyFortressChunk(chunk: Chunk): void {
   const startX = chunk.cx * CHUNK_SIZE;
   const startZ = chunk.cz * CHUNK_SIZE;
-  if (startX > MAP_MAX || startZ > MAP_MAX ||
-      startX + CHUNK_SIZE - 1 < MAP_MIN || startZ + CHUNK_SIZE - 1 < MAP_MIN) return;
+  if (
+    startX > MAP_MAX ||
+    startZ > MAP_MAX ||
+    startX + CHUNK_SIZE - 1 < MAP_MIN ||
+    startZ + CHUNK_SIZE - 1 < MAP_MIN
+  )
+    return;
 
   for (let x = 0; x < CHUNK_SIZE; x++) {
     const wx = startX + x;
@@ -41,7 +46,9 @@ export function applyFortressChunk(chunk: Chunk): void {
       // Preserve original underground terrain while leveling a safe arena.
       for (let y = FORTRESS_GROUND_Y - 1; y < CHUNK_HEIGHT; y++) {
         chunk.setBlock(
-          x, y, z,
+          x,
+          y,
+          z,
           y === FORTRESS_GROUND_Y
             ? BlockId.GRASS
             : y < FORTRESS_GROUND_Y
