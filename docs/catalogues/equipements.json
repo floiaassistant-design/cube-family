@@ -34,28 +34,43 @@
       "id": "copper-sword",
       "name": "Épée des clairières",
       "kind": "weapon",
-      "status": "asset_only",
+      "status": "integrated_in_code",
       "asset_id": "epee-cuivre",
-      "source_files": [],
-      "notes": "Arme de mêlée proposée. Recette et dégâts à valider. Aucun objet de jeu actuellement."
+      "source_files": [
+        "src/game/equipment.ts",
+        "src/game/items.ts",
+        "src/main.ts",
+        "src/render/equipment-models.ts"
+      ],
+      "notes": "Arme de mêlée proposée. Recette et dégâts à valider. Objet jouable intégré, modèle GLB en main WebGL et icône sur le rendu CPU."
     },
     {
       "id": "copper-axe",
       "name": "Hache des bois",
       "kind": "tool",
-      "status": "asset_only",
+      "status": "integrated_in_code",
       "asset_id": "hache-cuivre",
-      "source_files": [],
-      "notes": "Outil de coupe du bois proposé. Recette et vitesse à valider. Aucun objet de jeu actuellement."
+      "source_files": [
+        "src/game/equipment.ts",
+        "src/game/items.ts",
+        "src/main.ts",
+        "src/render/equipment-models.ts"
+      ],
+      "notes": "Outil de coupe du bois proposé. Recette et vitesse à valider. Objet jouable intégré, modèle GLB en main WebGL et icône sur le rendu CPU."
     },
     {
       "id": "wood-shield",
       "name": "Bouclier des sentiers",
       "kind": "shield",
-      "status": "asset_only",
+      "status": "integrated_in_code",
       "asset_id": "bouclier-bois",
-      "source_files": [],
-      "notes": "Bouclier léger proposé pour bloquer quelques attaques. Mécanique à valider."
+      "source_files": [
+        "src/game/equipment.ts",
+        "src/game/items.ts",
+        "src/main.ts",
+        "src/render/equipment-models.ts"
+      ],
+      "notes": "Bouclier léger proposé pour bloquer quelques attaques. Défense intégrée lorsque le bouclier est tenu dans le jeu."
     }
   ],
   "future_ideas": ["épées", "haches", "armures supplémentaires", "équipements propres aux montures"]

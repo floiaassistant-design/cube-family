@@ -10,6 +10,8 @@
 
 Cette base web dérive de Lumenwild de Vincent Plessy. Voir [AGENTS.md](AGENTS.md) et la [feuille de route](docs/feuille-de-route.md). Les sections d’origine ci-dessous décrivent le jeu hérité.
 
+En mode **Aventure**, tu peux fabriquer une épée de cuivre, une hache de cuivre et un bouclier en bois dans **Fabriquer**, puis les choisir dans le **Sac**. L'épée inflige 4 dégâts, la hache coupe le bois plus rapidement et inflige 3 dégâts, et le bouclier réduit les dégâts lorsqu'il est tenu. Le plastron en cuivre protège déjà en permanence ; son apparence GLB est visible sur le cavalier du dragon dans WebGL. Cliquer un bloc dans la barre rapide range l'outil tenu. Le même inventaire fonctionne sur PC et tactile ; la sélection est sauvegardée par monde.
+
 Le dragon rouge se trouve près du point de départ. Approche-toi et appuie sur **R** pour monter en selle. Maintiens **Espace** pour décoller et **C** pour te poser. [Commandes de la monture et modèle 3D](assets/3d/dragon-rouge/README.md)
 
 Pour retrouver la pioche, ouvre **Mondes**, choisis **Aventure**, puis ouvre l’onglet **Fabriquer** de l’inventaire. La pioche d’éclat se fabrique avec deux planches et deux pavés. Sélectionne-la dans le sac pour la reprendre en main.

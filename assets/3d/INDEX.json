@@ -52,7 +52,7 @@
       "latest": "v1",
       "model_source": "assets/3d/epee-cuivre/epee-cuivre_v1.glb",
       "format": "glb",
-      "status": "asset_available_not_integrated"
+      "status": "integrated_webgl"
     },
     {
       "id": "hache-cuivre",
@@ -61,7 +61,7 @@
       "latest": "v1",
       "model_source": "assets/3d/hache-cuivre/hache-cuivre_v1.glb",
       "format": "glb",
-      "status": "asset_available_not_integrated"
+      "status": "integrated_webgl"
     },
     {
       "id": "bouclier-bois",
@@ -70,7 +70,7 @@
       "latest": "v1",
       "model_source": "assets/3d/bouclier-bois/bouclier-bois_v1.glb",
       "format": "glb",
-      "status": "asset_available_not_integrated"
+      "status": "integrated_webgl"
     },
     {
       "id": "plastron-cuivre",
@@ -79,7 +79,7 @@
       "latest": "v1",
       "model_source": "assets/3d/plastron-cuivre/plastron-cuivre_v1.glb",
       "format": "glb",
-      "status": "asset_available_not_integrated"
+      "status": "integrated_rider_webgl"
     }
   ]
 }
