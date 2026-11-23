@@ -66,7 +66,7 @@ export function findFortressSite(
   if (!Number.isFinite(playerX) || !Number.isFinite(playerZ)) return null;
   const px = Math.floor(playerX);
   const pz = Math.floor(playerZ);
-  const candidates: readonly (readonly [number, number])[] = [
+  const candidates: [number, number][] = [
     [128, -48],
     [128, 96],
     [-224, -48],
@@ -88,6 +88,26 @@ export function findFortressSite(
     [512, -608],
     [-608, 512],
   ];
+  // Large worlds may spawn among rivers, coastlines or mountains.
+  // Search progressively farther around the player instead of failing
+  // because the first handful of sites are unsuitable.
+  for (const radius of [384, 512, 768, 1024, 1536, 2048]) {
+    const half = radius / 2;
+    candidates.push(
+      [radius, 0],
+      [-radius, 0],
+      [0, radius],
+      [0, -radius],
+      [radius, radius],
+      [-radius, radius],
+      [radius, -radius],
+      [-radius, -radius],
+      [radius, half],
+      [-radius, half],
+      [half, radius],
+      [half, -radius],
+    );
+  }
   let fallback: { site: FortressLocation; relief: number } | null = null;
   for (const [dx, dz] of candidates) {
     const x = px + dx;
