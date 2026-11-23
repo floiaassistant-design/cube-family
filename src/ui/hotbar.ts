@@ -27,6 +27,8 @@ export class Hotbar {
   private readonly blockName: (name: string) => string;
   /** Fired when the selection or a slot's contents change. */
   onChange: (() => void) | undefined;
+  /** An explicit block choice, even when it selects the current slot. */
+  onSelect: (() => void) | undefined;
   /** Set false while a menu is open so keys and scroll don't reach it. */
   enabled = true;
   /** Adventure mode: how many of a block the player holds (null = unlimited). */
@@ -113,7 +115,9 @@ export class Hotbar {
   }
 
   select(index: number): void {
-    if (index === this.selectedIndex || index < 0 || index >= HOTBAR_SLOTS) return;
+    if (index < 0 || index >= HOTBAR_SLOTS) return;
+    this.onSelect?.();
+    if (index === this.selectedIndex) return;
     this.selectedIndex = index;
     this.applySelectionStyle();
     this.onChange?.();
@@ -126,6 +130,7 @@ export class Hotbar {
 
   /** Puts a block in the selected slot (from the inventory). */
   assign(block: BlockId): void {
+    this.onSelect?.();
     this.slots[this.selectedIndex] = block;
     this.renderSlot(this.selectedIndex);
     this.onChange?.();

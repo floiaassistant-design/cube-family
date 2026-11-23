@@ -52,6 +52,11 @@ export const TileKind = {
   GLOWSHROOM: 38,
   CLAY: 39,
   LANTERN_TOP: 40,
+  COPPER_ORE: 41,
+  DIAMOND_ORE: 42,
+  COPPER_BLOCK: 43,
+  CAMP_BED_TOP: 44,
+  CAMP_BED_SIDE: 45,
 } as const;
 
 export type TileKind = (typeof TileKind)[keyof typeof TileKind];
@@ -89,6 +94,7 @@ const CAPPED: Partial<Record<BlockId, readonly [TileKind, TileKind, TileKind]>> 
   [BlockId.CACTUS]: [TileKind.CACTUS_TOP, TileKind.CACTUS_SIDE, TileKind.CACTUS_TOP],
   [BlockId.SANDSTONE]: [TileKind.SANDSTONE_TOP, TileKind.SANDSTONE_SIDE, TileKind.SANDSTONE_TOP],
   [BlockId.LANTERN]: [TileKind.LANTERN_TOP, TileKind.LANTERN, TileKind.LANTERN_TOP],
+  [BlockId.CAMP_BED]: [TileKind.CAMP_BED_TOP, TileKind.CAMP_BED_SIDE, TileKind.PLANKS],
 };
 
 const UNIFORM: Record<BlockId, TileKind> = {
@@ -127,6 +133,10 @@ const UNIFORM: Record<BlockId, TileKind> = {
   [BlockId.FROSTED_GRASS]: TileKind.FROSTED_GRASS_SIDE,
   [BlockId.GLOWSHROOM]: TileKind.GLOWSHROOM,
   [BlockId.CLAY]: TileKind.CLAY,
+  [BlockId.COPPER_ORE]: TileKind.COPPER_ORE,
+  [BlockId.DIAMOND_ORE]: TileKind.DIAMOND_ORE,
+  [BlockId.COPPER_BLOCK]: TileKind.COPPER_BLOCK,
+  [BlockId.CAMP_BED]: TileKind.CAMP_BED_SIDE,
 };
 
 export function tileForBlockFace(id: BlockId, face: Face): TileKind {

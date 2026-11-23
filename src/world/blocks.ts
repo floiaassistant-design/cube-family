@@ -36,6 +36,10 @@ export const BlockId = {
   FROSTED_GRASS: 32,
   GLOWSHROOM: 33,
   CLAY: 34,
+  COPPER_ORE: 35,
+  DIAMOND_ORE: 36,
+  COPPER_BLOCK: 37,
+  CAMP_BED: 38,
 } as const;
 
 export type BlockId = (typeof BlockId)[keyof typeof BlockId];
@@ -148,6 +152,10 @@ export const BLOCKS: Readonly<Record<BlockId, BlockDef>> = {
   [BlockId.FROSTED_GRASS]: block(BlockId.FROSTED_GRASS, "frosted grass"),
   [BlockId.GLOWSHROOM]: plant(BlockId.GLOWSHROOM, "glowshroom", { emission: 7, sway: "none" }),
   [BlockId.CLAY]: block(BlockId.CLAY, "clay"),
+  [BlockId.COPPER_ORE]: block(BlockId.COPPER_ORE, "copper ore"),
+  [BlockId.DIAMOND_ORE]: block(BlockId.DIAMOND_ORE, "rough diamond"),
+  [BlockId.COPPER_BLOCK]: block(BlockId.COPPER_BLOCK, "hammered copper"),
+  [BlockId.CAMP_BED]: block(BlockId.CAMP_BED, "camp bed"),
 };
 
 export const BLOCK_COUNT = Object.keys(BLOCKS).length;
@@ -214,6 +222,10 @@ export const INVENTORY_BLOCKS: readonly BlockId[] = [
   BlockId.SANDSTONE,
   BlockId.GRAVEL,
   BlockId.CLAY,
+  BlockId.COPPER_ORE,
+  BlockId.DIAMOND_ORE,
+  BlockId.COPPER_BLOCK,
+  BlockId.CAMP_BED,
   BlockId.SNOW,
   BlockId.ICE,
   BlockId.FROSTED_GRASS,

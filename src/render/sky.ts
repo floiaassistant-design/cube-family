@@ -25,8 +25,8 @@ interface Keyframe {
   readonly ambient: number;
 }
 
-/** Phases the sun is actually in the sky: [0, DAYTIME_END] of each cycle. */
-const DAYTIME_END = 0.6;
+/** Phases the sun is actually in the sky: [0, SUNSET_PHASE] of each cycle. */
+export const SUNSET_PHASE = 0.6;
 
 const KEYFRAMES: readonly Keyframe[] = [
   { phase: 0.0, sky: [255, 177, 110], sun: 0.7, ambient: 0.42 }, // sunrise
@@ -67,7 +67,7 @@ export function skyStateAt(timeSeconds: number): SkyState {
     lerp(before.sky[2], after.sky[2], t) / 255,
   ];
 
-  const arcT = Math.min(phase / DAYTIME_END, 1);
+  const arcT = Math.min(phase / SUNSET_PHASE, 1);
 
   return {
     skyColor,

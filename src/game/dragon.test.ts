@@ -29,6 +29,26 @@ function steer(dragon: DragonMount, seconds: number, input: Partial<DragonInput>
 }
 
 describe("dragon mount", () => {
+  it("keeps the camera above and behind the saddle even when looking back", () => {
+    const { dragon } = plateau();
+    const seat = dragon.seat(PARKING);
+    for (const yaw of [0, Math.PI / 2, -Math.PI + 0.1]) {
+      const view = dragon.mountedCamera(PARKING, yaw, Math.PI / 2, 0.6);
+      expect(view.position.z).toBeGreaterThan(seat.z + 3);
+      expect(view.position.y).toBeGreaterThan(seat.y + 1.5);
+    }
+  });
+
+  it("looks over the other shoulder when a wall hides the default view", () => {
+    const { world, dragon } = plateau();
+    for (let x = 9; x <= 12; x++) {
+      for (let y = 22; y <= 29; y++) world.setBlock(x, y, 24, BlockId.STONE);
+    }
+    const view = dragon.mountedCamera(PARKING, 0, 0, 1.6);
+    expect(view.position.x).toBeLessThan(PARKING.x);
+    expect(view.distance).toBeGreaterThan(5);
+  });
+
   it("walks, climbs, glides and only allows a rider to dismount on dry land", () => {
     const { dragon } = plateau();
     expect(dragon.canMount({ ...PARKING, x: PARKING.x - 3 })).toBe(true);

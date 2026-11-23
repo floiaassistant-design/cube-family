@@ -588,6 +588,62 @@ const PAINTERS: Record<TileKind, Painter> = {
     paintStone(t);
     nuggets(t, 5, [226, 178, 52], [255, 236, 140], 255);
   },
+  [TileKind.COPPER_ORE]: (t) => {
+    paintStone(t);
+    nuggets(t, 5, [165, 87, 50], [240, 167, 101], 255);
+    speckle(t, [86, 144, 117], 4);
+  },
+  [TileKind.DIAMOND_ORE]: (t) => {
+    paintStone(t);
+    nuggets(t, 4, [57, 135, 187], [185, 242, 255], 255);
+  },
+  [TileKind.COPPER_BLOCK]: (t) => {
+    mottle(
+      t,
+      [
+        [122, 63, 38],
+        [178, 97, 59],
+        [221, 143, 89],
+      ],
+      5,
+    );
+    for (let x = 0; x < S; x++) {
+      t.shade(x, 0, 1.22);
+      t.shade(x, S - 1, 0.72);
+    }
+  },
+  [TileKind.CAMP_BED_TOP]: (t) => {
+    mottle(
+      t,
+      [
+        [118, 76, 51],
+        [149, 100, 66],
+      ],
+      4,
+    );
+    for (let y = 1; y < 15; y++) {
+      for (let x = 1; x < 15; x++) {
+        const linen = y < 6;
+        const seam = y === 6 || y === 13 || x === 1 || x === 14;
+        t.set(x, y, linen ? [230, 218, 185] : seam ? [57, 88, 116] : [91, 132, 160]);
+        if (t.rng() < 0.36) t.shade(x, y, 0.92);
+      }
+    }
+  },
+  [TileKind.CAMP_BED_SIDE]: (t) => {
+    mottle(
+      t,
+      [
+        [100, 67, 46],
+        [141, 94, 58],
+        [168, 115, 68],
+      ],
+      4,
+    );
+    for (let y = 0; y < 5; y++) {
+      for (let x = 0; x < S; x++) t.set(x, y, y === 4 ? [54, 85, 112] : [93, 137, 165]);
+    }
+  },
   [TileKind.CRYSTAL]: (t) => {
     mottle(
       t,

@@ -224,7 +224,7 @@ function subsurfaceBlock(profile: ColumnProfile, depth: number): BlockId {
 function oreAt(seed: number, x: number, y: number, z: number): BlockId {
   const h = hash3(seed ^ 0x0be5, x >> 2, y >> 2, z >> 2);
   const kind = h & 0xff;
-  if (kind >= 20) return BlockId.STONE;
+  if (kind >= 42) return BlockId.STONE;
   const cx = 1 + ((h >>> 8) & 1);
   const cy = 1 + ((h >>> 9) & 1);
   const cz = 1 + ((h >>> 10) & 1);
@@ -234,7 +234,9 @@ function oreAt(seed: number, x: number, y: number, z: number): BlockId {
   const reach = (h >>> 11) & 1 ? 2 : 1;
   if (dx * dx + dy * dy + dz * dz > reach) return BlockId.STONE;
   if (kind < 15) return BlockId.COAL_ORE;
-  return y < 34 ? BlockId.GOLD_ORE : BlockId.STONE;
+  if (kind < 20) return y < 34 ? BlockId.GOLD_ORE : BlockId.STONE;
+  if (kind < 40) return y >= 16 && y <= 64 ? BlockId.COPPER_ORE : BlockId.STONE;
+  return y <= 15 ? BlockId.DIAMOND_ORE : BlockId.STONE;
 }
 
 /** What grows on top of a column, if anything. */

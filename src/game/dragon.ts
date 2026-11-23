@@ -155,6 +155,12 @@ export class DragonMount {
     this.lastParking = position;
   }
 
+  /** Return the dragon to dry ground when the rider retreats from combat. */
+  returnToParking(): void {
+    this.flying = false;
+    if (this.lastParking) this.park(this.lastParking);
+  }
+
   canMount(position: Vec3): boolean {
     if (!this.state?.onGround) return false;
     const seat = this.seat(this.state.position);
@@ -217,9 +223,52 @@ export class DragonMount {
     return x < max.x && x + 1 > min.x && y < max.y && y + 1 > min.y && z < max.z && z + 1 > min.z;
   }
 
-  cameraDistance(origin: Vec3, direction: Vec3, distance: number): number {
+  private cameraDistance(origin: Vec3, direction: Vec3, distance: number): number {
     const hit = raycastVoxels(origin, direction, distance, this.obstacle);
     return hit ? Math.max(0, hit.distance - 0.22) : distance;
+  }
+
+  /** A rear three-quarter view keeps the rider in front of the camera and
+   * the head beyond the saddle, even when steering with the view turned. */
+  mountedCamera(position: Vec3, lookYaw: number, lookPitch: number, aspect: number) {
+    const seat = this.seat(position);
+    const focus = { ...seat, y: seat.y + 0.6 };
+    const relative = lookYaw - this.yaw;
+    const orbit = Math.max(
+      -1.08,
+      Math.min(1.08, Math.atan2(Math.sin(relative), Math.cos(relative)) + 0.5),
+    );
+    const pitch = Math.max(-0.69, Math.min(-0.19, lookPitch - 0.42));
+    const wantedDistance = aspect < 1 ? 8.6 : 7.7;
+    const shot = (yaw: number, tilt: number) => {
+      const direction = forwardVector(yaw);
+      const back = {
+        x: -direction.x * Math.cos(tilt),
+        y: -Math.sin(tilt),
+        z: -direction.z * Math.cos(tilt),
+      };
+      const distance = this.cameraDistance(focus, back, wantedDistance);
+      return {
+        yaw,
+        pitch: tilt,
+        distance,
+        position: {
+          x: focus.x + back.x * distance,
+          y: focus.y + back.y * distance,
+          z: focus.z + back.z * distance,
+        },
+      };
+    };
+    let best = shot(this.yaw + orbit, pitch);
+    if (best.distance < 4.8) {
+      // Try the other shoulder and a higher view before moving close to the saddle.
+      for (const offset of [-0.93, 0.93, 0]) {
+        const alternative = shot(this.yaw + offset, -0.67);
+        if (alternative.distance > best.distance) best = alternative;
+        if (best.distance >= wantedDistance) break;
+      }
+    }
+    return best;
   }
 
   step(dt: number, input: DragonInput | null): void {

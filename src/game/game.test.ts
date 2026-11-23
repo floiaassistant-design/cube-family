@@ -2,7 +2,19 @@ import { describe, expect, it } from "vitest";
 import { BLOCKS, BlockId, INVENTORY_BLOCKS } from "../world/blocks";
 import { Biome } from "../world/terrain";
 import { DISCOVERIES, Journal, type Surroundings } from "./discoveries";
-import { Bag, canCraft, craft, digSeconds, dropFor, RECIPES, STACK_LIMIT } from "./items";
+import {
+  Bag,
+  canCraft,
+  craft,
+  COPPER_ARMOR,
+  COPPER_PICK,
+  digSeconds,
+  dropFor,
+  type ItemId,
+  MINING_PICK,
+  RECIPES,
+  STACK_LIMIT,
+} from "./items";
 
 describe("dropFor", () => {
   it("turns rock into cobblestone and turf into dirt", () => {
@@ -31,15 +43,25 @@ describe("digSeconds", () => {
     expect(digSeconds(BlockId.TALL_GRASS)).toBeLessThan(digSeconds(BlockId.DIRT));
     expect(digSeconds(BlockId.DIRT)).toBeLessThan(digSeconds(BlockId.WOOD));
     expect(digSeconds(BlockId.WOOD)).toBeLessThan(digSeconds(BlockId.STONE));
-    expect(digSeconds(BlockId.STONE)).toBeLessThan(digSeconds(BlockId.CRYSTAL));
+    expect(digSeconds(BlockId.STONE)).toBeLessThan(digSeconds(BlockId.COAL_ORE));
   });
 
-  it("never lets bedrock break, and never asks for more than a couple of seconds", () => {
-    expect(digSeconds(BlockId.BEDROCK)).toBe(Infinity);
+  it("the pick speeds up rock and is required for gold and crystal", () => {
+    for (const ore of [BlockId.GOLD_ORE, BlockId.CRYSTAL, BlockId.DIAMOND_ORE]) {
+      expect(digSeconds(ore)).toBe(Infinity);
+      expect(digSeconds(ore, true)).toBeLessThanOrEqual(2);
+    }
+    expect(digSeconds(BlockId.STONE, true)).toBeLessThan(digSeconds(BlockId.STONE));
+    expect(digSeconds(BlockId.COAL_ORE, true)).toBeLessThan(digSeconds(BlockId.COAL_ORE));
+    expect(digSeconds(BlockId.WOOD, true)).toBe(digSeconds(BlockId.WOOD));
+  });
+
+  it("never lets bedrock break and keeps available blocks quick with the pick", () => {
+    expect(digSeconds(BlockId.BEDROCK, true)).toBe(Infinity);
     for (const def of Object.values(BLOCKS)) {
       if (!def.breakable) continue;
-      expect(digSeconds(def.id)).toBeGreaterThan(0);
-      expect(digSeconds(def.id)).toBeLessThanOrEqual(2);
+      expect(digSeconds(def.id, true)).toBeGreaterThan(0);
+      expect(digSeconds(def.id, true)).toBeLessThanOrEqual(2);
     }
   });
 });
@@ -88,9 +110,12 @@ describe("Bag", () => {
     const bag = new Bag();
     bag.add(BlockId.PLANKS, 12);
     bag.add(BlockId.CRYSTAL, 2);
+    bag.add(MINING_PICK);
     const copy = new Bag(JSON.parse(JSON.stringify(bag)) as unknown);
     expect(copy.count(BlockId.PLANKS)).toBe(12);
     expect(copy.count(BlockId.CRYSTAL)).toBe(2);
+    expect(copy.count(MINING_PICK)).toBe(1);
+    expect(copy.owned()).not.toContain(MINING_PICK);
   });
 
   it("drops anything invalid from a saved bag", () => {
@@ -118,11 +143,12 @@ describe("recipes", () => {
   it("have unique ids, real ingredients and something to show for it", () => {
     expect(new Set(RECIPES.map((r) => r.id)).size).toBe(RECIPES.length);
     for (const recipe of RECIPES) {
-      expect(INVENTORY_BLOCKS).toContain(recipe.output);
+      if (typeof recipe.output === "number") expect(INVENTORY_BLOCKS).toContain(recipe.output);
       expect(recipe.amount).toBeGreaterThan(0);
       expect(recipe.needs.length).toBeGreaterThan(0);
       for (const [block, amount] of recipe.needs) {
-        expect(INVENTORY_BLOCKS).toContain(block);
+        if (typeof block === "number") expect(INVENTORY_BLOCKS).toContain(block);
+        else expect(RECIPES.some((source) => source.output === block)).toBe(true);
         expect(amount).toBeGreaterThan(0);
         expect(block).not.toBe(recipe.output);
       }
@@ -131,11 +157,16 @@ describe("recipes", () => {
 
   it("can all be reached from what the world drops", () => {
     // Everything you can dig up, then everything craftable from that, and so on.
-    const reachable = new Set<BlockId>();
-    for (const def of Object.values(BLOCKS)) {
-      if (def.breakable && def.id !== BlockId.LANTERN && def.id !== BlockId.PLANKS) {
+    const reachable = new Set<ItemId>();
+    for (let pass = 0; pass < 5; pass++) {
+      for (const def of Object.values(BLOCKS)) {
+        if (!Number.isFinite(digSeconds(def.id, reachable.has(MINING_PICK)))) continue;
         const drop = dropFor(def.id);
         const crafted: readonly BlockId[] = [
+          BlockId.LANTERN,
+          BlockId.COPPER_BLOCK,
+          BlockId.CAMP_BED,
+          BlockId.PLANKS,
           BlockId.STONE_BRICK,
           BlockId.BRICK,
           BlockId.GLASS,
@@ -144,8 +175,6 @@ describe("recipes", () => {
         const natural = !crafted.includes(def.id);
         if (drop !== BlockId.AIR && natural) reachable.add(drop);
       }
-    }
-    for (let pass = 0; pass < 5; pass++) {
       for (const recipe of RECIPES) {
         if (recipe.needs.every(([block]) => reachable.has(block))) reachable.add(recipe.output);
       }
@@ -153,6 +182,39 @@ describe("recipes", () => {
     for (const recipe of RECIPES) expect(reachable.has(recipe.output)).toBe(true);
     expect(reachable.has(BlockId.LANTERN)).toBe(true);
     expect(reachable.has(BlockId.GLASS)).toBe(true);
+  });
+
+  it("crafts and equips just one pick without spending on duplicates", () => {
+    const bag = new Bag({ [BlockId.PLANKS]: 4, [BlockId.COBBLE]: 4 });
+    const recipe = RECIPES.find((r) => r.id === MINING_PICK);
+    if (!recipe) throw new Error("pick recipe missing");
+    expect(bag.count(MINING_PICK)).toBe(0);
+    expect(craft(bag, recipe)).toBe(true);
+    expect(craft(bag, recipe)).toBe(false);
+    expect(bag.count(MINING_PICK)).toBe(1);
+    expect(bag.count(BlockId.PLANKS)).toBe(2);
+    expect(bag.count(BlockId.COBBLE)).toBe(2);
+  });
+
+  it("upgrades the shard pick and crafts armor, copper decoration and a camp bed", () => {
+    const bag = new Bag({
+      [MINING_PICK]: 1,
+      [BlockId.COPPER_ORE]: 13,
+      [BlockId.PLANKS]: 6,
+      [BlockId.TALL_GRASS]: 2,
+    });
+    for (const id of [COPPER_PICK, COPPER_ARMOR, "camp-bed", "copper-block"]) {
+      const recipe = RECIPES.find((row) => row.id === id);
+      if (!recipe) throw new Error(`Missing recipe: ${id}`);
+      expect(craft(bag, recipe)).toBe(true);
+    }
+    expect(bag.pick).toBe(COPPER_PICK);
+    expect(bag.count(MINING_PICK)).toBe(0);
+    expect(bag.count(COPPER_ARMOR)).toBe(1);
+    expect(bag.count(BlockId.COPPER_BLOCK)).toBe(1);
+    expect(bag.count(BlockId.CAMP_BED)).toBe(1);
+    expect(bag.count(BlockId.COPPER_ORE)).toBe(0);
+    expect(digSeconds(BlockId.STONE, true, true)).toBeLessThan(digSeconds(BlockId.STONE, true));
   });
 
   it("crafting spends the ingredients and adds the result", () => {

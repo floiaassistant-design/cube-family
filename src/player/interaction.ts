@@ -63,6 +63,8 @@ export class BlockInteraction {
   occupiedByEntity: ((x: number, y: number, z: number) => boolean) | undefined;
   /** Fired a few times a second while digging, for the tapping sound. */
   onDigTick: ((block: BlockId) => void) | undefined;
+  onAttack: (() => boolean) | undefined;
+  onUse: ((hit: RaycastHit | null) => boolean) | undefined;
 
   /** The block being dug, how far along it is, and whether the dig keeps
    * going by itself (a tap or a trigger pull) or only while a button is
@@ -108,20 +110,18 @@ export class BlockInteraction {
           this.beginDig(false);
           return;
         }
-        const action =
-          e.button === 0
-            ? () => {
-                this.breakTargetedBlock();
-              }
-            : e.button === 2
-              ? () => {
-                  this.placeTargetedBlock();
-                }
-              : undefined;
-        if (!action) return;
-        action();
         this.stopRepeat();
-        this.repeatTimer = setInterval(action, REPEAT_MS);
+        if (e.button === 2) {
+          if (this.placeTargetedBlock()) return;
+          this.repeatTimer = setInterval(() => {
+            this.placeTargetedBlock(false);
+          }, REPEAT_MS);
+        } else if (e.button === 0) {
+          this.breakTargetedBlock();
+          this.repeatTimer = setInterval(() => {
+            this.breakTargetedBlock();
+          }, REPEAT_MS);
+        }
         return;
       }
 
@@ -167,6 +167,10 @@ export class BlockInteraction {
   /** Starts digging whatever is under the crosshair. Returns false if
    * there's nothing there that can be dug. */
   private beginDig(auto: boolean): boolean {
+    if (this.onAttack?.()) {
+      this.dig = null;
+      return true;
+    }
     const hit = this.raycastFromCamera();
     if (!hit) return false;
     const block = this.world.getBlock(hit.blockX, hit.blockY, hit.blockZ);
@@ -260,6 +264,7 @@ export class BlockInteraction {
    * keeps up) a dig that finishes by itself; otherwise the block goes at
    * once. */
   breakTargetedBlock(): void {
+    if (this.controller.riding) return;
     if (this.digSeconds) {
       this.beginDig(true);
       return;
@@ -282,27 +287,30 @@ export class BlockInteraction {
 
   /** Place the hotbar's block against the targeted face. Public for the
    * touch controls (place button). */
-  placeTargetedBlock(): void {
+  placeTargetedBlock(allowUse = true): boolean {
+    if (this.controller.riding) return false;
     const hit = this.raycastFromCamera();
-    if (!hit) return;
+    if (allowUse && this.onUse?.(hit)) return true;
+    if (!hit) return false;
     const block = this.selection.selectedBlock;
-    if (this.canPlace && !this.canPlace(block)) return;
+    if (this.canPlace && !this.canPlace(block)) return false;
 
     // Aiming at a tuft of grass replaces it rather than stacking beside it.
     const target = this.world.getBlock(hit.blockX, hit.blockY, hit.blockZ);
     const into = BLOCKS[target].replaceable
       ? { x: hit.blockX, y: hit.blockY, z: hit.blockZ }
       : { x: hit.placeX, y: hit.placeY, z: hit.placeZ };
-    if (into.y < 1 || into.y >= CHUNK_HEIGHT) return;
-    if (!BLOCKS[this.world.getBlock(into.x, into.y, into.z)].replaceable) return;
+    if (into.y < 1 || into.y >= CHUNK_HEIGHT) return false;
+    if (!BLOCKS[this.world.getBlock(into.x, into.y, into.z)].replaceable) return false;
     if (isSolid(block) || block === BlockId.WATER) {
-      if (this.occupiedByEntity?.(into.x, into.y, into.z)) return;
-      if (isSolid(block) && this.overlapsPlayer(into.x, into.y, into.z)) return;
+      if (this.occupiedByEntity?.(into.x, into.y, into.z)) return false;
+      if (isSolid(block) && this.overlapsPlayer(into.x, into.y, into.z)) return false;
     }
     // Plants need something to root in.
-    if (isPlant(block) && !isSolid(this.world.getBlock(into.x, into.y - 1, into.z))) return;
+    if (isPlant(block) && !isSolid(this.world.getBlock(into.x, into.y - 1, into.z))) return false;
 
     this.setBlock(into.x, into.y, into.z, block);
+    return false;
   }
 
   /** Middle click: which block is under the crosshair (for the hotbar). */
