@@ -83,8 +83,11 @@ export function createFortressBlueprint(site: FortressLocation): FortressBlock[]
       }
     }
   }
+  // Foundations reach the lowest allowed terrain even on a gently raised site.
+  // Never emit a block below bedrock for manually supplied low-lying locations.
+  const footingBottom = Math.max(-22, 1 - site.y);
   for (let x = 0; x <= S; x += 8)
-    for (let z = 0; z <= S; z += 8) fill(x, x + 1, z, z + 1, -7, -1, BlockId.COBBLE);
+    for (let z = 0; z <= S; z += 8) fill(x, x + 1, z, z + 1, footingBottom, -1, BlockId.COBBLE);
   // Primary and secondary curtains. Walkways are wide enough for defenders.
   ring(0, S, 1, 9, 3, BlockId.STONE_BRICK);
   ring(15, 80, 1, 7, 2, BlockId.STONE_BRICK);
