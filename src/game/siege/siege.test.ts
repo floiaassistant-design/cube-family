@@ -5,7 +5,7 @@ import { createColumnSampler, SEA_LEVEL } from "../../world/terrain";
 import { CHUNK_HEIGHT } from "../../world/coords";
 import { createFortressBlueprint, siegePath } from "./fortress";
 import { findFortressSite, FortressStore } from "./fortress-store";
-import { SiegeController } from "./session";
+import { MAX_SIEGE_ZOMBIES, SiegeController } from "./session";
 
 const site = { x: 128, z: -64, y: 62 } as const;
 const at = (x: number, y: number, z: number) =>
@@ -127,7 +127,7 @@ describe("solo zombie defense", () => {
     expect(session.report.phase).toBe("wave");
     for (let i = 0; i < 80; i++) session.update(0.1);
     expect(session.zombies.length).toBeGreaterThan(0);
-    expect(session.zombies.length).toBeLessThanOrEqual(18);
+    expect(session.zombies.length).toBeLessThanOrEqual(MAX_SIEGE_ZOMBIES);
     session.stop();
     expect(session.report.phase).toBe("idle");
     expect(session.zombies.length).toBe(0);
