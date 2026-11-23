@@ -11,7 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
-    "format": "prettier --write scripts/visual-check.mjs src/game/siege/session.ts src/render/creature-view.ts src/ui/siege-panel.ts && node -e 'const fs=require(\"fs\");for(const f of [\"scripts/visual-check.mjs\",\"src/game/siege/session.ts\",\"src/render/creature-view.ts\",\"src/ui/siege-panel.ts\"])console.log(\"FMTJSON:\"+JSON.stringify({path:f,content:fs.readFileSync(f,\"utf8\")}));' && prettier --check .",
+    "format": "prettier --check .",
     "format:fix": "prettier --write .",
     "typecheck": "tsc -b",
     "build:native": "tsc -b && vite build --mode native",
