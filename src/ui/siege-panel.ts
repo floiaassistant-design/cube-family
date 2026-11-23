@@ -53,12 +53,12 @@ export class SiegePanel {
       });
       return b;
     };
-    this.buildButton = button(
-      french ? "Construire (B)" : "Build (B)",
-      callbacks.build,
-    );
+    this.buildButton = button(french ? "Construire (B)" : "Build (B)", callbacks.build);
     this.visitButton = button(french ? "Visiter (V)" : "Visit (V)", callbacks.visit);
-    this.startButton = button(french ? "Lancer les vagues (N)" : "Start waves (N)", callbacks.start);
+    this.startButton = button(
+      french ? "Lancer les vagues (N)" : "Start waves (N)",
+      callbacks.start,
+    );
     this.stopButton = button(french ? "Arrêter (X)" : "Stop (X)", callbacks.stop);
     this.shootButton = button(french ? "Tirer (G)" : "Fire (G)", callbacks.shoot);
     this.repairButton = button(
