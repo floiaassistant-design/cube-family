@@ -1,23 +1,36 @@
-# Titan zombie de siège — Cube Family
+# Titan zombie de siege — Cube Family
 
-**Statut : modèle 3D prêt dans la bibliothèque, NON intégré au jeu.**
+**Statut : asset V2 pret pour revue ; non integre au jeu, site non modifie.**
 
-Boss original voxel pour les grandes vagues de la forteresse : silhouette d'environ 14 mètres, plaques rouillées, œil lumineux, armure de pierre au poing droit et point faible au torse. Aucun élément provenant d'un autre jeu.
+## Version V2 (concept de siege detaille)
 
-## Modèle
-- `titan_zombie_siege_v1.glb` : véritable GLB glTF 2.0, couleurs et normales embarquées. Aucun fichier externe.
-- Axes : **Y vers le haut**, **Z positif vers l'avant**, pieds autour de Y=0.
-- 9 pièces articulées : `Body`, `Head`, `Jaw`, `Arm_Left`, `Arm_Right`, `Leg_Left`, `Leg_Right`, `Back_Spines`, `Core_WeakPoint`.
-- Repères : `ImpactAnchor` (effet d'impact), `HeadTarget` (visée), `HealthBarAnchor` (barre de vie).
-- Animations GLB : `Idle`, `Walk`, `Smash`, `Roar`, `Death`.
-- Matières et couleurs embarquées, sans dépendance réseau, utilisables par `THREE.GLTFLoader`.
+- Fichier : `titan_zombie_siege_v2.glb` (GLB 2.0, couleur et animations integrees).
+- Source : `generer_titan_v2.mjs`, qui transforme **sans perte de l'original** la V1 presente dans ce dossier. Reproductible avec Node.js et sans paquet externe.
+- Plan de construction : [PLAN_V2.md](PLAN_V2.md).
+- Esthetique : poing droit gigantesque en pierre, plaques de fer rouille, tissu bordeaux, yeux verts lumineux, noyau rouge emissif, piques et chaines.
+- Morphologie : silhouette d'environ **14 metres**, axes Y vertical et +Z vers l'avant.
+- Animations : `Idle`, `Walk`, `Smash`, `Roar`, `Death` (pivots de V1 conserves).
+- Modifications : 178 volumes decoratifs repartis sur 10 meshes supplementaires; 23 noeuds / 19 meshes au total.
 
-## Proposition d'intégration ultérieure par Work
-1. Lire `AGENTS.md` et ne modifier aucun moteur partagé hors d'une PR dédiée.
-2. Charger le fichier GLB localement; piloter les clips avec `THREE.AnimationMixer`.
-3. Créer un contrôleur de boss indépendant dans `src/game/siege/`, lié aux grosses vagues de l'événement des Cinq Bastions.
-4. Attaquer les **portes** depuis **une seule face** de la forteresse : télégraphier `Smash`, déclencher le dégât au moment de l'impact, puis permettre la destruction progressive. Respecter les protections de sauvegarde et les règles du mode Libre.
-5. Ajouter une collision simplifiée (sans envelopper les bras étendus), la cible de combat, l'échelle, les sons et la prise en charge du rendu CPU.
-6. Tester PC, mobile et tablette, performances en présence de nombreux zombies, sauvegardes et non-régression avant fusion et publication.
+**Reproduire :**
 
-Le modèle seul ne crée **ni IA, ni destruction des portes, ni apparition dans le jeu**. Il ne faut pas le présenter comme déjà jouable ou publié.
+```bash
+node assets/3d/titan-zombie-siege/generer_titan_v2.mjs
+```
+
+La planche d'illustration initiale indiquait 24 m; **ce chiffre est errone** et ne doit pas servir d'echelle au jeu.
+
+## Version V1 conservee
+
+`titan_zombie_siege_v1.glb` reste disponible pour retour arriere; ses articulations, marqueurs et ses 5 animations glTF sont reutilises dans la V2.
+
+## Integration ulterieure (ChatGPT Work)
+
+1. Lire `AGENTS.md` et `docs/ARCHITECTURE.md`, verifier les regles du mini-jeu de la forteresse.
+2. Charger `titan_zombie_siege_v2.glb` comme ressource locale dans Three.js via `GLTFLoader` et piloter les clips par `AnimationMixer`.
+3. Integrer le boss a la simulation du siege dans `src/game/siege/`, separe du monde normal.
+4. Utiliser `ImpactAnchor` pour synchroniser une attaque telegraphiee sur une porte et `Core_WeakPoint` pour la zone sensible. Rien de cela n'est code par ce modele.
+5. Definir des collisions simples, les degats, l'IA, l'apparition, les sons et le fallback de rendu CPU.
+6. Tester clavier/souris, tactile, sauvegardes, hors ligne et performances, puis PR et validation avant publication.
+
+Le dossier est une bibliotheque d'assets, **pas une apparition automatique dans le jeu**.
