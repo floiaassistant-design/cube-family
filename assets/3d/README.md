@@ -31,3 +31,7 @@ Les ressources sont préparées ici pour Work, mais **aucun ajout dans ce dossie
 Les listes de créatures et équipements sont tenues dans
 [les catalogues de suivi](../../docs/catalogues/README.md).
 L'intégration réelle reste décrite par les fichiers du moteur et les tests.
+
+## Pack d'équipements cuivre et bois
+
+Épée, hache, bouclier et plastron : voir les fiches dans leurs sous-dossiers et le catalogue d'équipements. Les GLB sont des modèles à intégrer, pas des fonctionnalités déjà jouables.

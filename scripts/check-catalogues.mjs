@@ -17,7 +17,7 @@ for (const asset of assets) {
 }
 
 const validStates = new Set(["asset_only", "integrated_in_code"]);
-const creatureIds = new Set();
+const catalogAssetIds = new Set();
 
 for (const name of ["creatures", "equipements"]) {
   const catalog = load(`docs/catalogues/${name}.json`);
@@ -42,12 +42,12 @@ for (const name of ["creatures", "equipements"]) {
     if (entry.asset_id !== null) {
       assert(assetIds.has(entry.asset_id), `Asset inconnu : ${entry.id}`);
     }
-    if (name === "creatures") creatureIds.add(entry.id);
+    if (entry.asset_id !== null) catalogAssetIds.add(entry.asset_id);
   }
 }
 
 for (const id of assetIds) {
-  assert(creatureIds.has(id), `Modèle sans fiche créature : ${id}`);
+  assert(catalogAssetIds.has(id), `Modèle sans fiche : ${id}`);
 }
 
 console.log("Catalogues et références de modèles vérifiés.");

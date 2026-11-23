@@ -9,7 +9,10 @@
       "kind": "tool",
       "status": "integrated_in_code",
       "asset_id": null,
-      "source_files": ["src/game/items.ts", "src/ui/inventory.ts"],
+      "source_files": [
+        "src/game/items.ts",
+        "src/ui/inventory.ts"
+      ],
       "notes": "Recette et minage dans le mode Aventure; visibilité en main à vérifier sur les différentes interfaces."
     },
     {
@@ -18,7 +21,10 @@
       "kind": "tool",
       "status": "integrated_in_code",
       "asset_id": null,
-      "source_files": ["src/game/items.ts", "src/ui/inventory.ts"],
+      "source_files": [
+        "src/game/items.ts",
+        "src/ui/inventory.ts"
+      ],
       "notes": "Pioche améliorable avec le cuivre; vitesse de minage gérée dans items.ts."
     },
     {
@@ -26,10 +32,46 @@
       "name": "Plastron de cuivre",
       "kind": "armor",
       "status": "integrated_in_code",
-      "asset_id": null,
-      "source_files": ["src/game/items.ts", "src/game/wildlife.ts", "src/ui/inventory.ts"],
-      "notes": "Réduction des dégâts via la protection en cuivre; pas de modèle d'armure en 3D répertorié."
+      "asset_id": "plastron-cuivre",
+      "source_files": [
+        "src/game/items.ts",
+        "src/game/wildlife.ts",
+        "src/ui/inventory.ts"
+      ],
+      "notes": "Réduction des dégâts via la protection en cuivre; pas de modèle d'armure en 3D répertorié. Modèle GLB préparé, non intégré au rendu."
+    },
+    {
+      "id": "copper-sword",
+      "name": "Épée des clairières",
+      "kind": "weapon",
+      "status": "asset_only",
+      "asset_id": "epee-cuivre",
+      "source_files": [],
+      "notes": "Arme de mêlée proposée. Recette et dégâts à valider. Aucun objet de jeu actuellement."
+    },
+    {
+      "id": "copper-axe",
+      "name": "Hache des bois",
+      "kind": "tool",
+      "status": "asset_only",
+      "asset_id": "hache-cuivre",
+      "source_files": [],
+      "notes": "Outil de coupe du bois proposé. Recette et vitesse à valider. Aucun objet de jeu actuellement."
+    },
+    {
+      "id": "wood-shield",
+      "name": "Bouclier des sentiers",
+      "kind": "shield",
+      "status": "asset_only",
+      "asset_id": "bouclier-bois",
+      "source_files": [],
+      "notes": "Bouclier léger proposé pour bloquer quelques attaques. Mécanique à valider."
     }
   ],
-  "future_ideas": ["épées", "haches", "armures supplémentaires", "équipements propres aux montures"]
+  "future_ideas": [
+    "épées",
+    "haches",
+    "armures supplémentaires",
+    "équipements propres aux montures"
+  ]
 }
