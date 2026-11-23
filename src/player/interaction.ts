@@ -60,6 +60,8 @@ export class BlockInteraction {
   digSeconds: ((block: BlockId) => number) | undefined;
   /** Adventure mode: whether the player actually has this block to place. */
   canPlace: ((block: BlockId) => boolean) | undefined;
+  /** Prevent breaking protected event structures without changing normal digging. */
+  canBreak: ((x: number, y: number, z: number) => boolean) | undefined;
   occupiedByEntity: ((x: number, y: number, z: number) => boolean) | undefined;
   /** Fired a few times a second while digging, for the tapping sound. */
   onDigTick: ((block: BlockId) => void) | undefined;
@@ -265,6 +267,7 @@ export class BlockInteraction {
    * once. */
   breakTargetedBlock(): void {
     if (this.controller.riding) return;
+    if (!this.digSeconds && this.onAttack?.()) return;
     if (this.digSeconds) {
       this.beginDig(true);
       return;
@@ -276,6 +279,7 @@ export class BlockInteraction {
 
   private breakAt(x: number, y: number, z: number): void {
     const current = this.world.getBlock(x, y, z);
+    if (this.canBreak && !this.canBreak(x, y, z)) return;
     if (!BLOCKS[current].breakable) return;
     this.setBlock(x, y, z, BlockId.AIR);
     // A plant can't hang in the air once its ground is gone.
