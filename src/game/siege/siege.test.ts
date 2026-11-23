@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { BlockId } from "../../world/blocks";
+import { findPleasantSpawn } from "../../world/spawn";
+import { createColumnSampler, SEA_LEVEL } from "../../world/terrain";
+import { CHUNK_HEIGHT } from "../../world/coords";
 import { createFortressBlueprint, siegePath } from "./fortress";
 import { findFortressSite, FortressStore } from "./fortress-store";
 import { SiegeController } from "./session";
@@ -63,6 +66,17 @@ describe("fortress world metadata and placement", () => {
     expect(s).not.toBeNull();
     expect(s?.x).not.toBe(128);
     expect(s?.y).toBe(62);
+  });
+
+  it("finds a safe construction site in the reference seeded world", () => {
+    const sampler = createColumnSampler(2026);
+    const spawn = findPleasantSpawn(2026);
+    const site = findFortressSite(spawn.x, spawn.z, sampler, () => false);
+    expect(site).not.toBeNull();
+    if (!site) return;
+    expect(site.y).toBeGreaterThan(SEA_LEVEL + 2);
+    expect(site.y + 20).toBeLessThan(CHUNK_HEIGHT);
+    expect(findFortressSite(spawn.x, spawn.z, sampler, () => true)).toBeNull();
   });
 
   it("stores a fortress per seed and clears it without touching player data", () => {
