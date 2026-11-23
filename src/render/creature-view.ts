@@ -73,9 +73,9 @@ export class CreatureView {
         this.delta.copy(creature.position).sub(this.camera.position);
         return { creature, depth: this.forward.dot(this.delta) };
       })
-      .filter(({ creature, depth }) =>
-        depth > 0.18 &&
-        depth < (creature.kind === "siege-zombie" ? (this.webgl ? 64 : 28) : 24),
+      .filter(
+        ({ creature, depth }) =>
+          depth > 0.18 && depth < (creature.kind === "siege-zombie" ? (this.webgl ? 64 : 28) : 24),
       )
       .sort((a, b) => b.depth - a.depth);
     const focus = height / (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)));
