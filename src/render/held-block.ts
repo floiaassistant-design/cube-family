@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { COPPER_PICK, type HeldItem, isMiningPick } from "../game/items";
+import { isNewEquipment } from "../game/equipment";
+import { EquipmentHandModels } from "./equipment-models";
 import { BLOCKS, type BlockId } from "../world/blocks";
 import { type Face, tileForBlockFace } from "./atlas-layout";
 import { drawMiningPickParts, MINING_PICK_GRID_SIZE } from "./mining-pick-art";
@@ -127,6 +129,7 @@ export class HeldBlock {
   private readonly cross: THREE.Mesh;
   private readonly pick: THREE.Mesh;
   private readonly group = new THREE.Group();
+  private readonly equipmentModels = new EquipmentHandModels(this.group);
   private readonly camera: THREE.PerspectiveCamera;
   private item: HeldItem | null = null;
   private pending: HeldItem | null = null;
@@ -200,10 +203,16 @@ export class HeldBlock {
 
   private apply(item: HeldItem): void {
     this.item = item;
+    this.equipmentModels.setItem(isNewEquipment(item) ? item : null);
     this.pick.visible = isMiningPick(item);
     if (isMiningPick(item)) {
       if (this.material.uniforms.uCopper)
         this.material.uniforms.uCopper.value = item === COPPER_PICK ? 1 : 0;
+      this.cube.visible = false;
+      this.cross.visible = false;
+      return;
+    }
+    if (isNewEquipment(item)) {
       this.cube.visible = false;
       this.cross.visible = false;
       return;
@@ -262,6 +271,7 @@ export class HeldBlock {
     const arc = Math.sin((1 - this.swing / SWING_SECONDS) * Math.PI) * (this.swing > 0 ? 1 : 0);
     // Tuck the hand in on narrow (portrait) screens so it stays in view.
     const holdingPick = this.item !== null && isMiningPick(this.item);
+    const holdingModel = this.item !== null && isNewEquipment(this.item);
     const aspect = this.camera.aspect;
     const x = holdingPick
       ? Math.max(0.15, Math.min(0.68, 0.34 * aspect))
@@ -272,6 +282,12 @@ export class HeldBlock {
       -0.95 - arc * 0.22,
     );
     this.group.rotation.set(0.12 - arc * 0.95, 0.62 + arc * 0.25, 0.04);
-    this.group.scale.setScalar(holdingPick ? 0.3 * Math.min(1, Math.max(0.68, aspect)) : 0.3);
+    this.group.scale.setScalar(
+      holdingModel
+        ? 0.68 * Math.min(1, Math.max(0.65, aspect))
+        : holdingPick
+          ? 0.3 * Math.min(1, Math.max(0.68, aspect))
+          : 0.3,
+    );
   }
 }

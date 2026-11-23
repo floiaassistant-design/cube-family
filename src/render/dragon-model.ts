@@ -10,6 +10,8 @@ import {
 import type { Vec3 } from "../player/physics";
 import { ATMOSPHERE, OUTPUT } from "./shaders/common";
 import type { UniformMap } from "./terrain-material";
+import { COPPER_ARMOR } from "../game/items";
+import { loadEquipmentModel } from "./equipment-models";
 
 const VERTEX = /* glsl */ `
   out vec3 vColor;
@@ -86,6 +88,9 @@ export class DragonModel {
   private readonly root = new THREE.Group();
   private readonly material: THREE.ShaderMaterial;
   private readonly rider: THREE.Mesh;
+  private armorModel: THREE.Group | null = null;
+  private armorLoading = false;
+  private armored = false;
   private wings: THREE.Object3D[] = [];
   private legs: THREE.Object3D[] = [];
   private tail: THREE.Object3D[] = [];
@@ -109,6 +114,32 @@ export class DragonModel {
     this.root.add(this.rider);
     this.root.visible = false;
     scene?.add(this.root);
+  }
+
+  /** Render the chestplate on the saddle rider, without affecting first-person controls. */
+  setArmored(armored: boolean): void {
+    this.armored = armored;
+    if (this.armorModel) {
+      this.armorModel.visible = armored;
+      return;
+    }
+    if (!armored || this.armorLoading) return;
+    this.armorLoading = true;
+    void loadEquipmentModel(COPPER_ARMOR)
+      .then((model) => {
+        model.scale.setScalar(0.72);
+        model.rotation.y = Math.PI;
+        model.position.set(0, 0.38, 0);
+        this.rider.add(model);
+        this.armorModel = model;
+        model.visible = this.armored;
+      })
+      .catch((error: unknown) => {
+        console.warn("Chestplate model unavailable:", error);
+      })
+      .finally(() => {
+        this.armorLoading = false;
+      });
   }
 
   get visibleModel(): THREE.Group | null {

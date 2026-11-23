@@ -3,9 +3,14 @@ import {
   type Bag,
   canCraft,
   COPPER_ARMOR,
+  COPPER_AXE,
   COPPER_PICK,
+  COPPER_SWORD,
+  isHandEquipment,
   isMiningPick,
+  type HandEquipment,
   type ItemId,
+  WOOD_SHIELD,
   type Recipe,
   RECIPES,
 } from "../game/items";
@@ -21,6 +26,7 @@ export interface InventoryState {
   readonly bag: Bag | null;
   readonly journal: Journal;
   readonly pickInHand: boolean;
+  readonly heldEquipment: HandEquipment | null;
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(
@@ -79,9 +85,19 @@ export class Inventory {
 
   private itemName(item: ItemId): string {
     if (typeof item === "number") return this.t.block(BLOCKS[item].name);
-    return this.t(
-      item === COPPER_ARMOR ? "copperArmor" : item === COPPER_PICK ? "copperPick" : "miningPick",
-    );
+    const name =
+      item === COPPER_ARMOR
+        ? "copperArmor"
+        : item === COPPER_PICK
+          ? "copperPick"
+          : item === COPPER_SWORD
+            ? "copperSword"
+            : item === COPPER_AXE
+              ? "copperAxe"
+              : item === WOOD_SHIELD
+                ? "woodShield"
+                : "miningPick";
+    return this.t(name);
   }
 
   private icon(block: ItemId): HTMLCanvasElement {
@@ -154,7 +170,7 @@ export class Inventory {
     }
     const grid = el("div", "inventory-grid");
     for (const item of equipment) {
-      const canHold = isMiningPick(item);
+      const canHold = isHandEquipment(item);
       const tool = el(canHold ? "button" : "div", "inventory-cell inventory-tool");
       tool.dataset.item = item;
       tool.title = this.itemName(item);
@@ -162,7 +178,7 @@ export class Inventory {
       tool.append(this.icon(item), el("span", "cell-count", "1"));
       if (tool instanceof HTMLButtonElement) {
         tool.type = "button";
-        tool.setAttribute("aria-pressed", String(state.pickInHand));
+        tool.setAttribute("aria-pressed", String(state.heldEquipment === item));
         tool.addEventListener("click", () => {
           this.onChoose?.(item);
         });
@@ -223,7 +239,13 @@ export class Inventory {
             ? "copperArmorRecipe"
             : recipe.output === COPPER_PICK
               ? "copperPickRecipe"
-              : "miningPickRecipe";
+              : recipe.output === COPPER_SWORD
+                ? "copperSwordRecipe"
+                : recipe.output === COPPER_AXE
+                  ? "copperAxeRecipe"
+                  : recipe.output === WOOD_SHIELD
+                    ? "woodShieldRecipe"
+                    : "miningPickRecipe";
         label.append(el("small", undefined, this.t(owned ? "miningPickOwned" : description)));
         makes.append(icon, label);
       } else {

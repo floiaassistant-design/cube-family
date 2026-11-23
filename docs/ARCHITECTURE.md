@@ -16,7 +16,9 @@ PC et mobile, plutôt que de maintenir des versions du gameplay divergentes.
 - `src/world/` : génération, blocs, chunks, sauvegardes et formats stables.
 - `src/player/` et `src/input/` : déplacements, physiques et commandes.
 - `src/game/` : règles des créatures, montures, équipement, recettes et combats.
+  Le module `equipment.ts` isole les nouveaux effets d'armes et de défense.
 - `src/render/` : modèles 3D, WebGL et solution de repli CPU.
+  `equipment-models.ts` charge localement les GLB d'équipements à la demande.
 - `src/ui/`, `src/i18n.ts` : HUD, menus, accès tactile et traductions.
 - `src/audio/` : sons.
 - `assets/3d/` : fichiers de modèles, fiches, scripts et `INDEX.json`.

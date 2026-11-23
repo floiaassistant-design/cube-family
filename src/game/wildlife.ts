@@ -1,3 +1,4 @@
+import { incomingDamage } from "./equipment";
 import { forwardVector, PLAYER_EYE_HEIGHT, type Vec3 } from "../player/physics";
 import { DAY_LENGTH_SECONDS, SUNSET_PHASE } from "../render/sky";
 import { CHUNK_HEIGHT } from "../world/coords";
@@ -35,7 +36,7 @@ export type Creature = Cat | NightCreature;
 
 export type CatResult = "adopted" | "purr" | "kitten" | "full" | "resting";
 export type StrikeResult = "struck" | "defeated" | "recovering";
-export type WildlifeEvent = "hurt" | "retreat";
+export type WildlifeEvent = "hurt" | "retreat" | "blocked";
 
 export interface WildlifeTerrain {
   /** Returns dry walkable ground just above or below this level. */
@@ -197,6 +198,7 @@ export class Wildlife {
     night: boolean | null,
     active: boolean,
     protectedByCopper: boolean,
+    shieldHeld = false,
   ): WildlifeEvent | null {
     if (!night) {
       this.roaming.clear();
@@ -218,7 +220,7 @@ export class Wildlife {
       this.life++;
       this.healAt = this.elapsed + 5;
     }
-    if (night) return this.updateNight(player, step, protectedByCopper);
+    if (night) return this.updateNight(player, step, protectedByCopper, shieldHeld);
     return null;
   }
 
@@ -295,7 +297,12 @@ export class Wildlife {
     return true;
   }
 
-  private updateNight(player: Vec3, dt: number, armored: boolean): WildlifeEvent | null {
+  private updateNight(
+    player: Vec3,
+    dt: number,
+    armored: boolean,
+    shieldHeld: boolean,
+  ): WildlifeEvent | null {
     if (this.elapsed >= this.nextSpawn) {
       this.nextSpawn = this.elapsed + 8;
       this.spawnRoamer(player);
@@ -314,7 +321,9 @@ export class Wildlife {
       ) {
         this.lastDamage = this.elapsed + 1.45;
         this.healAt = this.elapsed + 5;
-        this.life -= armored ? 1 : 2;
+        const damage = incomingDamage(armored, shieldHeld);
+        this.life -= damage;
+        if (damage === 0) return "blocked";
         if (this.life > 0) return "hurt";
         this.life = MAX_HEALTH;
         this.roaming.clear();
@@ -383,10 +392,10 @@ export class Wildlife {
     return "kitten";
   }
 
-  strike(creature: NightCreature): StrikeResult {
+  strike(creature: NightCreature, damage = 2): StrikeResult {
     if (this.elapsed < this.lastStrike) return "recovering";
     this.lastStrike = this.elapsed + 0.45;
-    creature.health -= 2;
+    creature.health -= Math.max(1, Math.min(4, Math.floor(damage)));
     if (creature.health > 0) return "struck";
     this.roaming.delete(creature.id);
     return "defeated";
