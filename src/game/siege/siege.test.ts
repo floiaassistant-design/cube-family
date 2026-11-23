@@ -32,6 +32,21 @@ describe("five-bastion fortress", () => {
     }
   });
 
+  it("provides usable ascent steps to every tower and the outer rampart", () => {
+    for (const tx of [0, 83]) {
+      for (const tz of [0, 83]) {
+        expect(at(tx + 6, 2, tz + (tz === 0 ? 10 : 2))).toBe(BlockId.COBBLE);
+        expect(at(tx + 3, 16, tz + (tz === 0 ? 5 : 7))).toBe(BlockId.COBBLE);
+      }
+    }
+    for (const tx of [5, 90]) {
+      expect(at(tx, 10, 4)).toBe(BlockId.COBBLE);
+      expect(at(tx, 1, 13)).toBe(BlockId.COBBLE);
+      expect(at(tx, 10, 91)).toBe(BlockId.COBBLE);
+      expect(at(tx, 1, 82)).toBe(BlockId.COBBLE);
+    }
+  });
+
   it("rejects sites outside safe world height", () => {
     expect(() => createFortressBlueprint({ ...site, y: 115 })).toThrow();
   });
