@@ -41,7 +41,6 @@ const EN = {
   worldImportConflict: "This world's seed is already on this device. No data was replaced.",
   worldImportInvalid: "The backup file is invalid or too large.",
 
-
   fullscreen: "Fullscreen",
   back: "Back",
   privacy: "Privacy",
@@ -199,7 +198,6 @@ const FR: Record<TextKey, string> = {
   worldImportSuccess: "Monde restauré. Sélectionnez-le dans la liste pour jouer.",
   worldImportConflict: "Cette graine existe déjà sur cet appareil. Aucune donnée remplacée.",
   worldImportInvalid: "Le fichier de sauvegarde est invalide ou trop volumineux.",
-
 
   fullscreen: "Plein écran",
   back: "Retour",

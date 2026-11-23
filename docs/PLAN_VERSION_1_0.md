@@ -11,15 +11,15 @@ Le document maître, avec l'inventaire complet des tâches, les décisions produ
 
 ## Ordre de priorité — jalons et critères
 
-| Priorité | Références Notion | Jalons | Conditions de validation |
-| --- | --- | --- | --- |
-| P0 | W-01 à W-06 | Protection des mondes | Liste de mondes, sauvegarde/export/import, gestion des erreurs et compatibilité des mondes anciens, site à jour |
-| P0 | M-01 à M-09 | Multijoueur familial | Cinq joueurs réels en simultané, invitations privées, monde et inventaires synchronisés, sauvegardes serveur et reconnexion |
-| P0 transverse | T-01 à T-06 | Fiabilité | CI verte, migrations testées, mesures PC/mobile, rendu WebGL/CPU, audits et tests navigateur |
-| P1 | G-01 à G-09 | Aventure intéressante | Première heure de jeu cohérente, collecte/fabrication, objectifs, combat, créatures et exploration utiles |
-| P1 | F-01 à F-06 | Forteresse aboutie | Vagues équilibrées, portes fiables, Titan intégré et animé, coopération future et tests de performances |
-| P1 | U-01 à U-05 | Interface et qualité | Interface adaptée tablette/téléphone, commandes, lisibilité, animations/audio cohérents, accessibilité |
-| P2 | P-01 à P-03 | Extensions | Mini-jeux, échanges, version native et distribution après stabilisation de la V1.0 |
+| Priorité      | Références Notion | Jalons                | Conditions de validation                                                                                                    |
+| ------------- | ----------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| P0            | W-01 à W-06       | Protection des mondes | Liste de mondes, sauvegarde/export/import, gestion des erreurs et compatibilité des mondes anciens, site à jour             |
+| P0            | M-01 à M-09       | Multijoueur familial  | Cinq joueurs réels en simultané, invitations privées, monde et inventaires synchronisés, sauvegardes serveur et reconnexion |
+| P0 transverse | T-01 à T-06       | Fiabilité             | CI verte, migrations testées, mesures PC/mobile, rendu WebGL/CPU, audits et tests navigateur                                |
+| P1            | G-01 à G-09       | Aventure intéressante | Première heure de jeu cohérente, collecte/fabrication, objectifs, combat, créatures et exploration utiles                   |
+| P1            | F-01 à F-06       | Forteresse aboutie    | Vagues équilibrées, portes fiables, Titan intégré et animé, coopération future et tests de performances                     |
+| P1            | U-01 à U-05       | Interface et qualité  | Interface adaptée tablette/téléphone, commandes, lisibilité, animations/audio cohérents, accessibilité                      |
+| P2            | P-01 à P-03       | Extensions            | Mini-jeux, échanges, version native et distribution après stabilisation de la V1.0                                          |
 
 ## Chantier immédiat : W-02 / W-03
 

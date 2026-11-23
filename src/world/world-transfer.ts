@@ -186,29 +186,18 @@ export function importWorldArchive(
   } catch {
     return { ok: false, reason: "storage" };
   }
-  const written: string[] = [];
-  const rollback = (): void => {
-    for (const key of written) {
-      try {
-        storage.removeItem?.(key);
-      } catch {
-        // Next boot can discover any remaining legacy key; never overwrite it.
-      }
-    }
-  };
+  // Reserve the seed before writing its save payload: registry.create checks
+  // that no saves exist yet, so invoking it after writes would fail.
+  if (!registry.create(name, mode, seed)) return { ok: false, reason: "storage" };
   try {
     for (const { key, value } of keys) {
-      if (value === null) continue;
-      storage.setItem(key, value);
-      written.push(key);
-    }
-    if (!registry.create(name, mode, seed)) {
-      rollback();
-      return { ok: false, reason: "storage" };
+      if (value !== null) storage.setItem(key, value);
     }
     return { ok: true, seed };
   } catch {
-    rollback();
+    // The new world is not active. Remove every new key and its registry
+    // entry; preflight guaranteed there were no earlier keys to destroy.
+    registry.remove(seed, -1);
     return { ok: false, reason: "storage" };
   }
 }

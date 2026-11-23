@@ -102,15 +102,27 @@ describe("world transfer", () => {
       '{"0,0":[]}',
     ];
     for (const bad of edits) {
-      expect(importWorldArchive(target, registry, JSON.stringify({
-        ...base,
-        saves: { ...base.saves, edits: bad },
-      })).ok).toBe(false);
+      expect(
+        importWorldArchive(
+          target,
+          registry,
+          JSON.stringify({
+            ...base,
+            saves: { ...base.saves, edits: bad },
+          }),
+        ).ok,
+      ).toBe(false);
     }
-    expect(importWorldArchive(target, registry, JSON.stringify({
-      ...base,
-      saves: { ...base.saves, player: '{"x":1}' },
-    })).ok).toBe(false);
+    expect(
+      importWorldArchive(
+        target,
+        registry,
+        JSON.stringify({
+          ...base,
+          saves: { ...base.saves, player: '{"x":1}' },
+        }),
+      ).ok,
+    ).toBe(false);
     expect(target.data.size).toBe(0);
   });
 
@@ -160,7 +172,9 @@ describe("world transfer", () => {
     const bad = JSON.parse(raw) as Record<string, unknown>;
     bad.version = 2;
     const destination = memory();
-    expect(importWorldArchive(destination, new WorldRegistry(destination), JSON.stringify(bad))).toEqual({
+    expect(
+      importWorldArchive(destination, new WorldRegistry(destination), JSON.stringify(bad)),
+    ).toEqual({
       ok: false,
       reason: "invalid",
     });

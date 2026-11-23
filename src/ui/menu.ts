@@ -404,7 +404,8 @@ export class Menu {
         fileInput.value = "";
         return;
       }
-      void file.text()
+      void file
+        .text()
         .then((contents) => {
           const result = this.handlers.onImportWorld(contents);
           if (result.ok) {
