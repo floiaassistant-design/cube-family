@@ -1134,6 +1134,76 @@ try {
   );
   await adventure.close();
 
+  // A real in-world fortress smoke test: place it through the same button
+  // as a player, verify the crystal voxel, reload, then launch the first wave.
+  // Distinct from tests of the menu or the pure siege state machine.
+  const fortressPage = await openPage(
+    "fortress",
+    `${BASE_URL}?seed=2026&quality=low&view=3&lang=en`,
+  );
+  await waitForWorld(fortressPage, 9);
+  await fortressPage.click("#play-button");
+  await until(
+    fortressPage,
+    () => document.querySelector("#siege-panel")?.hidden === false,
+  );
+  await fortressPage.evaluate(() => {
+    window.confirm = () => true;
+    document.querySelector("#siege-panel button")?.click();
+  });
+  const created = await until(
+    fortressPage,
+    () =>
+      window.__mc.siege() !== null &&
+      window.localStorage.getItem("voxel-world:fortress:v1:2026") !== null,
+    undefined,
+    30000,
+  );
+  report("fortress can be built from Creative within the existing world", created);
+  if (created) {
+    const crystalReady = await until(
+      fortressPage,
+      () => {
+        const raw = localStorage.getItem("voxel-world:fortress:v1:2026");
+        if (!raw) return false;
+        const site = JSON.parse(raw);
+        return window.__mc.blockAt(site.x + 47, site.y + 3, site.z + 47) === 21;
+      },
+      undefined,
+      60000,
+    );
+    report("the generated fortress has a physical central crystal block", crystalReady);
+    await fortressPage.reload({ waitUntil: "domcontentloaded" });
+    await waitForWorld(fortressPage, 9);
+    const persisted = await until(
+      fortressPage,
+      () => {
+        const raw = localStorage.getItem("voxel-world:fortress:v1:2026");
+        if (!raw || window.__mc.siege() === null) return false;
+        const site = JSON.parse(raw);
+        return window.__mc.blockAt(site.x + 47, site.y + 3, site.z + 47) === 21;
+      },
+      undefined,
+      60000,
+    );
+    report("the fortress survives a reload in the same free world", persisted);
+    await fortressPage.click("#play-button");
+    await fortressPage.evaluate(() => {
+      const start = [...document.querySelectorAll("#siege-panel button")].find((b) =>
+        b.textContent?.startsWith("Start waves"),
+      );
+      start?.click();
+    });
+    const siegeStarted = await until(
+      fortressPage,
+      () => window.__mc.siege()?.phase === "preparation",
+      undefined,
+      6000,
+    );
+    report("players launch zombie waves from inside their free world", siegeStarted);
+  }
+  await fortressPage.browserContext().close();
+
   // Boot the real production build with local storage denied by the browser.
   // Only the test build should expose the debug API used above.
   const production = await openPage(
