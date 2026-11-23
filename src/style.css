@@ -521,7 +521,6 @@ kbd {
   user-select: text;
 }
 
-
 /* Named local worlds — vertically scrollable for short landscape screens. */
 .world-screen {
   max-height: calc(100dvh - 32px);

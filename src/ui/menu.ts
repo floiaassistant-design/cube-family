@@ -270,7 +270,6 @@ export class Menu {
     return screen;
   }
 
-
   private buildWorld(worldButton: HTMLButtonElement | null): HTMLElement {
     const screen = el("div", "menu-screen world-screen");
     screen.dataset.screen = "world";
@@ -292,11 +291,7 @@ export class Menu {
           : this.t("worldLegacy");
         card.append(
           heading,
-          el(
-            "p",
-            "world-meta",
-            this.t("worldCardDetails", { mode, seed: world.seed, date: last }),
-          ),
+          el("p", "world-meta", this.t("worldCardDetails", { mode, seed: world.seed, date: last })),
         );
         const actions = el("div", "world-actions");
         const open = el(
@@ -383,7 +378,11 @@ export class Menu {
     const modeSelect = el("select");
     modeSelect.setAttribute("aria-label", this.t("mode"));
     for (const m of ["creative", "adventure"] as const) {
-      const option = el("option", undefined, this.t(m === "adventure" ? "modeAdventure" : "modeCreative"));
+      const option = el(
+        "option",
+        undefined,
+        this.t(m === "adventure" ? "modeAdventure" : "modeCreative"),
+      );
       option.value = m;
       option.selected = m === this.handlers.mode;
       modeSelect.append(option);
@@ -436,7 +435,11 @@ export class Menu {
       hint.textContent = this.t(current === "adventure" ? "modeAdventureHint" : "modeCreativeHint");
     };
     for (const mode of ["creative", "adventure"] as const) {
-      const button = el("button", undefined, this.t(mode === "adventure" ? "modeAdventure" : "modeCreative"));
+      const button = el(
+        "button",
+        undefined,
+        this.t(mode === "adventure" ? "modeAdventure" : "modeCreative"),
+      );
       button.type = "button";
       button.dataset.mode = mode;
       button.addEventListener("click", () => {

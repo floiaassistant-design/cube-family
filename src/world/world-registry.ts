@@ -81,7 +81,13 @@ export class WorldRegistry {
   }
 
   private fallback(seed: number): WorldEntry {
-    return { seed, name: `World ${seed.toString()}`, mode: "creative", createdAt: 0, lastPlayed: 0 };
+    return {
+      seed,
+      name: `World ${seed.toString()}`,
+      mode: "creative",
+      createdAt: 0,
+      lastPlayed: 0,
+    };
   }
 
   private load(): void {
@@ -164,7 +170,9 @@ export class WorldRegistry {
   private seedOccupied(seed: number): boolean {
     if (this.worlds.has(seed)) return true;
     try {
-      return SAVE_PREFIXES.some((prefix) => Boolean(this.storage?.getItem(prefix + seed.toString())));
+      return SAVE_PREFIXES.some((prefix) =>
+        Boolean(this.storage?.getItem(prefix + seed.toString())),
+      );
     } catch {
       // Never assume an unavailable store is empty.
       return true;

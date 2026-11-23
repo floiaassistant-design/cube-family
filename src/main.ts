@@ -955,7 +955,6 @@ function boot(): void {
       persist();
       const url = new URL(window.location.href);
       url.searchParams.set("seed", entry.seed.toString());
-      url.searchParams.set("mode", entry.mode);
       window.location.href = url.toString();
       return true;
     },

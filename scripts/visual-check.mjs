@@ -1291,7 +1291,6 @@ try {
   }
   await fortressPage.browserContext().close();
 
-
   // Named-world menu must preserve old saves and open a fresh Adventure world.
   const library = await openPage("world-library", pageUrl(991291, "quality=low&view=4"));
   await waitForWorld(library, 5);

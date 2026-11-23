@@ -13,7 +13,8 @@ const EN = {
   settings: "Settings",
   worlds: "Worlds",
   worldsMode: "Worlds · {mode}",
-  worldsLocalIntro: "Worlds saved on this device. Your family can join once online worlds are available.",
+  worldsLocalIntro:
+    "Worlds saved on this device. Your family can join once online worlds are available.",
   worldLegacy: "Older save",
   worldCardDetails: "{mode} · Seed {seed} · {date}",
   worldCurrent: "Current world",
@@ -28,7 +29,8 @@ const EN = {
   worldOptionalSeed: "Seed (optional, random if blank)",
   worldCreateFailed: "Name required, seed already used or storage unavailable.",
   worldOpenSeed: "Open by seed",
-  worldSeedNotSharing: "A seed shares the terrain, not saved builds or multiplayer. Shared worlds are coming later.",
+  worldSeedNotSharing:
+    "A seed shares the terrain, not saved builds or multiplayer. Shared worlds are coming later.",
   worldCurrentSettings: "Current world settings",
 
   fullscreen: "Fullscreen",
@@ -161,7 +163,8 @@ const FR: Record<TextKey, string> = {
   settings: "Réglages",
   worlds: "Mondes",
   worldsMode: "Mondes · {mode}",
-  worldsLocalIntro: "Mondes sauvegardés sur cet appareil. Le partage familial arrivera avec les mondes en ligne.",
+  worldsLocalIntro:
+    "Mondes sauvegardés sur cet appareil. Le partage familial arrivera avec les mondes en ligne.",
   worldLegacy: "Ancienne sauvegarde",
   worldCardDetails: "{mode} · Graine {seed} · {date}",
   worldCurrent: "Monde actuel",
@@ -176,7 +179,8 @@ const FR: Record<TextKey, string> = {
   worldOptionalSeed: "Graine (facultative, aléatoire sinon)",
   worldCreateFailed: "Nom manquant, graine déjà utilisée ou stockage indisponible.",
   worldOpenSeed: "Ouvrir par graine",
-  worldSeedNotSharing: "Une graine partage le terrain, pas les constructions ni une partie en ligne. Le partage arrive plus tard.",
+  worldSeedNotSharing:
+    "Une graine partage le terrain, pas les constructions ni une partie en ligne. Le partage arrive plus tard.",
   worldCurrentSettings: "Réglages du monde actuel",
 
   fullscreen: "Plein écran",

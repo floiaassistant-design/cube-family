@@ -11,7 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
-    "format": "prettier --write AGENTS.md src/i18n.ts src/style.css src/ui/menu.ts src/world/world-registry.ts src/world/world-registry.test.ts scripts/visual-check.mjs && git diff -- AGENTS.md src/i18n.ts src/style.css src/ui/menu.ts src/world/world-registry.ts src/world/world-registry.test.ts scripts/visual-check.mjs",
+    "format": "prettier --check .",
     "format:fix": "prettier --write .",
     "typecheck": "tsc -b",
     "build:native": "tsc -b && vite build --mode native",

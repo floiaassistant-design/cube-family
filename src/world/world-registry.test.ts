@@ -43,7 +43,11 @@ describe("WorldRegistry", () => {
 
   it("creates a named world, tracks mode and visit, and survives reopening", () => {
     const storage = memory();
-    const registry = new WorldRegistry(storage, () => 100, () => 0.01);
+    const registry = new WorldRegistry(
+      storage,
+      () => 100,
+      () => 0.01,
+    );
     const created = registry.create("  Family fort  ", "adventure");
     expect(created?.name).toBe("Family fort");
     expect(created?.mode).toBe("adventure");
@@ -59,8 +63,16 @@ describe("WorldRegistry", () => {
   it("keeps an older player save intact when its world is named", () => {
     const storage = memory();
     const save = {
-      x: 1, y: 64, z: 2, yaw: 0, pitch: 0, flying: false,
-      time: 8, hotbar: [], slot: 0, mode: "adventure" as const,
+      x: 1,
+      y: 64,
+      z: 2,
+      yaw: 0,
+      pitch: 0,
+      flying: false,
+      time: 8,
+      hotbar: [],
+      slot: 0,
+      mode: "adventure" as const,
     };
     storePlayerSave(storage, 28, save);
     const registry = new WorldRegistry(storage);
@@ -71,7 +83,11 @@ describe("WorldRegistry", () => {
 
   it("requires valid names and unique seeds, and never corrupts occupied worlds", () => {
     const storage = memory();
-    const registry = new WorldRegistry(storage, () => 8, () => 0.2);
+    const registry = new WorldRegistry(
+      storage,
+      () => 8,
+      () => 0.2,
+    );
     expect(registry.create("  ", "creative", 2)).toBeNull();
     expect(registry.create("A", "creative", 2)?.seed).toBe(2);
     expect(registry.create("B", "adventure", 2)).toBeNull();
