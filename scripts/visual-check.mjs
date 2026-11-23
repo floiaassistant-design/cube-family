@@ -1220,7 +1220,7 @@ try {
         phase: window.__mc.siege()?.phase,
         distance: site ? Math.hypot(position.x - (site.x + 47), position.z - (site.z + 47)) : null,
         startHidden: start?.hidden,
-        pointerUnlocked,
+        pointerUnlocked: document.pointerLockElement === null,
         panelHidden: document.querySelector("#siege-panel")?.hidden,
       };
     });
