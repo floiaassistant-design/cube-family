@@ -9,10 +9,7 @@
       "kind": "tool",
       "status": "integrated_in_code",
       "asset_id": null,
-      "source_files": [
-        "src/game/items.ts",
-        "src/ui/inventory.ts"
-      ],
+      "source_files": ["src/game/items.ts", "src/ui/inventory.ts"],
       "notes": "Recette et minage dans le mode Aventure; visibilité en main à vérifier sur les différentes interfaces."
     },
     {
@@ -21,10 +18,7 @@
       "kind": "tool",
       "status": "integrated_in_code",
       "asset_id": null,
-      "source_files": [
-        "src/game/items.ts",
-        "src/ui/inventory.ts"
-      ],
+      "source_files": ["src/game/items.ts", "src/ui/inventory.ts"],
       "notes": "Pioche améliorable avec le cuivre; vitesse de minage gérée dans items.ts."
     },
     {
@@ -33,12 +27,8 @@
       "kind": "armor",
       "status": "integrated_in_code",
       "asset_id": "plastron-cuivre",
-      "source_files": [
-        "src/game/items.ts",
-        "src/game/wildlife.ts",
-        "src/ui/inventory.ts"
-      ],
-      "notes": "Réduction des dégâts via la protection en cuivre; pas de modèle d'armure en 3D répertorié. Modèle GLB préparé, non intégré au rendu."
+      "source_files": ["src/game/items.ts", "src/game/wildlife.ts", "src/ui/inventory.ts"],
+      "notes": "Réduction des dégâts déjà codée. Modèle GLB du plastron préparé mais non intégré au rendu."
     },
     {
       "id": "copper-sword",
@@ -68,10 +58,5 @@
       "notes": "Bouclier léger proposé pour bloquer quelques attaques. Mécanique à valider."
     }
   ],
-  "future_ideas": [
-    "épées",
-    "haches",
-    "armures supplémentaires",
-    "équipements propres aux montures"
-  ]
+  "future_ideas": ["épées", "haches", "armures supplémentaires", "équipements propres aux montures"]
 }
