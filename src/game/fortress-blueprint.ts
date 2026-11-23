@@ -36,12 +36,16 @@ export function fortressBlueprint(): FortressBlock[] {
     cells.set(`${x},${y},${z}`, { x, y, z, id });
   };
   const fill = (
-    minX: number, maxX: number, minY: number, maxY: number,
-    minZ: number, maxZ: number, id: BlockId,
+    minX: number,
+    maxX: number,
+    minY: number,
+    maxY: number,
+    minZ: number,
+    maxZ: number,
+    id: BlockId,
   ): void => {
     for (let x = minX; x <= maxX; x++)
-      for (let y = minY; y <= maxY; y++)
-        for (let z = minZ; z <= maxZ; z++) put(x, y, z, id);
+      for (let y = minY; y <= maxY; y++) for (let z = minZ; z <= maxZ; z++) put(x, y, z, id);
   };
   // Continuous outer curtain walls, with a five-block-wide south gate.
   for (let y = 1; y <= 10; y++) {
@@ -61,7 +65,12 @@ export function fortressBlueprint(): FortressBlock[] {
     fill(86, 87, 11, 12, n, n + 1, BlockId.STONE_BRICK);
   }
   // Four large hollow towers, with covered upper platforms.
-  for (const [cx, cz] of [[10, 10], [85, 10], [10, 85], [85, 85]] as const) {
+  for (const [cx, cz] of [
+    [10, 10],
+    [85, 10],
+    [10, 85],
+    [85, 85],
+  ] as const) {
     for (let x = cx - 6; x <= cx + 6; x++)
       for (let z = cz - 6; z <= cz + 6; z++) {
         if (x < 0 || z < 0 || x >= 96 || z >= 96) continue;
@@ -74,8 +83,7 @@ export function fortressBlueprint(): FortressBlock[] {
         if (edge === 6 && (x + z) % 3 !== 0) put(x, 19, z, BlockId.STONE_BRICK);
       }
     // Leave an entrance facing the inner courtyard.
-    fill(cx < 48 ? cx + 5 : cx - 5, cx < 48 ? cx + 6 : cx - 4, 2, 4,
-      cz, cz + 1, BlockId.AIR);
+    fill(cx < 48 ? cx + 5 : cx - 5, cx < 48 ? cx + 6 : cx - 4, 2, 4, cz, cz + 1, BlockId.AIR);
     fill(cx - 6, cx + 6, 18, 18, cz - 6, cz + 6, BlockId.BRICK);
     put(cx, 20, cz, BlockId.LANTERN);
   }
@@ -107,7 +115,13 @@ export function fortressBlueprint(): FortressBlock[] {
     fill(79, 81, step, step, 34 + step, 35 + step, BlockId.STONE_BRICK);
   }
   // Sparse lighting in the courtyard: no new block ids needed.
-  for (const [x, z] of [[30, 30], [65, 30], [30, 65], [65, 65], [48, 81]] as const) {
+  for (const [x, z] of [
+    [30, 30],
+    [65, 30],
+    [30, 65],
+    [65, 65],
+    [48, 81],
+  ] as const) {
     fill(x, x, 1, 3, z, z, BlockId.WOOD);
     put(x, 4, z, BlockId.LANTERN);
   }
