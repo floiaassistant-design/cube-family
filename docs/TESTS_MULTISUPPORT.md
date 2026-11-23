@@ -10,12 +10,10 @@ La simulation **ne remplace pas** les essais sur un vrai appareil : GPU/WebGL, S
 
 Le scénario `scripts/visual-check.mjs` conserve les tests clavier/souris PC, rendu, inventaire, contrôle tactile téléphone, animaux, dragon, forteresse et sauvegardes. Il appelle désormais `scripts/device-layout-check.mjs` dans le **même contexte de jeu tactile** pour vérifier que les menus et le HUD restent accessibles aux dimensions suivantes :
 
-| Profil émulé | Dimensions CSS | Orientation | Interaction vérifiée |
-| --- | --- | --- | --- |
-| Téléphone | 390 × 844 | Portrait | Mondes/import, réglages, jeu, boutons tactiles, pause |
-| Téléphone | 844 × 390 | Paysage | Idem, défilement des menus courts en hauteur |
-| Tablette | 768 × 1024 | Portrait | Idem, largeur des commandes et des menus |
-| Tablette | 1024 × 768 | Paysage | Idem, HUD et barre d'inventaire |
+- **Téléphone portrait (390 × 844)** : mondes/import, réglages, jeu, boutons tactiles et pause.
+- **Téléphone paysage (844 × 390)** : mêmes fonctions et défilement des menus sur un écran peu haut.
+- **Tablette portrait (768 × 1024)** : mêmes fonctions, largeur des commandes et des menus.
+- **Tablette paysage (1024 × 768)** : mêmes fonctions, HUD et barre d'inventaire.
 
 Chaque test contrôle les éléments non coupés horizontalement, les possibilités de défilement, les actions accessibles sans clavier et le retour en jeu. Ces tests partagent les règles métier : **aucune duplication des systèmes de jeu**.
 
