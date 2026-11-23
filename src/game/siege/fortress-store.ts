@@ -56,7 +56,8 @@ export class FortressStore {
 
 export type TerrainSampler = (x: number, z: number) => Pick<ColumnProfile, "terrainHeight">;
 
-/** Select a dry, reasonably flat site near (not ON) the player's creations. */
+/** Find a defensible site without overwriting player creations. Prefer dry
+ * ground, but a raised fort with supported piers can span shallow rivers. */
 export function findFortressSite(
   playerX: number,
   playerZ: number,
@@ -108,7 +109,7 @@ export function findFortressSite(
       [half, -radius],
     );
   }
-  let fallback: { site: FortressLocation; relief: number } | null = null;
+  let fallback: { site: FortressLocation; score: number } | null = null;
   for (const [dx, dz] of candidates) {
     const x = px + dx;
     const z = pz + dz;
@@ -125,12 +126,17 @@ export function findFortressSite(
       }
     }
     const relief = high - low;
-    if (low <= SEA_LEVEL + 2 || relief > 20 || high + 20 >= CHUNK_HEIGHT) continue;
+    // A plateau above sea level can bridge a shallow river or pond.
+    // Requiring every one of 169 sampled columns to be dry made coastal
+    // worlds practically impossible to build in.
+    if (high <= SEA_LEVEL + 4 || relief > 20 || high + 20 >= CHUNK_HEIGHT) continue;
     const site = { x, z, y: high + 2 };
-    if (relief <= 7) return site;
-    // A level platform on supporting piers is preferable to failing to
-    // build on every slightly hilly world. Prefer the gentlest safe site.
-    if (!fallback || relief < fallback.relief) fallback = { site, relief };
+    const dry = low > SEA_LEVEL + 2;
+    if (dry && relief <= 7) return site;
+    const score = relief + (dry ? 0 : 8);
+    // Prefer naturally gentle dry ground; a supported crossing is the
+    // fallback when the world is cut by rivers or ocean inlets.
+    if (!fallback || score < fallback.score) fallback = { site, score };
   }
   return fallback?.site ?? null;
 }
