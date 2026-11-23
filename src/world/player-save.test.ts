@@ -38,7 +38,7 @@ describe("player save", () => {
 
   it("round-trips equipped items and ignores untrusted item ids", () => {
     const storage = memory();
-    for (const heldEquipment of [COPPER_SWORD, WOOD_SHIELD, null]) {
+    for (const heldEquipment of [COPPER_SWORD, WOOD_SHIELD, null] as const) {
       storePlayerSave(storage, 7, { ...save, heldEquipment });
       expect(loadPlayerSave(storage, 7)?.heldEquipment).toBe(heldEquipment);
     }

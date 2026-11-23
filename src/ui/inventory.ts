@@ -7,6 +7,7 @@ import {
   COPPER_PICK,
   COPPER_SWORD,
   isHandEquipment,
+  isMiningPick,
   type HandEquipment,
   type ItemId,
   WOOD_SHIELD,

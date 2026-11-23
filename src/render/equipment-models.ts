@@ -48,7 +48,11 @@ export class EquipmentHandModels {
   private readonly models = new Map<EquipmentModelId, THREE.Group>();
   private readonly pending = new Set<EquipmentModelId>();
 
-  constructor(private readonly parent: THREE.Group) {}
+  private readonly parent: THREE.Group;
+
+  constructor(parent: THREE.Group) {
+    this.parent = parent;
+  }
 
   setItem(item: HandEquipment | null): void {
     this.current = item;

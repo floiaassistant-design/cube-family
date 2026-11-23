@@ -24,7 +24,7 @@ describe("new adventure equipment", () => {
 
   it("crafts each new tool once and keeps it through a save", () => {
     const bag = new Bag({ [BlockId.COPPER_ORE]: 9, [BlockId.PLANKS]: 7 });
-    for (const id of [COPPER_SWORD, COPPER_AXE, WOOD_SHIELD]) {
+    for (const id of [COPPER_SWORD, COPPER_AXE, WOOD_SHIELD] as const) {
       const recipe = RECIPES.find((item) => item.id === id);
       if (!recipe) throw new Error(`Recipe missing: ${id}`);
       expect(craft(bag, recipe)).toBe(true);
