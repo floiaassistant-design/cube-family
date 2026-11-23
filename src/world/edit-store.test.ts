@@ -113,3 +113,33 @@ describe("storage failures", () => {
     expect(chunk.getBlock(5, 10, 7)).toBe(BlockId.WOOD);
   });
 });
+
+describe("fortress batch safety", () => {
+  it("persists a batch over several chunks and detects occupied terrain", () => {
+    const storage = memoryStorage();
+    const store = new EditStore(storage, 123);
+    store.recordMany([
+      { x: -1, y: 48, z: -1, id: BlockId.STONE_BRICK },
+      { x: 17, y: 50, z: 17, id: BlockId.COBBLE },
+    ]);
+    expect(store.totalEdits).toBe(2);
+    expect(store.hasEditsInRect(-3, 0, -3, 0)).toBe(true);
+    expect(store.hasEditsInRect(17, 19, 17, 19)).toBe(true);
+    expect(store.hasEditsInRect(5, 10, 5, 10)).toBe(false);
+    const copy = new EditStore(storage, 123);
+    const chunk = new Chunk(-1, -1);
+    copy.applyTo(chunk);
+    expect(chunk.getBlock(15, 48, 15)).toBe(BlockId.STONE_BRICK);
+  });
+
+  it("rejects invalid batches without committing partial edits", () => {
+    const store = new EditStore(memoryStorage(), 987);
+    expect(() => {
+      store.recordMany([
+        { x: 1, y: 40, z: 1, id: BlockId.STONE_BRICK },
+        { x: 2, y: -1, z: 1, id: BlockId.STONE_BRICK },
+      ]);
+    }).toThrow();
+    expect(store.totalEdits).toBe(0);
+  });
+});

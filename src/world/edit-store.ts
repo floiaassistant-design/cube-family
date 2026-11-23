@@ -42,6 +42,48 @@ export class EditStore {
     this.save();
   }
 
+  /** Batch structure edits: persist once rather than once per voxel. */
+  recordMany(edits: readonly { x: number; y: number; z: number; id: BlockId }[]): void {
+    for (const edit of edits) {
+      if (
+        !Number.isInteger(edit.x) ||
+        !Number.isInteger(edit.y) ||
+        !Number.isInteger(edit.z) ||
+        edit.y < 0 ||
+        edit.y >= CHUNK_HEIGHT ||
+        !Object.hasOwn(BLOCKS, edit.id)
+      ) {
+        throw new Error("Invalid block in edit batch");
+      }
+    }
+    for (const edit of edits) {
+      const key = chunkKey(worldToChunk(edit.x), worldToChunk(edit.z));
+      let cells = this.edits.get(key);
+      if (!cells) {
+        cells = new Map();
+        this.edits.set(key, cells);
+      }
+      cells.set(Chunk.index(worldToLocal(edit.x), edit.y, worldToLocal(edit.z)), edit.id);
+    }
+    this.save();
+  }
+
+  /** Returns true if any existing player edit would intersect the structure. */
+  hasEditsInRect(minX: number, maxX: number, minZ: number, maxZ: number): boolean {
+    for (let cx = worldToChunk(minX); cx <= worldToChunk(maxX); cx++) {
+      for (let cz = worldToChunk(minZ); cz <= worldToChunk(maxZ); cz++) {
+        const cells = this.edits.get(chunkKey(cx, cz));
+        if (!cells) continue;
+        for (const index of cells.keys()) {
+          const x = cx * CHUNK_SIZE + (index % CHUNK_SIZE);
+          const z = cz * CHUNK_SIZE + (Math.floor(index / CHUNK_SIZE) % CHUNK_SIZE);
+          if (x >= minX && x <= maxX && z >= minZ && z <= maxZ) return true;
+        }
+      }
+    }
+    return false;
+  }
+
   /** Re-applies recorded edits onto a freshly generated chunk. */
   applyTo(chunk: Chunk): void {
     const chunkEdits = this.edits.get(chunkKey(chunk.cx, chunk.cz));

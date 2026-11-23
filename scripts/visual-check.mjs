@@ -726,6 +726,29 @@ try {
     JSON.stringify(controlsShown),
   );
 
+  // A fortress is an in-world activity: its panel must be reachable
+  // without stealing the phone's right-side aiming and top ride controls.
+  const siegeMobile = await mobilePage.evaluate(() => {
+    const panel = document.querySelector("#siege-panel");
+    const controls = document.querySelector(".touch-top");
+    const build = [...(panel?.querySelectorAll("button") ?? [])].find((button) =>
+      button.textContent?.includes("Build"),
+    );
+    if (!panel || !controls) return { visible: false, build: false, overlap: true };
+    const a = panel.getBoundingClientRect();
+    const b = controls.getBoundingClientRect();
+    return {
+      visible: !panel.hidden && a.width > 0 && a.height > 0,
+      build: !!build && !build.hidden,
+      overlap: a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top,
+    };
+  });
+  report(
+    "fortress is offered inside Creative without covering phone controls",
+    siegeMobile.visible && siegeMobile.build && !siegeMobile.overlap,
+    JSON.stringify(siegeMobile),
+  );
+
   // Joystick: press bottom-left, push up (forward), hold, release.
   const beforeMove = await mobilePage.evaluate(() => window.__mc.position());
   await touch("pointerdown", 110, 560, 1);
@@ -1110,6 +1133,114 @@ try {
     JSON.stringify(kept),
   );
   await adventure.close();
+
+  // A real in-world fortress smoke test: place it through the same button
+  // as a player, verify the crystal voxel, reload, then launch the first wave.
+  // Distinct from tests of the menu or the pure siege state machine.
+  const fortressPage = await openPage(
+    "fortress",
+    `${BASE_URL}?seed=2026&quality=low&view=3&lang=en`,
+  );
+  await waitForWorld(fortressPage, 9);
+  await fortressPage.click("#play-button");
+  await until(fortressPage, () => document.querySelector("#siege-panel")?.hidden === false);
+  await fortressPage.evaluate(() => {
+    window.confirm = () => true;
+    document.querySelector("#siege-panel button")?.click();
+  });
+  const created = await until(
+    fortressPage,
+    () =>
+      window.__mc.siege() !== null &&
+      window.localStorage.getItem("voxel-world:fortress:v1:2026") !== null,
+    undefined,
+    30000,
+  );
+  report("fortress can be built from Creative within the existing world", created);
+  if (created) {
+    const crystalReady = await until(
+      fortressPage,
+      () => {
+        const raw = window.localStorage.getItem("voxel-world:fortress:v1:2026");
+        if (!raw) return false;
+        const site = JSON.parse(raw);
+        return window.__mc.blockAt(site.x + 47, site.y + 3, site.z + 47) === 21;
+      },
+      undefined,
+      60000,
+    );
+    report("the generated fortress has a physical central crystal block", crystalReady);
+    await fortressPage.reload({ waitUntil: "domcontentloaded" });
+    await waitForWorld(fortressPage, 9);
+    const persisted = await until(
+      fortressPage,
+      () => {
+        const raw = window.localStorage.getItem("voxel-world:fortress:v1:2026");
+        if (!raw || window.__mc.siege() === null) return false;
+        const site = JSON.parse(raw);
+        return window.__mc.blockAt(site.x + 47, site.y + 3, site.z + 47) === 21;
+      },
+      undefined,
+      60000,
+    );
+    report("the fortress survives a reload in the same free world", persisted);
+    await fortressPage.click("#play-button");
+    await until(fortressPage, () => window.__mc.mode() !== "idle", undefined, 10000);
+    // Desktop uses pointer lock for camera steering. Press M to free the
+    // cursor before interacting with the siege panel.
+    await fortressPage.keyboard.press("KeyM");
+    const pointerUnlocked = await until(
+      fortressPage,
+      () => document.pointerLockElement === null && window.__mc.mode() !== "idle",
+      undefined,
+      10000,
+    );
+    const canStart = await until(
+      fortressPage,
+      () =>
+        window.__mc.mode() !== "idle" &&
+        document.querySelector("#siege-panel button:nth-of-type(3)")?.hidden === false,
+      undefined,
+      10000,
+    );
+    if (pointerUnlocked && canStart) await fortressPage.click("#siege-panel button:nth-of-type(3)");
+    const siegeStarted = await until(
+      fortressPage,
+      () => window.__mc.siege()?.phase === "preparation",
+      undefined,
+      6000,
+    );
+    const siegeDebug = await fortressPage.evaluate(() => {
+      const raw = window.localStorage.getItem("voxel-world:fortress:v1:2026");
+      const site = raw ? JSON.parse(raw) : null;
+      const position = window.__mc.position();
+      const start = document.querySelector("#siege-panel button:nth-of-type(3)");
+      return {
+        mode: window.__mc.mode(),
+        phase: window.__mc.siege()?.phase,
+        distance: site ? Math.hypot(position.x - (site.x + 47), position.z - (site.z + 47)) : null,
+        startHidden: start?.hidden,
+        pointerUnlocked: document.pointerLockElement === null,
+        panelHidden: document.querySelector("#siege-panel")?.hidden,
+      };
+    });
+    report(
+      "players launch zombie waves from inside their free world",
+      siegeStarted,
+      JSON.stringify(siegeDebug),
+    );
+    if (siegeStarted) {
+      await fortressPage.keyboard.press("KeyX");
+      const stopped = await until(fortressPage, () => window.__mc.siege()?.phase === "idle");
+      await fortressPage.keyboard.press("KeyN");
+      const restarted = await until(
+        fortressPage,
+        () => window.__mc.siege()?.phase === "preparation",
+      );
+      report("keyboard controls can stop and restart the fortress waves", stopped && restarted);
+    }
+  }
+  await fortressPage.browserContext().close();
 
   // Boot the real production build with local storage denied by the browser.
   // Only the test build should expose the debug API used above.

@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import { MAX_CATS, MAX_NIGHT_CREATURES, type Creature } from "../game/wildlife";
 import { CatModel, OrangeCatModel } from "./cat-model";
+import { MAX_SIEGE_ZOMBIES } from "../game/siege/session";
+import { SiegeZombieModel } from "./siege-zombie-model";
 import type { CreatureModel } from "./creature-model";
 import { RoamerModel } from "./roamer-model";
 
@@ -134,7 +136,8 @@ export class CreatureModelView {
       geometry,
       material,
       MAX_CATS * new OrangeCatModel().boxes.length +
-        MAX_NIGHT_CREATURES * new RoamerModel().boxes.length,
+        MAX_NIGHT_CREATURES * new RoamerModel().boxes.length +
+        MAX_SIEGE_ZOMBIES * new SiegeZombieModel().boxes.length,
     );
     this.instances.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.instances.frustumCulled = false;
@@ -175,7 +178,9 @@ export class CreatureModelView {
             ? creature.coat === 0
               ? new OrangeCatModel()
               : new CatModel(creature.coat)
-            : new RoamerModel(),
+            : creature.kind === "siege-zombie"
+              ? new SiegeZombieModel()
+              : new RoamerModel(),
         phase,
         lastPosition: new THREE.Vector3(x, y, z),
         yaw: phase,

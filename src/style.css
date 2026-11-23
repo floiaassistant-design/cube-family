@@ -963,3 +963,73 @@ kbd {
 .secondary-link:hover {
   color: var(--accent);
 }
+
+/* Fortress event controls: reachable with mouse, touch and keyboard. */
+#siege-panel {
+  position: fixed;
+  top: max(72px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  z-index: 7;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: min(280px, 44vw);
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--glass-strong);
+  backdrop-filter: blur(10px);
+  font-size: 0.85rem;
+  touch-action: manipulation;
+}
+#siege-panel[hidden],
+#siege-panel button[hidden] {
+  display: none;
+}
+.siege-title {
+  font-size: 0.94rem;
+  font-weight: 750;
+  color: var(--accent);
+}
+.siege-status {
+  color: var(--ink-dim);
+  line-height: 1.35;
+}
+#siege-panel button {
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 196, 90, 0.14);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+#siege-panel button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+#siege-panel button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+@media (max-width: 700px) {
+  #siege-panel {
+    /* Keep the right-half look surface and the top-right ride/menu
+       buttons available on phones, even before a fortress is built. */
+    top: calc(max(10px, env(safe-area-inset-top)) + 58px);
+    left: max(8px, env(safe-area-inset-left));
+    right: auto;
+    width: min(210px, 40vw);
+    padding: 7px;
+    font-size: 0.73rem;
+    max-height: 38dvh;
+    overflow-y: auto;
+  }
+  .siege-title {
+    font-size: 0.79rem;
+  }
+  #siege-panel button {
+    min-height: 34px;
+  }
+}
