@@ -262,7 +262,8 @@ export class SiegeController {
       this.phase !== "wave" ||
       now - this.lastArrow < this.armory.state.bowCooldown ||
       this.arrows <= 0
-    ) return false;
+    )
+      return false;
     this.lastArrow = now;
     this.arrows--;
     const unit = Math.hypot(direction.x, direction.y, direction.z);
