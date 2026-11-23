@@ -156,6 +156,12 @@ export class SiegePanel {
         ? ` · ${report.armory.coins} pièces`
         : ` · ${report.armory.coins} coins`;
     }
+    if (report?.phase === "wave" || report?.phase === "preparation" || report?.phase === "intermission") {
+      const gateLabel = this.french ? "Assaut sud" : "South assault";
+      const intact = (health: number): string =>
+        health > 0 ? health.toString() : this.french ? "brisée" : "breached";
+      status += ` · ${gateLabel} · ${this.french ? "Ext" : "Outer"} ${intact(report.outerGate.health)}/${report.outerGate.maxHealth} · ${this.french ? "Int" : "Inner"} ${intact(report.innerGate.health)}/${report.innerGate.maxHealth}`;
+    }
     // The browser captures the mouse in first-person mode. The panel is
     // clickable with a mouse only after the player frees the cursor using M.
     // Keyboard N works directly during play; touch controls need no M.
