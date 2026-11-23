@@ -23,7 +23,11 @@ const S = FORTRESS_SIZE - 1;
 
 /** Pure blueprint — neither modifies a world nor saves anything. */
 export function createFortressBlueprint(site: FortressLocation): FortressBlock[] {
-  if (![site.x, site.y, site.z].every(Number.isInteger) || site.y < 18 || site.y + 20 >= CHUNK_HEIGHT)
+  if (
+    ![site.x, site.y, site.z].every(Number.isInteger) ||
+    site.y < 18 ||
+    site.y + 20 >= CHUNK_HEIGHT
+  )
     throw new Error("Fortress location is outside the buildable world");
 
   const blocks = new Map<string, FortressBlock>();
@@ -33,12 +37,26 @@ export function createFortressBlueprint(site: FortressLocation): FortressBlock[]
     const az = site.z + z;
     blocks.set(`${ax},${ay},${az}`, { x: ax, y: ay, z: az, id });
   };
-  const fill = (x0: number, x1: number, z0: number, z1: number, y0: number, y1: number, id: Block): void => {
+  const fill = (
+    x0: number,
+    x1: number,
+    z0: number,
+    z1: number,
+    y0: number,
+    y1: number,
+    id: Block,
+  ): void => {
     for (let y = y0; y <= y1; y++)
-      for (let x = x0; x <= x1; x++)
-        for (let z = z0; z <= z1; z++) put(x, y, z, id);
+      for (let x = x0; x <= x1; x++) for (let z = z0; z <= z1; z++) put(x, y, z, id);
   };
-  const ring = (a: number, b: number, y0: number, y1: number, thickness: number, id: Block): void => {
+  const ring = (
+    a: number,
+    b: number,
+    y0: number,
+    y1: number,
+    thickness: number,
+    id: Block,
+  ): void => {
     fill(a, b, a, a + thickness - 1, y0, y1, id);
     fill(a, b, b - thickness + 1, b, y0, y1, id);
     fill(a, a + thickness - 1, a, b, y0, y1, id);
@@ -51,7 +69,12 @@ export function createFortressBlueprint(site: FortressLocation): FortressBlock[]
   fill(2, 93, 43, 52, 0, 0, BlockId.COBBLE);
   fill(31, 64, 31, 64, 0, 0, BlockId.STONE_BRICK);
   // Four-direction approach roads, gently supported on stone piers.
-  for (const [dx, dz] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) {
+  for (const [dx, dz] of [
+    [-1, 0],
+    [1, 0],
+    [0, -1],
+    [0, 1],
+  ] as const) {
     for (let r = 1; r <= 10; r++) {
       for (let n = 44; n <= 51; n++) {
         const x = dx === 0 ? n : dx < 0 ? -r : S + r;
@@ -61,8 +84,7 @@ export function createFortressBlueprint(site: FortressLocation): FortressBlock[]
     }
   }
   for (let x = 0; x <= S; x += 8)
-    for (let z = 0; z <= S; z += 8)
-      fill(x, x + 1, z, z + 1, -7, -1, BlockId.COBBLE);
+    for (let z = 0; z <= S; z += 8) fill(x, x + 1, z, z + 1, -7, -1, BlockId.COBBLE);
   // Primary and secondary curtains. Walkways are wide enough for defenders.
   ring(0, S, 1, 9, 3, BlockId.STONE_BRICK);
   ring(15, 80, 1, 7, 2, BlockId.STONE_BRICK);
@@ -75,34 +97,41 @@ export function createFortressBlueprint(site: FortressLocation): FortressBlock[]
     }
   }
   // Four corner bastions, 13 x 13, with walkable roof and arrow slots.
-  for (const tx of [0, 83]) for (const tz of [0, 83]) {
-    fill(tx, tx + 12, tz, tz + 12, 1, 1, BlockId.COBBLE);
-    for (let y = 2; y <= 16; y++) {
-      for (let x = tx; x <= tx + 12; x++) for (let z = tz; z <= tz + 12; z++) {
-        if (x < tx + 2 || x > tx + 10 || z < tz + 2 || z > tz + 10)
-          put(x, y, z, BlockId.STONE_BRICK);
+  for (const tx of [0, 83])
+    for (const tz of [0, 83]) {
+      fill(tx, tx + 12, tz, tz + 12, 1, 1, BlockId.COBBLE);
+      for (let y = 2; y <= 16; y++) {
+        for (let x = tx; x <= tx + 12; x++)
+          for (let z = tz; z <= tz + 12; z++) {
+            if (x < tx + 2 || x > tx + 10 || z < tz + 2 || z > tz + 10)
+              put(x, y, z, BlockId.STONE_BRICK);
+          }
       }
+      fill(tx + 2, tx + 10, tz + 2, tz + 10, 9, 9, BlockId.PLANKS);
+      fill(tx + 2, tx + 10, tz + 2, tz + 10, 16, 16, BlockId.PLANKS);
+      for (let p = 0; p <= 12; p += 3) {
+        put(tx + p, 17, tz, BlockId.COBBLE);
+        put(tx + p, 17, tz + 12, BlockId.COBBLE);
+        put(tx, 17, tz + p, BlockId.COBBLE);
+        put(tx + 12, 17, tz + p, BlockId.COBBLE);
+      }
+      // Door on the courtyard-facing side and a visible lantern on the roof.
+      const entranceZ = tz === 0 ? tz + 12 : tz;
+      for (let y = 1; y <= 3; y++) put(tx + 6, y, entranceZ, BlockId.AIR);
+      put(tx + 6, 17, tz + 6, BlockId.LANTERN);
     }
-    fill(tx + 2, tx + 10, tz + 2, tz + 10, 9, 9, BlockId.PLANKS);
-    fill(tx + 2, tx + 10, tz + 2, tz + 10, 16, 16, BlockId.PLANKS);
-    for (let p = 0; p <= 12; p += 3) {
-      put(tx + p, 17, tz, BlockId.COBBLE);
-      put(tx + p, 17, tz + 12, BlockId.COBBLE);
-      put(tx, 17, tz + p, BlockId.COBBLE);
-      put(tx + 12, 17, tz + p, BlockId.COBBLE);
-    }
-    // Door on the courtyard-facing side and a visible lantern on the roof.
-    const entranceZ = tz === 0 ? tz + 12 : tz;
-    for (let y = 1; y <= 3; y++) put(tx + 6, y, entranceZ, BlockId.AIR);
-    put(tx + 6, 17, tz + 6, BlockId.LANTERN);
-  }
   // Main south gate-house is the fifth bastion.
   fill(39, 56, 0, 10, 11, 13, BlockId.STONE_BRICK);
   fill(40, 55, 2, 8, 14, 14, BlockId.PLANKS);
   for (let x = 40; x <= 56; x += 3) put(x, 15, 1, BlockId.COBBLE);
   for (const x of [40, 55]) for (let z = 1; z < 9; z += 2) put(x, 15, z, BlockId.LANTERN);
   // Both outer and inner walls have four 6-block-high open gates.
-  for (const [a, b] of [[0, 5], [15, 16], [79, 80], [90, 95]] as const) {
+  for (const [a, b] of [
+    [0, 5],
+    [15, 16],
+    [79, 80],
+    [90, 95],
+  ] as const) {
     for (let side = a; side <= b; side++) {
       for (let y = 1; y <= 6; y++) {
         for (let p = 44; p <= 51; p++) {
@@ -113,15 +142,16 @@ export function createFortressBlueprint(site: FortressLocation): FortressBlock[]
     }
   }
   // Staircases to the outer wall at the four corners of the courtyard.
-  for (const tx of [5, 90]) for (const tz of [15, 80]) {
-    const direction = tz === 15 ? 1 : -1;
-    for (let step = 0; step < 10; step++) {
-      const z = tz + direction * step;
-      fill(tx, tx + 1, z, z, 10 - step, 10 - step, BlockId.COBBLE);
+  for (const tx of [5, 90])
+    for (const tz of [15, 80]) {
+      const direction = tz === 15 ? 1 : -1;
+      for (let step = 0; step < 10; step++) {
+        const z = tz + direction * step;
+        fill(tx, tx + 1, z, z, 10 - step, 10 - step, BlockId.COBBLE);
+      }
+      put(tx, 11, tz, BlockId.AIR);
+      put(tx + 1, 11, tz, BlockId.AIR);
     }
-    put(tx, 11, tz, BlockId.AIR);
-    put(tx + 1, 11, tz, BlockId.AIR);
-  }
   // Central keep, open door to south, crystal on a protective plinth.
   ring(35, 60, 1, 13, 2, BlockId.STONE_BRICK);
   fill(35, 60, 35, 60, 14, 14, BlockId.PLANKS);
@@ -146,7 +176,12 @@ export function createFortressBlueprint(site: FortressLocation): FortressBlock[]
   fill(46, 49, 46, 49, 2, 2, BlockId.COPPER_BLOCK);
   put(FORTRESS_CRYSTAL, 3, FORTRESS_CRYSTAL, BlockId.CRYSTAL);
   // Courtyard lighting and supply stalls are visual landmarks.
-  for (const [x, z] of [[27, 27], [68, 27], [27, 68], [68, 68]] as const) {
+  for (const [x, z] of [
+    [27, 27],
+    [68, 27],
+    [27, 68],
+    [68, 68],
+  ] as const) {
     fill(x, x, z, z, 1, 3, BlockId.WOOD);
     put(x, 4, z, BlockId.LANTERN);
     fill(x - 3, x + 3, z - 2, z + 2, 1, 1, BlockId.PLANKS);
@@ -157,12 +192,19 @@ export function createFortressBlueprint(site: FortressLocation): FortressBlock[]
 /** Paths enter by real gate openings, rather than walking through curtain walls. */
 export type SiegeRoute = "north" | "south" | "east" | "west";
 
-export function siegePath(site: FortressLocation, route: SiegeRoute): readonly { x: number; z: number }[] {
+export function siegePath(
+  site: FortressLocation,
+  route: SiegeRoute,
+): readonly { x: number; z: number }[] {
   const c = (x: number, z: number) => ({ x: site.x + x + 0.5, z: site.z + z + 0.5 });
   switch (route) {
-    case "north": return [c(47, 107), c(47, 91), c(47, 74), c(47, 58), c(47, 47)];
-    case "south": return [c(47, -12), c(47, 6), c(47, 22), c(47, 37), c(47, 47)];
-    case "east": return [c(107, 47), c(91, 47), c(74, 47), c(58, 47), c(47, 47)];
-    case "west": return [c(-12, 47), c(6, 47), c(22, 47), c(37, 47), c(47, 47)];
+    case "north":
+      return [c(47, 107), c(47, 91), c(47, 74), c(47, 58), c(47, 47)];
+    case "south":
+      return [c(47, -12), c(47, 6), c(47, 22), c(47, 37), c(47, 47)];
+    case "east":
+      return [c(107, 47), c(91, 47), c(74, 47), c(58, 47), c(47, 47)];
+    case "west":
+      return [c(-12, 47), c(6, 47), c(22, 47), c(37, 47), c(47, 47)];
   }
 }
