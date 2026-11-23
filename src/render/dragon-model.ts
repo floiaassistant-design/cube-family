@@ -134,7 +134,9 @@ export class DragonModel {
         this.armorModel = model;
         model.visible = this.armored;
       })
-      .catch((error: unknown) => console.warn("Chestplate model unavailable:", error))
+      .catch((error: unknown) => {
+        console.warn("Chestplate model unavailable:", error);
+      })
       .finally(() => {
         this.armorLoading = false;
       });
