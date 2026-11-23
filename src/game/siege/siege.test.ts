@@ -85,9 +85,11 @@ describe("fortress world metadata and placement", () => {
         const x = spawn.x + (dx ?? 0);
         const z = spawn.z + (dz ?? 0);
         const heights = [];
-        for (let sx = 0; sx <= 96; sx += 8)
-          for (let sz = 0; sz <= 96; sz += 8)
+        for (let sx = 0; sx <= 96; sx += 8) {
+          for (let sz = 0; sz <= 96; sz += 8) {
             heights.push(sampler(x + sx, z + sz).terrainHeight);
+          }
+        }
         return { dx, dz, low: Math.min(...heights), high: Math.max(...heights) };
       });
       console.warn("FORTRESS_SITE_DIAGNOSTIC", JSON.stringify({ spawn, examples }));
