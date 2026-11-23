@@ -1,4 +1,5 @@
 import type { DragonParking } from "../game/dragon";
+import { isHandEquipment, type HandEquipment } from "../game/items";
 import { CHUNK_HEIGHT } from "./coords";
 import type { KeyValueStorage } from "./edit-store";
 
@@ -18,6 +19,8 @@ export interface PlayerSave {
   readonly slot: number;
   /** Optional for saves made before the pick could be selected or put away. */
   readonly pickInHand?: boolean;
+  /** Optional new selection; null means a block, undefined means a legacy save. */
+  readonly heldEquipment?: HandEquipment | null;
   /** "creative" (everything, unlimited) or "adventure" (gather and craft). */
   readonly mode?: "creative" | "adventure";
   /** Raw saved bag and journal; validated by the classes that own them. */
@@ -64,6 +67,9 @@ export function loadPlayerSave(storage: KeyValueStorage | null, seed: number): P
       hotbar,
       slot: finite(p.slot) ? Math.max(0, Math.min(8, Math.floor(p.slot))) : 0,
       ...(typeof p.pickInHand === "boolean" ? { pickInHand: p.pickInHand } : {}),
+      ...(p.heldEquipment === null || isHandEquipment(p.heldEquipment)
+        ? { heldEquipment: p.heldEquipment }
+        : {}),
       mode: p.mode === "adventure" ? "adventure" : "creative",
       bag: p.bag,
       journal: p.journal,

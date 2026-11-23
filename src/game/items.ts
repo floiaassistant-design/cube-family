@@ -1,4 +1,7 @@
+import { COPPER_AXE, COPPER_SWORD, isNewEquipment, type NewEquipment, WOOD_SHIELD } from "./equipment";
 import { BLOCKS, BlockId, INVENTORY_BLOCKS } from "../world/blocks";
+
+export { COPPER_AXE, COPPER_SWORD, WOOD_SHIELD } from "./equipment";
 
 /** What the player carries in Adventure mode. Validate items and counts
  * when loading a saved bag. */
@@ -8,15 +11,27 @@ export const MINING_PICK = "mining-pick";
 export const COPPER_PICK = "copper-pick";
 export const COPPER_ARMOR = "copper-armor";
 export type MiningPick = typeof MINING_PICK | typeof COPPER_PICK;
-export type ItemId = BlockId | MiningPick | typeof COPPER_ARMOR;
-export type HeldItem = BlockId | MiningPick;
+export type HandEquipment = MiningPick | NewEquipment;
+export type ItemId = BlockId | HandEquipment | typeof COPPER_ARMOR;
+export type HeldItem = BlockId | HandEquipment;
+
+export function isHandEquipment(item: unknown): item is HandEquipment {
+  return item === MINING_PICK || item === COPPER_PICK || isNewEquipment(item);
+}
 
 export function isMiningPick(item: ItemId): item is MiningPick {
   return item === MINING_PICK || item === COPPER_PICK;
 }
 
 const HOLDABLE = new Set<number>(INVENTORY_BLOCKS);
-const EQUIPMENT = [MINING_PICK, COPPER_PICK, COPPER_ARMOR] as const;
+const EQUIPMENT = [
+  MINING_PICK,
+  COPPER_PICK,
+  COPPER_ARMOR,
+  COPPER_SWORD,
+  COPPER_AXE,
+  WOOD_SHIELD,
+] as const;
 const stackLimit = (item: ItemId): number => (typeof item === "string" ? 1 : STACK_LIMIT);
 
 /** What breaking a block gives you (nothing for AIR). Rock comes away as
@@ -34,7 +49,12 @@ export function dropFor(block: BlockId): BlockId {
 }
 
 /** Seconds of digging in Adventure, using the pick automatically when owned. */
-export function digSeconds(block: BlockId, hasMiningPick = false, copperPick = false): number {
+export function digSeconds(
+  block: BlockId,
+  hasMiningPick = false,
+  copperPick = false,
+  usingAxe = false,
+): number {
   const rockSpeed = copperPick ? 0.42 : hasMiningPick ? 0.65 : 1.3;
   const oreSpeed = copperPick ? 0.57 : 0.85;
   const def = BLOCKS[block];
@@ -63,7 +83,7 @@ export function digSeconds(block: BlockId, hasMiningPick = false, copperPick = f
     case BlockId.PALE_WOOD:
     case BlockId.PINE_WOOD:
     case BlockId.PLANKS:
-      return 0.9;
+      return usingAxe ? 0.3 : 0.9;
     case BlockId.COAL_ORE:
       return hasMiningPick ? oreSpeed : 1.6;
     case BlockId.GOLD_ORE:
@@ -132,7 +152,7 @@ export class Bag {
 
   equipment(): readonly (typeof EQUIPMENT)[number][] {
     return EQUIPMENT.filter((item) =>
-      item === COPPER_ARMOR ? this.count(item) > 0 : item === this.pick,
+      isMiningPick(item) ? item === this.pick : this.count(item) > 0,
     );
   }
 
@@ -210,6 +230,33 @@ export const RECIPES: readonly Recipe[] = [
     needs: [
       [BlockId.COPPER_ORE, 6],
       [BlockId.PLANKS, 1],
+    ],
+  },
+  {
+    id: COPPER_SWORD,
+    output: COPPER_SWORD,
+    amount: 1,
+    needs: [
+      [BlockId.COPPER_ORE, 2],
+      [BlockId.PLANKS, 1],
+    ],
+  },
+  {
+    id: COPPER_AXE,
+    output: COPPER_AXE,
+    amount: 1,
+    needs: [
+      [BlockId.COPPER_ORE, 3],
+      [BlockId.PLANKS, 2],
+    ],
+  },
+  {
+    id: WOOD_SHIELD,
+    output: WOOD_SHIELD,
+    amount: 1,
+    needs: [
+      [BlockId.PLANKS, 4],
+      [BlockId.COPPER_ORE, 1],
     ],
   },
   {
