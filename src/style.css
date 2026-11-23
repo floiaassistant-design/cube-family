@@ -141,12 +141,29 @@ canvas {
 
 /* Photo mode (F1): nothing on screen but the world. */
 #app.hud-hidden #crosshair,
+#app.riding #crosshair,
 #app.hud-hidden #hotbar,
 #app.hud-hidden #toast,
 #app.hud-hidden #fps,
+#app.hud-hidden #dragon-hint,
 #app.hud-hidden .touch-buttons,
 #app.hud-hidden .touch-top {
   display: none !important;
+}
+
+#dragon-hint {
+  position: absolute;
+  top: max(14px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--glass-strong);
+  color: var(--ink);
+  font-size: 13px;
+  text-align: center;
+  pointer-events: none;
+  z-index: 5;
 }
 
 .hotbar-count,
@@ -733,6 +750,16 @@ kbd {
   height: 44px;
   font-size: 18px;
   border-radius: 12px;
+}
+
+.touch-top .touch-ride {
+  width: auto;
+  padding: 0 10px;
+  font: 600 13px var(--font);
+}
+
+.touch-top .touch-ride[hidden] {
+  display: none;
 }
 
 .touch-fly,

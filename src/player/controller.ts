@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import type { DragonMount } from "../game/dragon";
 import { BlockId, isSolid } from "../world/blocks";
 import { CHUNK_HEIGHT } from "../world/coords";
 import type { World } from "../world/world";
@@ -118,6 +119,8 @@ export class PlayerController {
   private external: ExternalInput | null = null;
 
   private flying = false;
+  private dragon: DragonMount | null = null;
+  private rideAlpha = 1;
   private lastJumpTap = 0;
   private jumpWasDown = false;
   private smoothForward = 0;
@@ -258,6 +261,7 @@ export class PlayerController {
 
   /** Two quick presses of jump toggle flight, like every creative mode. */
   private registerJumpTap(): void {
+    if (this.dragon) return;
     const now = performance.now();
     if (now - this.lastJumpTap < DOUBLE_TAP_MS) {
       this.toggleFlight();
@@ -277,6 +281,7 @@ export class PlayerController {
   }
 
   toggleFlight(force = false): void {
+    if (this.dragon) return;
     if (!this.flightAllowed && !this.flying && !force) return;
     this.flying = !this.flying;
     this.state = { ...this.state, velocity: { x: 0, y: 0, z: 0 } };
@@ -547,6 +552,10 @@ export class PlayerController {
   }
 
   update(dt: number): void {
+    if (this.dragon) {
+      this.updateRide(dt, this.dragon);
+      return;
+    }
     let alpha = 1;
     if (this.controlMode !== "idle") {
       const input = this.currentInput();
@@ -581,6 +590,70 @@ export class PlayerController {
       this.jumpWasDown = input.jump;
     }
     this.syncCamera(alpha);
+  }
+
+  get riding(): boolean {
+    return this.dragon !== null;
+  }
+
+  get dragonRenderPosition(): Vec3 | null {
+    return this.dragon?.interpolatedPosition(this.rideAlpha) ?? null;
+  }
+
+  mount(dragon: DragonMount): boolean {
+    if (this.dragon || !dragon.canMount(this.position)) return false;
+    dragon.recordParking();
+    if (this.flying) this.toggleFlight();
+    this.dragon = dragon;
+    this.pitch = 0;
+    this.accumulator = 0;
+    this.updateRide(0, dragon);
+    return true;
+  }
+
+  dismount(): boolean {
+    const exit = this.dragon?.safeExit();
+    if (!exit) return false;
+    this.dragon?.recordParking();
+    this.restore({ ...exit, yaw: this.yaw, pitch: 0, flying: false });
+    return true;
+  }
+
+  private updateRide(dt: number, dragon: DragonMount): void {
+    if (this.isActive) {
+      const input = this.currentInput();
+      this.accumulator = Math.min(this.accumulator + dt, TICK * MAX_TICKS_PER_FRAME);
+      while (this.accumulator >= TICK) {
+        dragon.step(TICK, this.inputEnabled ? { ...input, yaw: this.yaw } : null);
+        this.accumulator -= TICK;
+      }
+      this.rideAlpha = this.accumulator / TICK;
+    }
+    const position = dragon.position;
+    const renderPosition = this.dragonRenderPosition;
+    if (!position || !renderPosition) return;
+    this.state = { position: dragon.seat(position), velocity: dragon.velocity, onGround: false };
+
+    const seat = dragon.seat(renderPosition);
+    const f = forwardVector(this.yaw);
+    const pitch = Math.max(-0.78, Math.min(0.4, this.pitch - 0.33));
+    const focus = { ...seat, y: seat.y + 0.62 };
+    const back = {
+      x: -f.x * Math.cos(pitch),
+      y: -Math.sin(pitch),
+      z: -f.z * Math.cos(pitch),
+    };
+    const distance = dragon.cameraDistance(focus, back, this.camera.aspect < 1 ? 9 : 7.4);
+    this.camera.position.set(
+      focus.x + back.x * distance,
+      focus.y + back.y * distance,
+      focus.z + back.z * distance,
+    );
+    this.camera.rotation.set(pitch, this.yaw, 0, "YXZ");
+    if (this.camera.fov !== this.options.fov) {
+      this.camera.fov = this.options.fov;
+      this.camera.updateProjectionMatrix();
+    }
   }
 
   /** The current view-bob offset, so things attached to the view (the
@@ -645,6 +718,14 @@ export class PlayerController {
 
   /** Puts the player back where a previous session left them. */
   restore(pose: SavedPose): void {
+    this.dragon = null;
+    this.accumulator = 0;
+    this.smoothForward = 0;
+    this.smoothRight = 0;
+    this.lastJumpTap = 0;
+    this.bobAmount = 0;
+    this.landDip = 0;
+    this.fallSpeed = 0;
     this.state = {
       position: { x: pose.x, y: pose.y, z: pose.z },
       velocity: { x: 0, y: 0, z: 0 },

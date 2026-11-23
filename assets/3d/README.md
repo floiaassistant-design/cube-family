@@ -5,6 +5,7 @@ Dossier de dépôt des créations 3D destinées à Minecraft Family. **Cette bib
 ## Organisation
 
 - `chaton-orange/` : premières versions du chaton voxel, avec modèle 3D et informations d'intégration.
+- [Dragon rouge](dragon-rouge/README.md) — modèle v0.3 et commandes de la monture intégrée au jeu.
 - `INDEX.json` : inventaire des modèles, versions et états d'intégration.
 - `OUTIL_WORK.md` : marche à suivre pour récupérer un nouvel objet, le tester, et l'intégrer.
 
