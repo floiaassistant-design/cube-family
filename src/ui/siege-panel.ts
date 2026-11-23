@@ -44,7 +44,7 @@ export class SiegePanel {
       const b = document.createElement("button");
       b.type = "button";
       b.textContent = label;
-      b.addEventListener("pointerdown", (e) => e.stopPropagation());
+      b.addEventListener("pointerdown", (e) => { e.stopPropagation(); });
       b.addEventListener("click", (e) => {
         e.stopPropagation();
         action();
@@ -85,7 +85,7 @@ export class SiegePanel {
     this.repairButton.hidden = report?.phase !== "intermission";
     this.repairButton.disabled = !report || report.kills < 5 || report.crystal === report.maxCrystal;
 
-    let status = "";
+    let status: string;
     if (!hasFortress) {
       status = this.french ? "Mode Libre : construire sur un terrain vierge" : "Creative: build on an empty site";
     } else if (!report || report.phase === "idle") {
