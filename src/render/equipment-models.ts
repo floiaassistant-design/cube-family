@@ -7,10 +7,7 @@ import { COPPER_ARMOR, type HandEquipment } from "../game/items";
 import { COPPER_AXE, COPPER_SWORD, isNewEquipment, WOOD_SHIELD } from "../game/equipment";
 
 export type EquipmentModelId =
-  | typeof COPPER_SWORD
-  | typeof COPPER_AXE
-  | typeof WOOD_SHIELD
-  | typeof COPPER_ARMOR;
+  typeof COPPER_SWORD | typeof COPPER_AXE | typeof WOOD_SHIELD | typeof COPPER_ARMOR;
 
 const MODEL_URLS: Readonly<Record<EquipmentModelId, string>> = {
   [COPPER_SWORD]: swordUrl,
