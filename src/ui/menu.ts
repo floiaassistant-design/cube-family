@@ -397,7 +397,7 @@ export class Menu {
     fileInput.accept = ".json,application/json";
     fileInput.setAttribute("aria-label", this.t("worldImport"));
     fileInput.addEventListener("change", () => {
-      const file = fileInput.files?.item(0);
+      const file = fileInput.files?.[0];
       if (!file) return;
       if (file.size > MAX_WORLD_FILE_BYTES) {
         feedback.textContent = this.t("worldImportInvalid");
