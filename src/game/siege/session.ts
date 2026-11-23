@@ -1,4 +1,5 @@
 import type { Vec3 } from "../../player/physics";
+import { SiegeArmory, type ArmoryPurchase, type ArmoryState } from "./armory";
 import { siegePath, type FortressLocation, type SiegeRoute } from "./fortress";
 
 export const MAX_SIEGE_ZOMBIES = 18;
@@ -34,12 +35,14 @@ export interface SiegeReport {
   readonly pending: number;
   readonly arrows: number;
   readonly timer: number;
+  readonly armory: ArmoryState;
 }
 
 export class SiegeController {
   private readonly site: FortressLocation;
   private readonly sampler: (x: number, z: number) => number;
   private readonly enemies = new Map<string, SiegeZombie>();
+  private readonly armory = new SiegeArmory();
   private phase: SiegePhase = "idle";
   private wave = 0;
   private clock = 0;
@@ -79,6 +82,7 @@ export class SiegeController {
       pending: Math.max(0, this.budget - this.spawned) + this.enemies.size,
       arrows: this.arrows,
       timer: Math.ceil(this.clock),
+      armory: this.armory.state,
     };
   }
 
@@ -96,6 +100,7 @@ export class SiegeController {
     this.crystal = 600;
     this.kills = 0;
     this.arrows = 32;
+    this.armory.reset();
     this.lastArrow = -1;
     this.lastMelee = -1;
     this.sequence = 0;
@@ -106,6 +111,16 @@ export class SiegeController {
     this.phase = "idle";
     this.enemies.clear();
     this.clock = 0;
+    this.armory.reset();
+  }
+
+  /** A purchase is local to this run and only allowed before/between waves. */
+  buy(item: ArmoryPurchase): boolean {
+    if (this.phase !== "preparation" && this.phase !== "intermission") return false;
+    const result = this.armory.buy(item, this.arrows);
+    if (!result.success) return false;
+    this.arrows = result.arrows;
+    return true;
   }
 
   private beginWave(): void {
@@ -117,7 +132,7 @@ export class SiegeController {
     this.spawned = 0;
     this.nextSpawn = 0;
     this.clock = 0;
-    this.arrows = Math.min(64, this.arrows + 24);
+    this.arrows = Math.min(128, this.arrows + 24);
   }
 
   private spawn(): void {
@@ -206,10 +221,11 @@ export class SiegeController {
       this.phase = "defeat";
       this.enemies.clear();
     } else if (this.spawned >= this.budget && this.enemies.size === 0) {
+      this.armory.awardWave();
       if (this.wave >= this.totalWaves) this.phase = "victory";
       else {
         this.phase = "intermission";
-        this.clock = 12;
+        this.clock = 25; // Give families time to shop between waves.
       }
     }
   }
@@ -231,7 +247,7 @@ export class SiegeController {
     if (this.phase !== "wave" || now - this.lastMelee < 0.45 || !this.enemies.has(enemy.id))
       return false;
     this.lastMelee = now;
-    this.damage(enemy, Math.max(1, Math.min(6, damage)));
+    this.damage(enemy, Math.max(1, Math.min(16, Math.max(damage, this.armory.state.swordDamage))));
     return true;
   }
 
@@ -242,7 +258,12 @@ export class SiegeController {
     now: number,
     clear: (from: Vec3, to: Vec3) => boolean,
   ): boolean {
-    if (this.phase !== "wave" || now - this.lastArrow < 0.8 || this.arrows <= 0) return false;
+    if (
+      this.phase !== "wave" ||
+      now - this.lastArrow < this.armory.state.bowCooldown ||
+      this.arrows <= 0
+    )
+      return false;
     this.lastArrow = now;
     this.arrows--;
     const unit = Math.hypot(direction.x, direction.y, direction.z);
@@ -261,7 +282,7 @@ export class SiegeController {
       selected = enemy;
       nearest = dot;
     }
-    if (selected) this.damage(selected, 4);
+    if (selected) this.damage(selected, this.armory.state.bowDamage);
     return true;
   }
 
@@ -278,5 +299,6 @@ export class SiegeController {
     if (enemy.health > 0) return;
     this.enemies.delete(enemy.id);
     this.kills++;
+    this.armory.awardKill(enemy.variant);
   }
 }
