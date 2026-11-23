@@ -216,6 +216,12 @@ canvas {
   z-index: 5;
 }
 
+#dragon-hint.touch {
+  top: calc(max(10px, env(safe-area-inset-top)) + 52px);
+  width: max-content;
+  max-width: calc(100% - 24px);
+}
+
 .hotbar-count,
 .cell-count {
   position: absolute;

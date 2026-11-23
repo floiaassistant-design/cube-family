@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import type { Creature } from "../game/wildlife";
 import { CreatureModel } from "./creature-model";
+import { ORANGE_CAT_PARTS } from "./orange-cat-geometry";
 
 const COATS = [
   [0xab6841, 0xe9ad73, 0xf9dcc0],
@@ -72,5 +73,55 @@ export class CatModel extends CreatureModel {
     }
     this.tail.rotation.y = Math.sin(time * 2.9 + phase) * (0.23 + gait * 0.19);
     this.tail.rotation.x = -0.38 + Math.sin(time * 2.1 + phase) * 0.12;
+  }
+}
+
+const ORANGE_CAT_SCALE = 0.3;
+
+/** The orange cat uses the original V2 volumes in both renderers. */
+export class OrangeCatModel extends CreatureModel {
+  private readonly torso = new THREE.Group();
+  private readonly legs: THREE.Group[] = [];
+  private readonly tail: THREE.Group;
+  private readonly head: THREE.Group;
+  private readonly accessories: readonly THREE.Object3D[];
+
+  constructor() {
+    super();
+    this.torso.scale.setScalar(ORANGE_CAT_SCALE);
+    this.root.add(this.torso);
+    const addPart = ({ pivot: [x, y, z], boxes }: (typeof ORANGE_CAT_PARTS)[number]) => {
+      const part = new THREE.Group();
+      part.position.set(x, y, z);
+      this.torso.add(part);
+      for (const [cx, cy, cz, width, height, depth, color] of boxes) {
+        this.box(part, new THREE.Color(color), cx, cy, cz, width, height, depth);
+      }
+      return part;
+    };
+    const [body, head, frontLeft, frontRight, backLeft, backRight, tail] = ORANGE_CAT_PARTS;
+    addPart(body);
+    this.head = addPart(head);
+    this.legs.push(addPart(frontLeft), addPart(frontRight), addPart(backLeft), addPart(backRight));
+    this.tail = addPart(tail);
+    const collar = new THREE.Color(0x6189c5);
+    const tag = new THREE.Color(0xffd28a);
+    this.accessories = [
+      this.box(this.torso, collar, 0, 1.15, 0.29, 0.93, 0.16, 0.42),
+      this.box(this.torso, tag, 0, 1.01, 0.53, 0.18, 0.21, 0.09),
+    ];
+  }
+
+  pose(time: number, phase: number, gait: number, creature: Creature): void {
+    if (creature.kind !== "cat") return;
+    for (const accessory of this.accessories) accessory.visible = creature.owned;
+    this.root.scale.setScalar(creature.growsIn > 0 ? 0.64 : 1);
+    const stride = Math.sin(time * 14 + phase);
+    this.torso.position.y = Math.abs(stride) * gait * 0.037;
+    for (const [index, leg] of this.legs.entries()) {
+      leg.rotation.x = (index === 0 || index === 3 ? stride : -stride) * gait * 0.59;
+    }
+    this.head.rotation.y = Math.sin(time * 1.15 + phase) * 0.1 * (1 - gait);
+    this.tail.rotation.y = Math.sin(time * 2.9 + phase) * (0.23 + gait * 0.19);
   }
 }

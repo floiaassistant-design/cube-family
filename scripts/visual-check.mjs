@@ -810,6 +810,78 @@ try {
   );
   await mobilePage.close();
 
+  const dragonPhone = await openPage(
+    "mobile dragon",
+    pageUrl(2026, "mode=creative&quality=low&view=3"),
+    { width: 390, height: 844, isMobile: true, hasTouch: true },
+  );
+  await waitForWorld(dragonPhone, 9);
+  await dragonPhone.tap("#play-button");
+  const catsVisible = await until(dragonPhone, () => {
+    const position = window.__mc.position();
+    return window.__mc
+      .creatures()
+      .some(
+        (creature) =>
+          creature.kind === "cat" &&
+          creature.coat === 0 &&
+          Math.hypot(creature.position.x - position.x, creature.position.z - position.z) < 9,
+      );
+  });
+  report("the orange cat is near the player in Creative mode", catsVisible);
+  const rideVisible = await until(dragonPhone, () => {
+    const button = document.querySelector(".touch-ride");
+    return window.__mc.dragon().ready && button?.getBoundingClientRect().width > 0;
+  });
+  report("the dragon mount button is available on a phone", rideVisible);
+  if (rideVisible) {
+    await dragonPhone.tap(".touch-ride");
+    const mounted = await until(dragonPhone, () => window.__mc.dragon().mounted);
+    report("tapping the dragon button puts the player in the saddle", mounted);
+    if (mounted) {
+      const onGround = await dragonPhone.evaluate(() => window.__mc.dragon().position.y);
+      const pressFlight = async (button, pressed) => {
+        const rect = await (await dragonPhone.$(button)).boundingBox();
+        if (pressed) {
+          await dragonPhone.touchscreen.touchStart(
+            rect.x + rect.width / 2,
+            rect.y + rect.height / 2,
+          );
+        } else {
+          await dragonPhone.touchscreen.touchEnd();
+        }
+      };
+      await pressFlight(".touch-jump", true);
+      const airborne = await until(
+        dragonPhone,
+        (ground) => {
+          const dragon = window.__mc.dragon();
+          return dragon.flying && dragon.position.y > ground + 2;
+        },
+        onGround,
+      );
+      await pressFlight(".touch-jump", false);
+      report("holding ascent takes the dragon into the air", airborne);
+      if (airborne) {
+        await pressFlight(".touch-descend", true);
+        const landed = await until(
+          dragonPhone,
+          () => window.__mc.dragon().grounded && !window.__mc.dragon().flying,
+        );
+        await pressFlight(".touch-descend", false);
+        report("holding descent lands the dragon", landed);
+        if (landed) {
+          await dragonPhone.tap(".touch-ride");
+          report(
+            "the rider can dismount after landing on a phone",
+            await until(dragonPhone, () => !window.__mc.dragon().mounted),
+          );
+        }
+      }
+    }
+  }
+  await dragonPhone.browserContext().close();
+
   // =====================================================================
   // 6. Installed build: boots with the network gone
   // =====================================================================
