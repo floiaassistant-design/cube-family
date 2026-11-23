@@ -14,8 +14,12 @@ interface Raider {
 
 const CORE = { x: FORTRESS_CRYSTAL.x + 0.5, z: FORTRESS_CRYSTAL.z + 0.5 };
 const SOUTH: Route = [
-  { x: 48, z: 93 }, { x: 48, z: 79 }, { x: 48, z: 73 },
-  { x: 48, z: 61 }, { x: 48, z: 54 }, CORE,
+  { x: 48, z: 93 },
+  { x: 48, z: 79 },
+  { x: 48, z: 73 },
+  { x: 48, z: 61 },
+  { x: 48, z: 54 },
+  CORE,
 ];
 const ROUTES: readonly Route[] = [
   SOUTH,
@@ -25,8 +29,11 @@ const ROUTES: readonly Route[] = [
   [{ x: 102, z: 8 }, { x: 105, z: 102 }, { x: 48, z: 103 }, ...SOUTH],
 ];
 const STARTS = [
-  { x: 48, z: 105 }, { x: 48, z: 107 }, { x: 105, z: 48 },
-  { x: -8, z: 48 }, { x: 94, z: 8 },
+  { x: 48, z: 105 },
+  { x: 48, z: 107 },
+  { x: 105, z: 48 },
+  { x: -8, z: 48 },
+  { x: 94, z: 8 },
 ] as const;
 
 /** Standalone cooperative-ready wave simulation, with no DOM or storage. */
@@ -93,8 +100,7 @@ export class FortressSiege {
     }
 
     this.spawnTimer -= step;
-    if (this.spawned < this.toSpawn && this.enemies.size < this.maxActive &&
-        this.spawnTimer <= 0) {
+    if (this.spawned < this.toSpawn && this.enemies.size < this.maxActive && this.spawnTimer <= 0) {
       this.spawnOne(stand);
       this.spawnTimer = 1.35;
     }
@@ -150,9 +156,7 @@ export class FortressSiege {
     this.countdown = 0;
   }
 
-  private spawnOne(
-    stand: (x: number, z: number, y: number, tall: boolean) => number | null,
-  ): void {
+  private spawnOne(stand: (x: number, z: number, y: number, tall: boolean) => number | null): void {
     // Alternate fronts after the early tutorial waves.
     const front = this.wave <= 2 ? 0 : (this.spawned + this.wave) % STARTS.length;
     const start = STARTS[front];
