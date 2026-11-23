@@ -389,8 +389,9 @@ function boot(): void {
   const fortressStore = new FortressStore(storage, SEED);
   let fortress = fortressStore.read();
   let siege: SiegeController | null = fortress
-    ? new SiegeController(fortress, (x, z) =>
-        sampleColumn(Math.floor(x), Math.floor(z)).terrainHeight,
+    ? new SiegeController(
+        fortress,
+        (x, z) => sampleColumn(Math.floor(x), Math.floor(z)).terrainHeight,
       )
     : null;
   const standNear = (x: number, z: number, y: number, tall: boolean): number | null => {
@@ -442,9 +443,16 @@ function boot(): void {
       sight.copy(center).sub(camera.position);
       const distance = forward.dot(sight);
       if (distance <= 0 || distance >= best) continue;
-      const radius = creature.kind === "roamer" ? 0.52 :
-        creature.kind === "siege-zombie" ? (creature.variant === "boss" ? 0.86 : 0.52) :
-          creature.growsIn > 0 ? 0.24 : 0.38;
+      const radius =
+        creature.kind === "roamer"
+          ? 0.52
+          : creature.kind === "siege-zombie"
+            ? creature.variant === "boss"
+              ? 0.86
+              : 0.52
+            : creature.growsIn > 0
+              ? 0.24
+              : 0.38;
       if (sight.lengthSq() - distance * distance > radius * radius) continue;
       if (!clearSight(camera.position, center)) continue;
       closest = creature;
@@ -601,7 +609,13 @@ function boot(): void {
     // Cats and kittens are companions and never take damage.
     if (creature.kind === "cat") return true;
     if (creature.kind === "siege-zombie") {
-      if (siege?.melee(creature, attackDamage(siege.active ? COPPER_SWORD : heldEquipment), performance.now() / 1000)) {
+      if (
+        siege?.melee(
+          creature,
+          attackDamage(siege.active ? COPPER_SWORD : heldEquipment),
+          performance.now() / 1000,
+        )
+      ) {
         swingHand();
         sound.breakBlock(BlockId.STONE);
       }
@@ -778,7 +792,9 @@ function boot(): void {
   // ---- reusable mini-game: player-triggered fortress, never a new world ----
   const visitFortress = (): void => {
     if (!fortress || player.riding) {
-      hud.announce(t.locale === "fr" ? "Descends du dragon avant d'entrer." : "Dismount before entering.");
+      hud.announce(
+        t.locale === "fr" ? "Descends du dragon avant d'entrer." : "Dismount before entering.",
+      );
       return;
     }
     const x = fortress.x + FORTRESS_CENTER + 0.5;
@@ -796,12 +812,16 @@ function boot(): void {
       (minX, maxX, minZ, maxZ) => editStore.hasEditsInRect(minX, maxX, minZ, maxZ),
     );
     if (!site) {
-      hud.announce(t.locale === "fr" ? "Aucun terrain plat libre à proximité." : "No empty level site nearby.");
+      hud.announce(
+        t.locale === "fr" ? "Aucun terrain plat libre à proximité." : "No empty level site nearby.",
+      );
       return;
     }
-    const agree = window.confirm(t.locale === "fr"
-      ? "Construire la forteresse de 96 × 96 blocs sur un terrain vierge voisin ?"
-      : "Build the 96 × 96 fortress on a nearby unedited site?");
+    const agree = window.confirm(
+      t.locale === "fr"
+        ? "Construire la forteresse de 96 × 96 blocs sur un terrain vierge voisin ?"
+        : "Build the 96 × 96 fortress on a nearby unedited site?",
+    );
     if (!agree) return;
     const edits = createFortressBlueprint(site);
     editStore.recordMany(edits);
@@ -824,9 +844,14 @@ function boot(): void {
     }
     fortress = site;
     fortressStore.write(site);
-    siege = new SiegeController(site, (x, z) => sampleColumn(Math.floor(x), Math.floor(z)).terrainHeight);
+    siege = new SiegeController(
+      site,
+      (x, z) => sampleColumn(Math.floor(x), Math.floor(z)).terrainHeight,
+    );
     visitFortress();
-    hud.announce(t.locale === "fr" ? "Forteresse construite et enregistrée." : "Fortress built and saved.");
+    hud.announce(
+      t.locale === "fr" ? "Forteresse construite et enregistrée." : "Fortress built and saved.",
+    );
   };
   const shootSiege = (): void => {
     if (!siege || !player.isActive || inventory.isOpen) return;
@@ -836,20 +861,29 @@ function boot(): void {
       sound.breakBlock(BlockId.WOOD);
     }
   };
-  const siegePanel = new SiegePanel(app, {
-    build: buildFortress,
-    visit: visitFortress,
-    start: () => {
-      if (!siege || !player.isActive) return;
-      siege.start();
-      hud.announce(t.locale === "fr" ? "Prépare-toi : attaque dans 20 secondes !" : "Get ready: attack in 20 seconds!");
+  const siegePanel = new SiegePanel(
+    app,
+    {
+      build: buildFortress,
+      visit: visitFortress,
+      start: () => {
+        if (!siege || !player.isActive) return;
+        siege.start();
+        hud.announce(
+          t.locale === "fr"
+            ? "Prépare-toi : attaque dans 20 secondes !"
+            : "Get ready: attack in 20 seconds!",
+        );
+      },
+      stop: () => siege?.stop(),
+      shoot: shootSiege,
+      repair: () => {
+        if (siege?.repair())
+          hud.announce(t.locale === "fr" ? "Cristal réparé !" : "Crystal repaired!");
+      },
     },
-    stop: () => siege?.stop(),
-    shoot: shootSiege,
-    repair: () => {
-      if (siege?.repair()) hud.announce(t.locale === "fr" ? "Cristal réparé !" : "Crystal repaired!");
-    },
-  }, t.locale === "fr");
+    t.locale === "fr",
+  );
 
   // ---- menu and settings ----
   const menu = new Menu(menuRoot, settings, {
@@ -1154,7 +1188,7 @@ function boot(): void {
     gameTime += dt;
     const clock = siege?.active
       ? (Math.floor(gameTime / DAY_LENGTH_SECONDS) + 0.86) * DAY_LENGTH_SECONDS
-      : frozenTime ?? gameTime;
+      : (frozenTime ?? gameTime);
 
     // Adaptive quality: feed the real frame cadence so the renderer can
     // trade resolution for a fluid frame rate on weaker (mobile) hardware.
@@ -1259,11 +1293,17 @@ function boot(): void {
     const adventure = mode === "adventure";
     const night = timeIsNight(clock);
     if (player.isActive && !inventory.isOpen && !document.hidden) siege?.update(dt);
-    const nearbySiege = siege?.zombies.filter((enemy) =>
-      Math.hypot(player.position.x - enemy.position.x, player.position.z - enemy.position.z) < 24,
-    ) ?? [];
+    const nearbySiege =
+      siege?.zombies.filter(
+        (enemy) =>
+          Math.hypot(player.position.x - enemy.position.x, player.position.z - enemy.position.z) <
+          24,
+      ) ?? [];
     const distanceToFortress = fortress
-      ? Math.hypot(player.position.x - (fortress.x + FORTRESS_CENTER), player.position.z - (fortress.z + FORTRESS_CENTER))
+      ? Math.hypot(
+          player.position.x - (fortress.x + FORTRESS_CENTER),
+          player.position.z - (fortress.z + FORTRESS_CENTER),
+        )
       : Infinity;
     siegePanel.update({
       creative: mode === "creative",
@@ -1426,7 +1466,8 @@ function boot(): void {
       (siege?.active ? COPPER_SWORD : null) ??
       (mode === "adventure" && heldEquipment && bag.count(heldEquipment) > 0
         ? heldEquipment
-        : null) ?? hotbar.selectedBlock;
+        : null) ??
+      hotbar.selectedBlock;
     if (cpuHand) {
       const hideHand = !handVisible || (mode !== "adventure" && !siege?.active);
       if (cpuHand.hidden !== hideHand) cpuHand.hidden = hideHand;
