@@ -1015,12 +1015,15 @@ kbd {
 }
 @media (max-width: 700px) {
   #siege-panel {
-    top: max(12px, env(safe-area-inset-top));
-    right: max(8px, env(safe-area-inset-right));
-    width: min(210px, 42vw);
+    /* Keep the right-half look surface and the top-right ride/menu
+       buttons available on phones, even before a fortress is built. */
+    top: calc(max(10px, env(safe-area-inset-top)) + 58px);
+    left: max(8px, env(safe-area-inset-left));
+    right: auto;
+    width: min(210px, 40vw);
     padding: 7px;
     font-size: 0.73rem;
-    max-height: 54dvh;
+    max-height: 38dvh;
     overflow-y: auto;
   }
   .siege-title {
