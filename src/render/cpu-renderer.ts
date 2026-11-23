@@ -5,6 +5,7 @@ import { CHUNK_HEIGHT } from "../world/coords";
 import { deriveSeed, mulberry32 } from "../world/rng";
 import type { World } from "../world/world";
 import { BLOCK_COLORS } from "./block-colors";
+import { CpuModelRenderer } from "./cpu-model";
 
 /** A complete software renderer for the voxel world on a 2D canvas,
  * smoothly upscaled. It exists so the game still runs — and still looks
@@ -117,6 +118,8 @@ export class CpuRenderer {
   private height = Math.round((START_WIDTH * 9) / 16);
   private sigGrid = new Int32Array(0);
   private depthGrid = new Float32Array(0);
+  private modelDepth = new Float32Array(0);
+  private readonly modelRenderer = new CpuModelRenderer();
   private frameMsEma = 33;
   private highlight: CpuHighlight | null = null;
 
@@ -165,6 +168,7 @@ export class CpuRenderer {
     const coarseH = (this.height + 1) >> 1;
     this.sigGrid = new Int32Array(coarseW * coarseH);
     this.depthGrid = new Float32Array(coarseW * coarseH);
+    this.modelDepth = new Float32Array(this.width * this.height);
     const ctx = this.buffer.getContext("2d");
     if (!ctx) throw new Error("2D canvas context is unavailable");
     return { ctx, image: ctx.createImageData(this.width, this.height) };
@@ -202,7 +206,7 @@ export class CpuRenderer {
     }
   }
 
-  render(elapsedSeconds: number): void {
+  render(elapsedSeconds: number, entity: THREE.Object3D | null = null): void {
     const started = performance.now();
     const data = this.image.data;
     const W = this.width;
@@ -210,6 +214,8 @@ export class CpuRenderer {
     const coarseW = (W + 1) >> 1;
     const sigGrid = this.sigGrid;
     const depthGrid = this.depthGrid;
+    const modelDepth = this.modelDepth;
+    const drawModel = entity !== null && this.modelRenderer.prepare(this.camera, entity);
 
     // Camera basis, once per frame.
     const forward = new THREE.Vector3();
@@ -568,6 +574,9 @@ export class CpuRenderer {
       data[k + 2] = b;
       data[k + 3] = 255;
 
+      // The mesh projection uses depth along the camera axis. Convert the
+      // traced distance along this normalized ray to the same units.
+      if (drawModel) modelDepth[j * W + i] = hitT * invLen;
       lastT = hitT;
       // Signature: block id (4b) | face axis (2b) | face sign (1b) | water (1b).
       return hitId | (axis << 4) | ((entered > 0 ? 1 : 0) << 6) | ((waterT >= 0 ? 1 : 0) << 7);
@@ -651,12 +660,21 @@ export class CpuRenderer {
               4) |
             0;
           data[k + 3] = 255;
+          if (drawModel) {
+            modelDepth[j * W + i] = Math.min(
+              modelDepth[pA / 4] ?? 0,
+              modelDepth[pB / 4] ?? 0,
+              modelDepth[pC / 4] ?? 0,
+              modelDepth[pD / 4] ?? 0,
+            );
+          }
         } else {
           trace(i, j);
         }
       }
     }
 
+    if (drawModel) this.modelRenderer.draw(entity, this.image, modelDepth, light);
     this.bufferCtx.putImageData(this.image, 0, 0);
     // Smooth upscale: the browser's bilinear filter is the final
     // anti-aliasing pass — crisp enough to read blocks, soft enough to

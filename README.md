@@ -4,6 +4,8 @@ Cette base web dérive de Lumenwild de Vincent Plessy. Voir [AGENTS.md](AGENTS.m
 
 Le dragon rouge se trouve près du point de départ. Approche-toi et appuie sur **R** pour monter en selle. Maintiens **Espace** pour décoller et **C** pour te poser. [Commandes de la monture et modèle 3D](assets/3d/dragon-rouge/README.md)
 
+Pour retrouver la pioche, ouvre **Mondes**, choisis **Aventure**, puis ouvre l’onglet **Fabriquer** de l’inventaire. La pioche d’éclat se fabrique avec deux planches et deux pavés. Sélectionne-la dans le sac pour la reprendre en main.
+
 ## Lumenwild
 
 > An endless voxel world of light. Explore, dig and build across forests,

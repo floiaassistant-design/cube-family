@@ -19,6 +19,7 @@ Cette base reprend le moteur libre de Lumenwild, © Vincent Plessy. La licence [
 ## Développement
 
 - Utiliser la version de Node de `.node-version`, `npm ci --ignore-scripts` et les versions verrouillées. Installer Chromium ou Chrome depuis sa source officielle et fournir `PUPPETEER_EXECUTABLE_PATH` pour les tests fonctionnels.
+- Reporter les changements du jeu en commun dans `src/` et les tests concernés sur GitHub et sur le site. Compiler les cibles web et native depuis ce même code.
 - Suivre TypeScript strict, ESLint et Prettier. Réutiliser les contrôleurs et types existants. Traduire les éléments visibles en français et en anglais. Garder la génération déterministe et limiter le travail sur le thread de rendu.
 - Préserver le mode Créatif, le mode Aventure, les contrôles, la génération, le rendu CPU de secours et le jeu hors ligne. Conserver les clés, identifiants de blocs et formats des sauvegardes existantes. Tester toute migration avec de vraies données d’une version précédente.
 - Garder `dist-e2e/` pour les essais locaux et la CI. L’interface de débogage `window.__mc` est réservée au développement et à cette compilation. La compilation de publication est `npm run build` dans `dist/`.

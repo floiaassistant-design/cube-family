@@ -1,12 +1,23 @@
 import { BLOCKS, BlockId, INVENTORY_BLOCKS } from "../world/blocks";
 
-/** What the player carries in Adventure mode: a count per block. Pure data
- * with validation on the way in, so a saved bag can't hold blocks that
- * don't exist or counts that make no sense. */
+/** What the player carries in Adventure mode. Validate items and counts
+ * when loading a saved bag. */
 
 export const STACK_LIMIT = 999;
+export const MINING_PICK = "mining-pick";
+export const COPPER_PICK = "copper-pick";
+export const COPPER_ARMOR = "copper-armor";
+export type MiningPick = typeof MINING_PICK | typeof COPPER_PICK;
+export type ItemId = BlockId | MiningPick | typeof COPPER_ARMOR;
+export type HeldItem = BlockId | MiningPick;
+
+export function isMiningPick(item: ItemId): item is MiningPick {
+  return item === MINING_PICK || item === COPPER_PICK;
+}
 
 const HOLDABLE = new Set<number>(INVENTORY_BLOCKS);
+const EQUIPMENT = [MINING_PICK, COPPER_PICK, COPPER_ARMOR] as const;
+const stackLimit = (item: ItemId): number => (typeof item === "string" ? 1 : STACK_LIMIT);
 
 /** What breaking a block gives you (nothing for AIR). Rock comes away as
  * cobblestone and turf as dirt; everything else drops itself. */
@@ -22,8 +33,10 @@ export function dropFor(block: BlockId): BlockId {
   }
 }
 
-/** Seconds of digging to break a block by hand in Adventure mode. */
-export function digSeconds(block: BlockId): number {
+/** Seconds of digging in Adventure, using the pick automatically when owned. */
+export function digSeconds(block: BlockId, hasMiningPick = false, copperPick = false): number {
+  const rockSpeed = copperPick ? 0.42 : hasMiningPick ? 0.65 : 1.3;
+  const oreSpeed = copperPick ? 0.57 : 0.85;
   const def = BLOCKS[block];
   if (!def.breakable) return Infinity;
   if (def.shape === "cross") return 0.08;
@@ -52,47 +65,53 @@ export function digSeconds(block: BlockId): number {
     case BlockId.PLANKS:
       return 0.9;
     case BlockId.COAL_ORE:
+      return hasMiningPick ? oreSpeed : 1.6;
     case BlockId.GOLD_ORE:
-      return 1.6;
+      return hasMiningPick ? oreSpeed : Infinity;
+    case BlockId.COPPER_ORE:
+      return hasMiningPick ? oreSpeed : 1.8;
+    case BlockId.DIAMOND_ORE:
+      return hasMiningPick ? (copperPick ? 0.76 : 1.5) : Infinity;
     case BlockId.CRYSTAL:
-      return 1.9;
+      return hasMiningPick ? (copperPick ? 0.7 : 1) : Infinity;
     default:
-      return 1.3; // stone and everything built from it
+      return rockSpeed; // stone and everything built from it
   }
 }
 
 export class Bag {
-  private readonly counts = new Map<BlockId, number>();
+  private readonly counts = new Map<ItemId, number>();
   /** Fired whenever a count changes. */
   onChange: (() => void) | undefined;
 
   constructor(saved?: unknown) {
     if (typeof saved !== "object" || saved === null) return;
     for (const [key, value] of Object.entries(saved as Record<string, unknown>)) {
-      const id = Number(key);
-      if (!HOLDABLE.has(id) || typeof value !== "number" || !Number.isFinite(value)) continue;
-      const count = Math.min(STACK_LIMIT, Math.floor(value));
-      if (count > 0) this.counts.set(id as BlockId, count);
+      const id = EQUIPMENT.find((equipment) => equipment === key) ?? (Number(key) as BlockId);
+      if (typeof id === "number" && !HOLDABLE.has(id)) continue;
+      if (typeof value !== "number" || !Number.isFinite(value)) continue;
+      const count = Math.min(stackLimit(id), Math.floor(value));
+      if (count > 0) this.counts.set(id, count);
     }
   }
 
-  count(block: BlockId): number {
-    return this.counts.get(block) ?? 0;
+  count(item: ItemId): number {
+    return this.counts.get(item) ?? 0;
   }
 
   /** Adds up to `amount`; returns how many actually fit. */
-  add(block: BlockId, amount = 1): number {
-    if (!HOLDABLE.has(block) || amount <= 0) return 0;
-    const before = this.count(block);
-    const after = Math.min(STACK_LIMIT, before + Math.floor(amount));
+  add(item: ItemId, amount = 1): number {
+    if ((typeof item === "number" && !HOLDABLE.has(item)) || amount <= 0) return 0;
+    const before = this.count(item);
+    const after = Math.min(stackLimit(item), before + Math.floor(amount));
     if (after === before) return 0;
-    this.counts.set(block, after);
+    this.counts.set(item, after);
     this.onChange?.();
     return after - before;
   }
 
   /** Takes `amount` out if (and only if) that many are there. */
-  remove(block: BlockId, amount = 1): boolean {
+  remove(block: ItemId, amount = 1): boolean {
     const before = this.count(block);
     if (amount <= 0 || before < amount) return false;
     if (before === amount) this.counts.delete(block);
@@ -106,6 +125,17 @@ export class Bag {
     return INVENTORY_BLOCKS.filter((block) => this.count(block) > 0);
   }
 
+  get pick(): MiningPick | null {
+    if (this.count(COPPER_PICK) > 0) return COPPER_PICK;
+    return this.count(MINING_PICK) > 0 ? MINING_PICK : null;
+  }
+
+  equipment(): readonly (typeof EQUIPMENT)[number][] {
+    return EQUIPMENT.filter((item) =>
+      item === COPPER_ARMOR ? this.count(item) > 0 : item === this.pick,
+    );
+  }
+
   toJSON(): Record<string, number> {
     const out: Record<string, number> = {};
     for (const [block, count] of this.counts) out[block.toString()] = count;
@@ -115,9 +145,9 @@ export class Bag {
 
 export interface Recipe {
   readonly id: string;
-  readonly output: BlockId;
+  readonly output: ItemId;
   readonly amount: number;
-  readonly needs: readonly (readonly [BlockId, number])[];
+  readonly needs: readonly (readonly [ItemId, number])[];
 }
 
 /** What can be made by hand. Deliberately few and obvious: a child should
@@ -126,6 +156,15 @@ export const RECIPES: readonly Recipe[] = [
   { id: "planks-oak", output: BlockId.PLANKS, amount: 4, needs: [[BlockId.WOOD, 1]] },
   { id: "planks-pale", output: BlockId.PLANKS, amount: 4, needs: [[BlockId.PALE_WOOD, 1]] },
   { id: "planks-pine", output: BlockId.PLANKS, amount: 4, needs: [[BlockId.PINE_WOOD, 1]] },
+  {
+    id: MINING_PICK,
+    output: MINING_PICK,
+    amount: 1,
+    needs: [
+      [BlockId.PLANKS, 2],
+      [BlockId.COBBLE, 2],
+    ],
+  },
   {
     id: "stone",
     output: BlockId.STONE,
@@ -155,6 +194,39 @@ export const RECIPES: readonly Recipe[] = [
     ],
   },
   { id: "sandstone", output: BlockId.SANDSTONE, amount: 2, needs: [[BlockId.SAND, 4]] },
+  {
+    id: COPPER_PICK,
+    output: COPPER_PICK,
+    amount: 1,
+    needs: [
+      [MINING_PICK, 1],
+      [BlockId.COPPER_ORE, 3],
+    ],
+  },
+  {
+    id: COPPER_ARMOR,
+    output: COPPER_ARMOR,
+    amount: 1,
+    needs: [
+      [BlockId.COPPER_ORE, 6],
+      [BlockId.PLANKS, 1],
+    ],
+  },
+  {
+    id: "copper-block",
+    output: BlockId.COPPER_BLOCK,
+    amount: 1,
+    needs: [[BlockId.COPPER_ORE, 4]],
+  },
+  {
+    id: "camp-bed",
+    output: BlockId.CAMP_BED,
+    amount: 1,
+    needs: [
+      [BlockId.PLANKS, 3],
+      [BlockId.TALL_GRASS, 2],
+    ],
+  },
   { id: "ice", output: BlockId.ICE, amount: 1, needs: [[BlockId.SNOW, 2]] },
   {
     id: "lantern",
@@ -177,9 +249,10 @@ export const RECIPES: readonly Recipe[] = [
 ];
 
 export function canCraft(bag: Bag, recipe: Recipe): boolean {
+  if (recipe.output === MINING_PICK && bag.pick === COPPER_PICK) return false;
   return (
     recipe.needs.every(([block, amount]) => bag.count(block) >= amount) &&
-    bag.count(recipe.output) + recipe.amount <= STACK_LIMIT
+    bag.count(recipe.output) + recipe.amount <= stackLimit(recipe.output)
   );
 }
 

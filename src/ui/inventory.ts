@@ -1,6 +1,16 @@
 import { DISCOVERIES, type Journal } from "../game/discoveries";
-import { type Bag, canCraft, type Recipe, RECIPES } from "../game/items";
+import {
+  type Bag,
+  canCraft,
+  COPPER_ARMOR,
+  COPPER_PICK,
+  isMiningPick,
+  type ItemId,
+  type Recipe,
+  RECIPES,
+} from "../game/items";
 import type { Translator } from "../i18n";
+import { renderEquipmentIcon } from "../render/mining-pick-art";
 import { BLOCKS, type BlockId, INVENTORY_BLOCKS } from "../world/blocks";
 import { renderBlockIcon } from "./block-icon";
 
@@ -10,6 +20,7 @@ export interface InventoryState {
   /** null in Creative mode: every block, unlimited. */
   readonly bag: Bag | null;
   readonly journal: Journal;
+  readonly pickInHand: boolean;
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(
@@ -37,7 +48,7 @@ export class Inventory {
   private open = false;
   private tab: InventoryTab = "blocks";
   private state: InventoryState | null = null;
-  onChoose: ((block: BlockId) => void) | undefined;
+  onChoose: ((item: ItemId) => void) | undefined;
   onCraft: ((recipe: Recipe) => void) | undefined;
   onClose: (() => void) | undefined;
 
@@ -66,7 +77,15 @@ export class Inventory {
     parent.appendChild(this.panel);
   }
 
-  private icon(block: BlockId): HTMLCanvasElement {
+  private itemName(item: ItemId): string {
+    if (typeof item === "number") return this.t.block(BLOCKS[item].name);
+    return this.t(
+      item === COPPER_ARMOR ? "copperArmor" : item === COPPER_PICK ? "copperPick" : "miningPick",
+    );
+  }
+
+  private icon(block: ItemId): HTMLCanvasElement {
+    if (typeof block === "string") return renderEquipmentIcon(64, block);
     let source = this.icons.get(block);
     if (!source) {
       source = renderBlockIcon(this.atlas, block, 64);
@@ -103,7 +122,9 @@ export class Inventory {
   private render(): void {
     const state = this.state;
     if (!state) return;
-    const names: [InventoryTab, string][] = [["blocks", this.t("tabBlocks")]];
+    const names: [InventoryTab, string][] = [
+      ["blocks", this.t(state.bag ? "tabBag" : "tabBlocks")],
+    ];
     if (state.bag) names.push(["craft", this.t("tabCraft")]);
     names.push(["journal", this.t("tabJournal")]);
     this.tabs.replaceChildren(
@@ -126,11 +147,30 @@ export class Inventory {
 
   private renderBlocks(state: InventoryState): void {
     const blocks = state.bag ? state.bag.owned() : INVENTORY_BLOCKS;
-    if (blocks.length === 0) {
+    const equipment = state.bag?.equipment() ?? [];
+    if (blocks.length === 0 && equipment.length === 0) {
       this.body.replaceChildren(el("p", "panel-hint", this.t("bagEmpty")));
       return;
     }
     const grid = el("div", "inventory-grid");
+    for (const item of equipment) {
+      const canHold = isMiningPick(item);
+      const tool = el(canHold ? "button" : "div", "inventory-cell inventory-tool");
+      tool.dataset.item = item;
+      tool.title = this.itemName(item);
+      tool.setAttribute("aria-label", this.itemName(item));
+      tool.append(this.icon(item), el("span", "cell-count", "1"));
+      if (tool instanceof HTMLButtonElement) {
+        tool.type = "button";
+        tool.setAttribute("aria-pressed", String(state.pickInHand));
+        tool.addEventListener("click", () => {
+          this.onChoose?.(item);
+        });
+      } else {
+        tool.setAttribute("role", "img");
+      }
+      grid.appendChild(tool);
+    }
     for (const block of blocks) {
       const name = this.t.block(BLOCKS[block].name);
       const cell = el("button", "inventory-cell");
@@ -145,7 +185,13 @@ export class Inventory {
       });
       grid.appendChild(cell);
     }
-    this.body.replaceChildren(grid, el("p", "panel-hint", this.t("inventoryHint")));
+    this.body.replaceChildren(grid);
+    if (blocks.length > 0) this.body.append(el("p", "panel-hint", this.t("inventoryHint")));
+    if (state.bag?.pick) {
+      this.body.append(
+        el("p", "panel-hint", this.t(state.pickInHand ? "miningPickEquipped" : "miningPickSelect")),
+      );
+    }
   }
 
   private renderRecipes(bag: Bag): void {
@@ -159,14 +205,35 @@ export class Inventory {
       const needs = el("span", "recipe-side");
       for (const [block, amount] of recipe.needs) {
         const part = el("span", "recipe-item");
-        part.title = this.t.block(BLOCKS[block].name);
+        part.title = this.itemName(block);
         part.append(this.icon(block), el("span", "cell-count", `${bag.count(block)}/${amount}`));
         part.classList.toggle("short", bag.count(block) < amount);
         needs.appendChild(part);
       }
-      const makes = el("span", "recipe-item");
-      makes.title = this.t.block(BLOCKS[recipe.output].name);
-      makes.append(this.icon(recipe.output), el("span", "cell-count", `×${recipe.amount}`));
+      let makes: HTMLSpanElement;
+      if (typeof recipe.output === "string") {
+        makes = el("span", "recipe-pick");
+        const icon = el("span", "recipe-item");
+        icon.appendChild(this.icon(recipe.output));
+        const label = el("span", "recipe-tool", this.itemName(recipe.output));
+        const owned =
+          bag.count(recipe.output) > 0 || (isMiningPick(recipe.output) && bag.pick === COPPER_PICK);
+        const description =
+          recipe.output === COPPER_ARMOR
+            ? "copperArmorRecipe"
+            : recipe.output === COPPER_PICK
+              ? "copperPickRecipe"
+              : "miningPickRecipe";
+        label.append(el("small", undefined, this.t(owned ? "miningPickOwned" : description)));
+        makes.append(icon, label);
+      } else {
+        makes = el("span", "recipe-item");
+        makes.title = this.itemName(recipe.output);
+        makes.append(
+          this.icon(recipe.output),
+          el("span", "cell-count", `×${recipe.amount.toString()}`),
+        );
+      }
 
       row.append(needs, el("span", "recipe-arrow", "→"), makes);
       row.addEventListener("click", () => {

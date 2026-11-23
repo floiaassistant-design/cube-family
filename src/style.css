@@ -66,6 +66,54 @@ canvas {
   border-radius: 1px;
 }
 
+#dig-hint,
+#dig-progress {
+  position: fixed;
+  top: calc(50% + 22px);
+  left: 50%;
+  z-index: 5;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+#held-item {
+  position: fixed;
+  right: max(7vw, env(safe-area-inset-right));
+  bottom: max(8vh, env(safe-area-inset-bottom));
+  z-index: 4;
+  width: clamp(66px, min(16vmin, 16vw), 128px);
+  height: auto;
+  image-rendering: pixelated;
+  transform-origin: 25% 85%;
+  pointer-events: none;
+  filter: drop-shadow(2px 5px 4px rgba(0, 0, 0, 0.55));
+}
+
+#held-item.holding-pick {
+  width: clamp(90px, min(25vmin, 21vw), 216px);
+}
+
+#held-item canvas {
+  width: 100%;
+  height: auto;
+}
+
+#dig-hint {
+  width: max-content;
+  max-width: min(78vw, 23rem);
+  padding: 5px 9px;
+  border-radius: 7px;
+  background: var(--glass-strong);
+  text-align: center;
+  font-size: 0.78rem;
+}
+
+#dig-progress {
+  width: 7rem;
+  height: 0.65rem;
+  accent-color: var(--accent);
+}
+
 #crosshair::before {
   left: 50%;
   top: 0;
@@ -141,6 +189,8 @@ canvas {
 
 /* Photo mode (F1): nothing on screen but the world. */
 #app.hud-hidden #crosshair,
+#app.hud-hidden #dig-hint,
+#app.hud-hidden #dig-progress,
 #app.riding #crosshair,
 #app.hud-hidden #hotbar,
 #app.hud-hidden #toast,
@@ -543,6 +593,11 @@ kbd {
   border-color: var(--accent);
 }
 
+.inventory-tool[aria-pressed="true"] {
+  background: rgba(255, 196, 90, 0.1);
+  border-color: var(--accent);
+}
+
 .inventory-cell:active {
   transform: scale(0.94);
 }
@@ -636,6 +691,32 @@ kbd {
 .recipe-arrow {
   font-size: 20px;
   opacity: 0.7;
+}
+
+.recipe-pick {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.recipe-pick .recipe-item {
+  flex-shrink: 0;
+  width: clamp(26px, 7vw, 46px);
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.recipe-tool {
+  max-width: 11rem;
+  text-align: left;
+  font-weight: 700;
+}
+
+.recipe-tool small {
+  display: block;
+  margin-top: 3px;
+  color: var(--ink-dim);
+  font-weight: 400;
 }
 
 .journal-list {
@@ -837,4 +918,42 @@ kbd {
   * {
     transition: none !important;
   }
+}
+
+#creatures {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  z-index: 2;
+  pointer-events: none;
+}
+#creatures[hidden] {
+  display: none;
+}
+#adventure-status {
+  position: absolute;
+  top: max(48px, calc(env(safe-area-inset-top) + 38px));
+  left: max(12px, env(safe-area-inset-left));
+  z-index: 5;
+  padding: 5px 9px;
+  max-width: 60vw;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--glass-strong);
+  font-size: 0.8rem;
+  color: var(--ink);
+  pointer-events: none;
+}
+#app.hud-hidden #adventure-status {
+  display: none;
+}
+.secondary-link {
+  color: var(--ink-dim);
+  font-size: 0.74rem;
+  text-underline-offset: 3px;
+}
+.secondary-link:hover {
+  color: var(--accent);
 }

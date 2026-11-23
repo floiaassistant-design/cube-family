@@ -214,7 +214,8 @@ export class PlayerController {
     });
 
     document.addEventListener("mousemove", (e) => {
-      if (this.controlMode === "pointer") {
+      if (this.uiOpen) return;
+      if (this.controlMode === "pointer" && document.pointerLockElement === this.domElement) {
         this.applyLook(e.movementX, e.movementY, MOUSE_SENSITIVITY);
       } else if (this.controlMode === "drag" && this.dragging) {
         this.applyLook(e.movementX, e.movementY, DRAG_SENSITIVITY);
@@ -605,6 +606,7 @@ export class PlayerController {
     dragon.recordParking();
     if (this.flying) this.toggleFlight();
     this.dragon = dragon;
+    this.yaw = dragon.yaw;
     this.pitch = 0;
     this.accumulator = 0;
     this.updateRide(0, dragon);
@@ -634,22 +636,9 @@ export class PlayerController {
     if (!position || !renderPosition) return;
     this.state = { position: dragon.seat(position), velocity: dragon.velocity, onGround: false };
 
-    const seat = dragon.seat(renderPosition);
-    const f = forwardVector(this.yaw);
-    const pitch = Math.max(-0.78, Math.min(0.4, this.pitch - 0.33));
-    const focus = { ...seat, y: seat.y + 0.62 };
-    const back = {
-      x: -f.x * Math.cos(pitch),
-      y: -Math.sin(pitch),
-      z: -f.z * Math.cos(pitch),
-    };
-    const distance = dragon.cameraDistance(focus, back, this.camera.aspect < 1 ? 9 : 7.4);
-    this.camera.position.set(
-      focus.x + back.x * distance,
-      focus.y + back.y * distance,
-      focus.z + back.z * distance,
-    );
-    this.camera.rotation.set(pitch, this.yaw, 0, "YXZ");
+    const view = dragon.mountedCamera(renderPosition, this.yaw, this.pitch, this.camera.aspect);
+    this.camera.position.set(view.position.x, view.position.y, view.position.z);
+    this.camera.rotation.set(view.pitch, view.yaw, 0, "YXZ");
     if (this.camera.fov !== this.options.fov) {
       this.camera.fov = this.options.fov;
       this.camera.updateProjectionMatrix();

@@ -41,6 +41,16 @@ describe("player save", () => {
     expect(loadPlayerSave(storage, 8)).toBeNull();
   });
 
+  it("persists either held item and ignores invalid selections", () => {
+    const storage = memory();
+    for (const pickInHand of [true, false]) {
+      storePlayerSave(storage, 7, { ...save, pickInHand });
+      expect(loadPlayerSave(storage, 7)?.pickInHand).toBe(pickInHand);
+    }
+    storage.data.set(playerSaveKey(7), JSON.stringify({ ...save, pickInHand: "yes" }));
+    expect(loadPlayerSave(storage, 7)?.pickInHand).toBeUndefined();
+  });
+
   it("returns null when nothing was saved or the payload is corrupt", () => {
     const storage = memory();
     expect(loadPlayerSave(storage, 1)).toBeNull();

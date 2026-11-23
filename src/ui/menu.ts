@@ -67,6 +67,7 @@ export class Menu {
     this.playButton = root.querySelector<HTMLButtonElement>("#play-button");
 
     const main = root.querySelector<HTMLElement>('[data-screen="main"]');
+    const worldButton = main?.querySelector<HTMLButtonElement>("#world-button") ?? null;
     if (main) {
       this.screens.set("main", main);
       const title = main.querySelector(".title");
@@ -84,10 +85,15 @@ export class Menu {
       if (version) {
         version.textContent = this.t("version", { version: GAME_VERSION, seed: handlers.seed });
       }
+      if (import.meta.env.MODE === "private-site") {
+        const link = el("a", "secondary-link", this.t("legacyMultiplayer"));
+        link.href = "/ancienne-version/";
+        main.appendChild(link);
+      }
       main.querySelector("#settings-button")?.addEventListener("click", () => {
         this.show("settings");
       });
-      main.querySelector("#world-button")?.addEventListener("click", () => {
+      worldButton?.addEventListener("click", () => {
         this.show("world");
       });
       main.querySelector("#fullscreen-button")?.addEventListener("click", () => {
@@ -95,7 +101,7 @@ export class Menu {
       });
     }
     this.screens.set("settings", this.buildSettings());
-    this.screens.set("world", this.buildWorld());
+    this.screens.set("world", this.buildWorld(worldButton));
     for (const [name, screen] of this.screens) {
       if (name !== "main") this.root.appendChild(screen);
     }
@@ -259,7 +265,7 @@ export class Menu {
     return screen;
   }
 
-  private buildWorld(): HTMLElement {
+  private buildWorld(worldButton: HTMLButtonElement | null): HTMLElement {
     const screen = el("div", "menu-screen");
     screen.dataset.screen = "world";
     screen.append(el("h2", undefined, this.t("worlds")));
@@ -274,6 +280,10 @@ export class Menu {
       modeButtons.forEach((button) => {
         button.classList.toggle("active", button.dataset.mode === current);
       });
+      if (worldButton) {
+        const mode = this.t(current === "adventure" ? "modeAdventure" : "modeCreative");
+        worldButton.textContent = this.t("worldsMode", { mode });
+      }
       hint.textContent = this.t(current === "adventure" ? "modeAdventureHint" : "modeCreativeHint");
     };
     for (const mode of ["creative", "adventure"] as const) {

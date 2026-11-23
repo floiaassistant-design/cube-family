@@ -4,14 +4,33 @@ import { SoundEngine } from "./audio/sound";
 import { GAME_NAME } from "./branding";
 import { type DiscoveryId, Journal } from "./game/discoveries";
 import { DragonMount } from "./game/dragon";
-import { Bag, craft, digSeconds, dropFor } from "./game/items";
+import {
+  Bag,
+  COPPER_ARMOR,
+  COPPER_PICK,
+  craft,
+  digSeconds,
+  dropFor,
+  type HeldItem,
+  isMiningPick,
+} from "./game/items";
+import {
+  creatureCenter,
+  type Creature,
+  MAX_HEALTH,
+  nextMorning,
+  timeIsNight,
+  Wildlife,
+} from "./game/wildlife";
 import { createTranslator, resolveLocale, type Translator } from "./i18n";
 import { GamepadInput } from "./input/gamepad";
 import { ChunkMeshManager } from "./render/chunk-mesh-manager";
+import { CreatureView } from "./render/creature-view";
 import { CpuRenderer } from "./render/cpu-renderer";
 import { DragonModel } from "./render/dragon-model";
 import { environmentAt } from "./render/environment";
 import { HeldBlock } from "./render/held-block";
+import { renderEquipmentIcon } from "./render/mining-pick-art";
 import { Particles } from "./render/particles";
 import { Rain } from "./render/rain";
 import { QUALITY_PROFILES, WorldRenderer } from "./render/renderer";
@@ -20,15 +39,17 @@ import { createTextureAtlas } from "./render/texture-atlas";
 import { applyWeather, type Weather, weatherAt } from "./render/weather";
 import { PlayerController } from "./player/controller";
 import { BlockInteraction } from "./player/interaction";
-import { aabbFromFeetPosition, aabbIntersectsSolid } from "./player/physics";
+import { aabbFromFeetPosition, aabbIntersectsSolid, type Vec3 } from "./player/physics";
+import { raycastVoxels } from "./player/raycast";
 import { defaultSettings, type Settings, SettingsStore } from "./settings";
+import { renderBlockIcon } from "./ui/block-icon";
 import { Hotbar, sanitizeHotbar } from "./ui/hotbar";
 import { Hud } from "./ui/hud";
-import { Inventory } from "./ui/inventory";
+import { Inventory, type InventoryState } from "./ui/inventory";
 import { Menu } from "./ui/menu";
 import { isTouchDevice, TouchControls } from "./ui/touch-controls";
 import { BLOCKS, BlockId, isSolid } from "./world/blocks";
-import { CHUNK_HEIGHT } from "./world/coords";
+import { CHUNK_HEIGHT, worldToChunk } from "./world/coords";
 import { EditStore, type KeyValueStorage } from "./world/edit-store";
 import { loadPlayerSave, storePlayerSave } from "./world/player-save";
 import { findPleasantSpawn } from "./world/spawn";
@@ -89,6 +110,7 @@ declare global {
       /** What's in the Adventure bag, by block id. */
       bag: () => Record<string, number>;
       give: (block: number, amount: number) => void;
+      creatures: () => readonly Creature[];
       discoveries: () => string[];
       digging: () => number;
       settings: () => Record<string, string | number | boolean>;
@@ -196,7 +218,7 @@ function boot(): void {
   let chunkMeshes: ChunkMeshManager | null = null;
   let particles: Particles | null = null;
   let heldBlock: HeldBlock | null = null;
-  let dragonModel: DragonModel | null = null;
+  let dragonModel: DragonModel;
   let rain: Rain | null = null;
   let highlight: THREE.LineSegments | null = null;
   let digVeil: THREE.Mesh | null = null;
@@ -258,10 +280,19 @@ function boot(): void {
   } catch (webglError) {
     console.warn("WebGL2 unavailable, switching to the CPU raycaster:", webglError);
     cpu = new CpuRenderer(app, world, SEED);
+    dragonModel = new DragonModel(null);
   }
   const view = webgl ?? cpu;
   if (!view) throw new Error("no renderer could be created");
   const { camera, domElement } = view;
+  const cpuHand = cpu ? document.createElement("div") : null;
+  let cpuHeldItem: HeldItem | null = null;
+  if (cpuHand) {
+    cpuHand.id = "held-item";
+    cpuHand.setAttribute("aria-hidden", "true");
+    cpuHand.hidden = true;
+    app.appendChild(cpuHand);
+  }
 
   const editStore = new EditStore(storage, SEED);
   const streamer = new ChunkStreamer(world, {
@@ -321,11 +352,7 @@ function boot(): void {
   const terrainSurface = (x: number, z: number): number => sampleColumn(x, z).terrainHeight + 1;
   const spawnDragon = (): void => {
     const p = player.position;
-    if (
-      !dragonModel ||
-      dragon.position ||
-      Math.hypot(p.x - dragonOrigin.x, p.z - dragonOrigin.z) > 35
-    ) {
+    if (dragon.position || Math.hypot(p.x - dragonOrigin.x, p.z - dragonOrigin.z) > 35) {
       return;
     }
     dragon.spawn(saved?.dragon ?? spawn, terrainSurface, saved?.dragon);
@@ -348,10 +375,70 @@ function boot(): void {
   let mode: "creative" | "adventure" =
     modeParam === "adventure" || modeParam === "creative" ? modeParam : (saved?.mode ?? "creative");
   const bag = new Bag(saved?.bag);
+  const standNear = (x: number, z: number, y: number, tall: boolean): number | null => {
+    const bx = Math.floor(x);
+    const bz = Math.floor(z);
+    if (!world.hasChunk(worldToChunk(bx), worldToChunk(bz))) return null;
+    const origin = Math.floor(y + 0.001);
+    for (const offset of [0, -1, 1]) {
+      const by = origin + offset;
+      if (by < 1 || by + 1 >= CHUNK_HEIGHT) continue;
+      const base = world.getBlock(bx, by, bz);
+      if (isSolid(base) || base === BlockId.WATER || !isSolid(world.getBlock(bx, by - 1, bz)))
+        continue;
+      if (tall && isSolid(world.getBlock(bx, by + 1, bz))) continue;
+      return by + 0.015;
+    }
+    return null;
+  };
+  const clearSight = (from: Vec3, to: Vec3): boolean => {
+    const direction = { x: to.x - from.x, y: to.y - from.y, z: to.z - from.z };
+    const range = Math.hypot(direction.x, direction.y, direction.z);
+    return (
+      raycastVoxels(from, direction, Math.max(0, range - 0.035), (x, y, z) =>
+        isSolid(world.getBlock(x, y, z)),
+      ) === null
+    );
+  };
+  const wildlife = new Wildlife(
+    SEED,
+    {
+      stand: standNear,
+      surface: (x, z) => sampleColumn(Math.floor(x), Math.floor(z)).terrainHeight + 1,
+      clear: clearSight,
+    },
+    saved?.wildlife,
+  );
+  const creatureView = new CreatureView(app, camera, clearSight, webgl?.scene ?? null);
+  let nearbyCreatures: Creature[] = [];
+  const forward = new THREE.Vector3();
+  const sight = new THREE.Vector3();
+  const findCreature = (range = 4): Creature | null => {
+    camera.updateMatrixWorld();
+    camera.getWorldDirection(forward);
+    let closest: Creature | null = null;
+    let best = range;
+    for (const creature of nearbyCreatures) {
+      const center = creatureCenter(creature);
+      sight.copy(center).sub(camera.position);
+      const distance = forward.dot(sight);
+      if (distance <= 0 || distance >= best) continue;
+      const radius = creature.kind === "roamer" ? 0.52 : creature.growsIn > 0 ? 0.24 : 0.38;
+      if (sight.lengthSq() - distance * distance > radius * radius) continue;
+      if (!clearSight(camera.position, center)) continue;
+      closest = creature;
+      best = distance;
+    }
+    return closest;
+  };
+  let pickInHand = saved?.pickInHand ?? true;
   const journal = new Journal(saved?.journal as { found?: unknown; placed?: unknown } | undefined);
-  const inventoryState = (): { bag: Bag | null; journal: Journal } => ({
+  const inventoryState = (): InventoryState => ({
     bag: mode === "adventure" ? bag : null,
     journal,
+    get pickInHand() {
+      return pickEquipped();
+    },
   });
   const celebrate = (found: DiscoveryId[]): void => {
     for (const id of found) {
@@ -359,13 +446,33 @@ function boot(): void {
       sound.discover();
     }
   };
-  const hud = new Hud(app);
+  const hud = new Hud(app, t("digProgress"));
   hud.setStatsVisible(settings.values.showStats);
   const dragonHint = document.createElement("div");
   dragonHint.id = "dragon-hint";
   dragonHint.hidden = true;
   app.append(dragonHint);
 
+  const hasMiningPick = (): boolean => bag.pick !== null;
+  const pickEquipped = (): boolean => mode === "adventure" && hasMiningPick() && pickInHand;
+  const swingHand = (): void => {
+    heldBlock?.use();
+    if (
+      cpuHand &&
+      !cpuHand.hidden &&
+      !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      for (const motion of cpuHand.getAnimations()) motion.cancel();
+      cpuHand.animate(
+        [
+          { transform: "rotate(0)" },
+          { transform: "rotate(-22deg) translate(-10%, 5%)" },
+          { transform: "rotate(0)" },
+        ],
+        { duration: 220, easing: "ease-in-out" },
+      );
+    }
+  };
   const interaction = new BlockInteraction(
     camera,
     domElement,
@@ -376,7 +483,7 @@ function boot(): void {
   );
   interaction.onEdit = (edit) => {
     editStore.record(edit.x, edit.y, edit.z, edit.id);
-    heldBlock?.use();
+    swingHand();
     if (edit.id === BlockId.AIR) {
       sound.breakBlock(edit.previous);
       particles?.burst(edit.x, edit.y, edit.z, edit.previous);
@@ -398,14 +505,17 @@ function boot(): void {
   interaction.occupiedByEntity = (x, y, z) => dragon.occupiesBlock(x, y, z);
   interaction.onDigTick = (block) => {
     sound.step(block);
+    if (pickEquipped()) swingHand();
   };
   bag.onChange = () => {
     hotbar.refresh();
     inventory.refresh();
   };
+  const adventureDigSeconds = (block: BlockId): number =>
+    digSeconds(block, hasMiningPick(), bag.pick === COPPER_PICK);
   const applyMode = (): void => {
     const adventure = mode === "adventure";
-    interaction.digSeconds = adventure ? digSeconds : undefined;
+    interaction.digSeconds = adventure ? adventureDigSeconds : undefined;
     interaction.canPlace = adventure ? (block) => bag.count(block) > 0 : undefined;
     hotbar.setCounts(adventure ? (block) => bag.count(block) : null);
     player.setFlightAllowed(!adventure);
@@ -440,12 +550,69 @@ function boot(): void {
       time: gameTime,
       hotbar: [...hotbar.contents],
       slot: hotbar.selectedSlot,
+      pickInHand,
       mode,
       bag: bag.toJSON(),
       journal: journal.toJSON(),
+      wildlife: wildlife.save(),
     });
   };
 
+  interaction.onAttack = () => {
+    const creature = mode === "adventure" ? findCreature() : null;
+    if (!creature) return false;
+    // Cats and kittens are companions and never take damage.
+    if (creature.kind === "cat") return true;
+    const result = wildlife.strike(creature);
+    if (result !== "recovering") {
+      swingHand();
+      sound.breakBlock(BlockId.STONE);
+    }
+    if (result === "struck") hud.announce(t("roamerStruck"));
+    if (result === "defeated") {
+      bag.add(BlockId.COAL_ORE);
+      nearbyCreatures = wildlife.nearby(player.position);
+      hud.announce(t("roamerFell"));
+      persist();
+    }
+    return true;
+  };
+  interaction.onUse = (hit) => {
+    if (mode !== "adventure") return false;
+    const creature = findCreature();
+    if (creature?.kind === "cat") {
+      const feedback = {
+        adopted: "catAdopted",
+        purr: "catPurr",
+        kitten: "catBorn",
+        full: "catFull",
+        resting: "catResting",
+      } as const;
+      const result = wildlife.useCat(creature);
+      hud.announce(t(feedback[result]));
+      sound.select();
+      if (result === "adopted" || result === "kitten") persist();
+      return true;
+    }
+    if (!hit || world.getBlock(hit.blockX, hit.blockY, hit.blockZ) !== BlockId.CAMP_BED)
+      return false;
+    const now = frozenTime ?? gameTime;
+    if (timeIsNight(now)) {
+      gameTime = nextMorning(Math.max(gameTime, now));
+      frozenTime = null;
+      wildlife.rest();
+      nearbyCreatures = wildlife.nearby(player.position);
+      hud.announce(t("campDawn"));
+      sound.select();
+      persist();
+    } else {
+      hud.announce(t("campDay"));
+    }
+    return true;
+  };
+  hotbar.onSelect = () => {
+    pickInHand = false;
+  };
   hotbar.onChange = () => {
     hud.announce(t.block(BLOCKS[hotbar.selectedBlock].name));
     sound.select();
@@ -462,28 +629,42 @@ function boot(): void {
     else player.closeUi();
     sound.click();
   };
-  inventory.onChoose = (block) => {
-    hotbar.assign(block);
+  inventory.onChoose = (item) => {
+    if (isMiningPick(item)) {
+      if (mode !== "adventure" || bag.pick !== item) return;
+      pickInHand = true;
+      hud.announce(t("miningPickEquipped"));
+    } else if (typeof item === "number") {
+      hotbar.assign(item);
+    }
     setInventory(false);
   };
   inventory.onCraft = (recipe) => {
     if (mode !== "adventure" || !craft(bag, recipe)) return;
-    sound.placeBlock(recipe.output);
-    hud.announce(
-      t("crafted", { amount: recipe.amount, name: t.block(BLOCKS[recipe.output].name) }),
-    );
-    if (!hotbar.contents.includes(recipe.output)) {
-      const free = hotbar.contents.findIndex((block) => bag.count(block) === 0);
-      if (free >= 0) hotbar.setSlot(free, recipe.output);
+    const output = recipe.output;
+    if (isMiningPick(output)) {
+      pickInHand = true;
+      sound.select();
+      hud.announce(t("miningPickEquipped"));
+    } else if (output === COPPER_ARMOR) {
+      sound.select();
+      hud.announce(t("copperArmorReady"));
+    } else {
+      sound.placeBlock(output);
+      hud.announce(t("crafted", { amount: recipe.amount, name: t.block(BLOCKS[output].name) }));
+      if (!hotbar.contents.includes(output)) {
+        const free = hotbar.contents.findIndex((block) => bag.count(block) === 0);
+        if (free >= 0) hotbar.setSlot(free, output);
+      }
     }
     celebrate(journal.crafted());
+    persist();
   };
   inventory.onClose = () => {
     setInventory(false);
   };
 
-  const canMountDragon = (): boolean =>
-    dragonModel?.ready === true && dragon.canMount(player.position);
+  const canMountDragon = (): boolean => dragonModel.ready && dragon.canMount(player.position);
 
   const toggleRide = (): boolean => {
     if (!player.isActive || inventory.isOpen) return false;
@@ -497,7 +678,7 @@ function boot(): void {
       }
       return true;
     }
-    if (!dragonModel?.ready || !player.mount(dragon)) return false;
+    if (!dragonModel.ready || !player.mount(dragon)) return false;
     interaction.enabled = false;
     app.classList.add("riding");
     return true;
@@ -778,7 +959,7 @@ function boot(): void {
       flying: () => player.isFlying,
       dragon: () => ({
         position: dragon.position,
-        ready: dragonModel?.ready === true,
+        ready: dragonModel.ready,
         mounted: player.riding,
         flying: dragon.flying,
         grounded: dragon.grounded,
@@ -794,6 +975,8 @@ function boot(): void {
       give: (block, amount) => {
         bag.add(block as BlockId, amount);
       },
+      creatures: () =>
+        nearbyCreatures.map((entity) => ({ ...entity, position: { ...entity.position } })),
       discoveries: () => journal.toJSON().found,
       digging: () => interaction.digProgress?.fraction ?? 0,
       settings: () => ({ ...settings.values }),
@@ -808,9 +991,13 @@ function boot(): void {
     };
   }
 
-  // Installable and playable offline (web production builds only; the
-  // desktop and mobile shells already ship every file on disk).
-  if (import.meta.env.PROD && import.meta.env.MODE !== "native" && "serviceWorker" in navigator) {
+  // Offline access is enabled for the standalone web build only.
+  if (
+    import.meta.env.PROD &&
+    import.meta.env.MODE !== "native" &&
+    import.meta.env.MODE !== "private-site" &&
+    "serviceWorker" in navigator
+  ) {
     navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => undefined);
   }
 
@@ -881,7 +1068,7 @@ function boot(): void {
     }
     player.update(dt);
     const dragonPosition = player.dragonRenderPosition ?? dragon.position;
-    if (dragonPosition && dragonModel) {
+    if (dragonPosition) {
       const { x, z } = player.position;
       const distance = Math.hypot(x - dragonPosition.x, z - dragonPosition.z);
       if (!player.riding && player.isActive && distance < 25)
@@ -911,6 +1098,37 @@ function boot(): void {
       chunkMeshes.pump();
     }
 
+    const adventure = mode === "adventure";
+    const night = timeIsNight(clock);
+    const wildlifeEvent = wildlife.update(
+      dt,
+      player.position,
+      adventure && night,
+      adventure && controlsVisible,
+      bag.count(COPPER_ARMOR) > 0,
+    );
+    nearbyCreatures = adventure ? wildlife.nearby(player.position) : [];
+    if (wildlifeEvent === "hurt") hud.announce(t("playerHurt"));
+    if (wildlifeEvent === "retreat") {
+      if (player.riding) {
+        dragon.returnToParking();
+        interaction.enabled = true;
+        app.classList.remove("riding");
+      }
+      streamer.warmUp(spawn.x, spawn.z, WARMUP_RADIUS_CHUNKS);
+      const y = sampleColumn(Math.floor(spawn.x), Math.floor(spawn.z)).terrainHeight + 1;
+      const floor = standNear(spawn.x, spawn.z, y, true);
+      player.restore({
+        ...player.pose(),
+        x: spawn.x,
+        y: floor ?? y + 2,
+        z: spawn.z,
+        flying: false,
+      });
+      hud.announce(t("playerRetreat"));
+      persist();
+    }
+
     interaction.update(dt);
     const digging = interaction.digProgress;
     if (digVeil) {
@@ -922,6 +1140,45 @@ function boot(): void {
     }
 
     const hit = player.isActive && !inventory.isOpen ? interaction.raycastFromCamera() : null;
+    const targetedCreature =
+      adventure && controlsVisible && !player.riding && !digging ? findCreature() : null;
+    let digHint = "";
+    const use = t(padDriving ? "usePad" : touch && !player.isLocked ? "useTouch" : "useMouse");
+    if (targetedCreature?.kind === "cat") {
+      digHint = t(
+        targetedCreature.growsIn > 0
+          ? "catKitten"
+          : targetedCreature.owned
+            ? "catBreed"
+            : "catAdopt",
+        { use },
+      );
+    } else if (targetedCreature?.kind === "roamer") {
+      const attack = t(
+        padDriving ? "attackPad" : touch && !player.isLocked ? "attackTouch" : "attackMouse",
+      );
+      digHint = `${t("roamer", { life: targetedCreature.health })} · ${attack}`;
+    } else if (adventure && hit && !digging) {
+      const target = world.getBlock(hit.blockX, hit.blockY, hit.blockZ);
+      if (target === BlockId.CAMP_BED) digHint = t(night ? "campSleep" : "campDay", { use });
+      else if (BLOCKS[target].breakable) {
+        if (!Number.isFinite(adventureDigSeconds(target))) digHint = t("miningPickRequired");
+        else if (padDriving) digHint = t("digPad");
+        else if (player.isLocked) digHint = t("digHold");
+        else digHint = t(touch ? "digTouch" : "digClick");
+      }
+    }
+    hud.setDigging(digging?.fraction ?? null, digHint);
+    const pets = wildlife.petCount;
+    hud.setAdventureStatus(
+      adventure && controlsVisible
+        ? [
+            t(night ? "adventNight" : "adventDay"),
+            t("healthStatus", { life: wildlife.health, max: MAX_HEALTH }),
+            ...(pets > 0 ? [t("petStatus", { count: pets })] : []),
+          ].join(" · ")
+        : "",
+    );
     if (highlight) {
       highlight.visible = hit !== null;
       if (hit) highlight.position.set(hit.blockX + 0.5, hit.blockY + 0.5, hit.blockZ + 0.5);
@@ -988,9 +1245,30 @@ function boot(): void {
         : `cpu ${(cpu?.internalWidth ?? 0).toString()}p`,
     });
 
+    const handVisible = controlsVisible && !hudHidden && !player.riding;
+    const heldItem = (pickEquipped() ? bag.pick : null) ?? hotbar.selectedBlock;
+    if (cpuHand) {
+      const hideHand = !handVisible || mode !== "adventure";
+      if (cpuHand.hidden !== hideHand) cpuHand.hidden = hideHand;
+      if (!hideHand && cpuHeldItem !== heldItem) {
+        const showPick = isMiningPick(heldItem);
+        const icon = showPick
+          ? renderEquipmentIcon(64, heldItem)
+          : renderBlockIcon(atlas.canvas, heldItem, 64);
+        cpuHand.classList.toggle("holding-pick", showPick);
+        cpuHand.replaceChildren(icon);
+        cpuHeldItem = heldItem;
+      }
+    }
+    creatureView.render(
+      nearbyCreatures,
+      time / 1000,
+      dt,
+      1 - 0.64 * Math.max(environment.night, caveFactor * 0.85),
+    );
     if (webgl) {
       const open = 1 - caveFactor;
-      heldBlock?.setBlock(hotbar.selectedBlock);
+      heldBlock?.setItem(heldItem);
       heldBlock?.update(
         dt,
         player.bob,
@@ -999,7 +1277,7 @@ function boot(): void {
           environment.ambientSky[1] * open + environment.lightColor[1] * 0.45 * open + 0.15,
           environment.ambientSky[2] * open + environment.lightColor[2] * 0.45 * open + 0.13,
         ],
-        player.isActive && !hudHidden && !player.riding,
+        handVisible,
       );
       particles?.update(
         dt,
@@ -1051,7 +1329,7 @@ function boot(): void {
       }
     } else if (cpu) {
       cpu.applySky(skyStateAt(clock));
-      cpu.render(clock);
+      cpu.render(clock, dragonModel.visibleModel);
     }
     requestAnimationFrame(frame);
   };

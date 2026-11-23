@@ -49,4 +49,8 @@ export const BLOCK_COLORS: Readonly<Record<BlockId, BlockColor>> = {
   [BlockId.FROSTED_GRASS]: { top: [238, 244, 250], side: [116, 82, 52] },
   [BlockId.GLOWSHROOM]: uniform(96, 236, 228),
   [BlockId.CLAY]: uniform(154, 162, 176),
+  [BlockId.COPPER_ORE]: uniform(164, 111, 88),
+  [BlockId.DIAMOND_ORE]: uniform(113, 173, 223),
+  [BlockId.COPPER_BLOCK]: uniform(187, 104, 65),
+  [BlockId.CAMP_BED]: { top: [102, 142, 167], side: [123, 86, 55] },
 };

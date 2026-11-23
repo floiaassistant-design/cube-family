@@ -111,6 +111,8 @@ const UNDERGROUND: readonly BlockId[] = [
   BlockId.SNOW,
   BlockId.COAL_ORE,
   BlockId.GOLD_ORE,
+  BlockId.COPPER_ORE,
+  BlockId.DIAMOND_ORE,
   BlockId.CRYSTAL,
 ];
 
@@ -194,14 +196,34 @@ describe("generateChunk layering", () => {
     });
   });
 
-  it("only stone hosts ore, and gold stays deep", () => {
-    eachColumn((chunk, lx, lz, _x, _z, profile) => {
-      for (let y = 1; y < profile.terrainHeight; y++) {
-        const block = chunk.getBlock(lx, y, lz);
-        if (block === BlockId.GOLD_ORE) expect(y).toBeLessThan(34);
-        if (block === BlockId.CRYSTAL) expect(y).toBeLessThan(SEA_LEVEL - 4);
+  it("keeps gold and diamonds deep and makes copper more common", () => {
+    let copper = 0;
+    let diamond = 0;
+    for (let cx = -3; cx <= 3; cx++) {
+      for (let cz = -3; cz <= 3; cz++) {
+        const chunk = generateChunk(cx, cz, seed);
+        for (let x = 0; x < CHUNK_SIZE; x++) {
+          for (let z = 0; z < CHUNK_SIZE; z++) {
+            for (let y = 1; y < CHUNK_HEIGHT; y++) {
+              const block = chunk.getBlock(x, y, z);
+              if (block === BlockId.GOLD_ORE) expect(y).toBeLessThan(34);
+              if (block === BlockId.CRYSTAL) expect(y).toBeLessThan(SEA_LEVEL - 4);
+              if (block === BlockId.COPPER_ORE) {
+                expect(y).toBeGreaterThanOrEqual(16);
+                expect(y).toBeLessThanOrEqual(64);
+                copper++;
+              }
+              if (block === BlockId.DIAMOND_ORE) {
+                expect(y).toBeLessThanOrEqual(15);
+                diamond++;
+              }
+            }
+          }
+        }
       }
-    });
+    }
+    expect(diamond).toBeGreaterThan(0);
+    expect(copper).toBeGreaterThan(diamond);
   });
 
   it("above the terrain: water (or ice) up to sea level, otherwise only air, plants or trees", () => {

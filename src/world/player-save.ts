@@ -16,11 +16,14 @@ export interface PlayerSave {
   readonly time: number;
   readonly hotbar: readonly number[];
   readonly slot: number;
+  /** Optional for saves made before the pick could be selected or put away. */
+  readonly pickInHand?: boolean;
   /** "creative" (everything, unlimited) or "adventure" (gather and craft). */
   readonly mode?: "creative" | "adventure";
   /** Raw saved bag and journal; validated by the classes that own them. */
   readonly bag?: unknown;
   readonly journal?: unknown;
+  readonly wildlife?: unknown;
   readonly dragon?: DragonParking | undefined;
 }
 
@@ -60,9 +63,11 @@ export function loadPlayerSave(storage: KeyValueStorage | null, seed: number): P
       time: p.time,
       hotbar,
       slot: finite(p.slot) ? Math.max(0, Math.min(8, Math.floor(p.slot))) : 0,
+      ...(typeof p.pickInHand === "boolean" ? { pickInHand: p.pickInHand } : {}),
       mode: p.mode === "adventure" ? "adventure" : "creative",
       bag: p.bag,
       journal: p.journal,
+      ...(p.wildlife === undefined ? {} : { wildlife: p.wildlife }),
       dragon: readDragon(p.dragon),
     };
   } catch {

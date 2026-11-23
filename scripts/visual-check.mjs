@@ -881,6 +881,15 @@ try {
     JSON.stringify(startMode),
   );
 
+  await adventure.evaluate(() => window.__mc.setLook(0, -Math.PI / 2));
+  report(
+    "Adventure explains the held mouse button when aiming at a block",
+    await until(adventure, () => {
+      const hint = document.querySelector("#dig-hint");
+      return !hint?.hidden && hint?.textContent === "Hold left click to dig";
+    }),
+  );
+
   // Headless pointer lock can recenter the synthetic mouse. Hold the button
   // from inside the page so a CDP mouse move cannot shift this exact target.
   const ground = await adventure.evaluate(() => {
@@ -894,6 +903,10 @@ try {
     canvas.dispatchEvent(new MouseEvent("mousedown", { button: 0, buttons: 1, bubbles: true }));
     return { ...target, id, partWay: window.__mc.blockAt(x, y, z) };
   });
+  const progressSeen = await until(adventure, () => {
+    const bar = document.querySelector("#dig-progress");
+    return !bar?.hidden && bar?.value > 0 && bar.value < 1;
+  });
   const dug =
     ground !== null &&
     (await until(adventure, (g) => window.__mc.blockAt(g.x, g.y, g.z) === 0, ground));
@@ -902,6 +915,11 @@ try {
   });
   const afterDig = await adventure.evaluate(() => window.__mc.bag());
   const gathered = Object.values(afterDig).reduce((a, b) => a + b, 0);
+  report(
+    "a visible progress bar advances while digging and hides on release",
+    progressSeen &&
+      (await until(adventure, () => document.querySelector("#dig-progress")?.hidden === true)),
+  );
   report(
     "holding the button digs through the ground, and the blocks land in the bag",
     ground !== null &&
@@ -916,7 +934,29 @@ try {
   const tookFlight = await doubleTapJump(adventure);
   report("double-tapping jump does not take off in Adventure", tookFlight === false);
 
+  const ore = await adventure.evaluate(() => {
+    window.__mc.setLook(0, -Math.PI / 2);
+    const target = window.__mc.target();
+    if (target) window.__mc.setBlock(target.x, target.y, target.z, 20);
+    return target;
+  });
+  const needsPick = await until(adventure, () =>
+    document.querySelector("#dig-hint")?.textContent?.includes("Craft a shard pick"),
+  );
+  await adventure.evaluate(() => {
+    document.pointerLockElement?.dispatchEvent(
+      new MouseEvent("mousedown", { button: 0, buttons: 1, bubbles: true }),
+    );
+  });
+  await sleep(2000);
+  const oreStillIntact = await adventure.evaluate((target) => {
+    document.dispatchEvent(new MouseEvent("mouseup", { button: 0, bubbles: true }));
+    return target !== null && window.__mc.blockAt(target.x, target.y, target.z) === 20;
+  }, ore);
+  report("gold stays intact without a pick and the game explains why", needsPick && oreStillIntact);
+
   // Crafting: two logs in the bag, one becomes four planks.
+  const aimingPitch = await adventure.evaluate(() => window.__mc.pitch());
   await adventure.evaluate(() => window.__mc.give(6, 2));
   await adventure.keyboard.press("KeyE");
   await sleep(400);
@@ -935,6 +975,21 @@ try {
     JSON.stringify(afterCraft),
   );
 
+  await adventure.evaluate(() => window.__mc.give(15, 2));
+  await adventure.click('.recipe[data-recipe="mining-pick"]');
+  const tool = await adventure.evaluate(() => ({
+    bag: window.__mc.bag(),
+    disabled: document.querySelector('.recipe[data-recipe="mining-pick"]')?.disabled,
+  }));
+  report(
+    "the pick recipe uses two planks and two stones and equips one pick",
+    tool.bag["mining-pick"] === 1 &&
+      tool.bag["14"] === 2 &&
+      tool.bag["15"] === undefined &&
+      tool.disabled === true,
+    JSON.stringify(tool),
+  );
+
   await adventure.click('.tab[data-tab="journal"]');
   await sleep(200);
   await saveScreenshot(adventure, "14-journal.png");
@@ -942,6 +997,11 @@ try {
     list: window.__mc.discoveries(),
     shown: document.querySelectorAll(".journal-entry.found").length,
   }));
+  const inventoryPitch = await adventure.evaluate(() => {
+    document.dispatchEvent(new MouseEvent("mousemove", { movementY: 120, bubbles: true }));
+    return window.__mc.pitch();
+  });
+  report("moving the mouse in the inventory keeps the mining aim", inventoryPitch === aimingPitch);
   report(
     "the journal records the first dig and the first craft",
     found.list.includes("first-dig") && found.list.includes("craft") && found.shown >= 2,
@@ -950,6 +1010,18 @@ try {
 
   await adventure.keyboard.press("KeyE");
   await sleep(300);
+  const relocked = await until(adventure, () => document.pointerLockElement !== null);
+  await adventure.evaluate(() => {
+    document.pointerLockElement?.dispatchEvent(
+      new MouseEvent("mousedown", { button: 0, buttons: 1, bubbles: true }),
+    );
+  });
+  const minedGold = relocked && (await until(adventure, () => window.__mc.bag()["20"] === 1));
+  await adventure.evaluate(() => {
+    document.dispatchEvent(new MouseEvent("mouseup", { button: 0, bubbles: true }));
+  });
+  report("the equipped pick lets the player mine and collect the gold", minedGold);
+
   await adventure.evaluate(() => document.exitPointerLock());
   await sleep(400);
   await adventure.reload({ waitUntil: "domcontentloaded" });
@@ -959,8 +1031,11 @@ try {
     found: window.__mc.discoveries().length,
   }));
   report(
-    "the bag and the journal survive a reload",
-    kept.bag["14"] === 4 && kept.found >= 2,
+    "the bag, equipped pick, and journal survive a reload",
+    kept.bag["14"] === 2 &&
+      kept.bag["mining-pick"] === 1 &&
+      kept.bag["20"] === 1 &&
+      kept.found >= 2,
     JSON.stringify(kept),
   );
   await adventure.close();
