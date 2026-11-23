@@ -11,7 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
-    "format": "prettier --check .",
+    "format": "prettier --write docs/PLAN_VERSION_1_0.md docs/feuille-de-route.md docs/ARCHITECTURE.md src/world/world-transfer.ts src/world/world-transfer.test.ts src/ui/menu.ts src/main.ts src/i18n.ts src/style.css scripts/visual-check.mjs && git diff -- docs/PLAN_VERSION_1_0.md docs/feuille-de-route.md docs/ARCHITECTURE.md src/world/world-transfer.ts src/world/world-transfer.test.ts src/ui/menu.ts src/main.ts src/i18n.ts src/style.css scripts/visual-check.mjs",
     "format:fix": "prettier --write .",
     "typecheck": "tsc -b",
     "build:native": "tsc -b && vite build --mode native",

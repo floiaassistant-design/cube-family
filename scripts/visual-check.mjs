@@ -1345,7 +1345,7 @@ try {
       };
       Object.defineProperty(input, "files", {
         configurable: true,
-        value: [new File([JSON.stringify(archive)], "backup.json", { type: "application/json" })],
+        value: [new window.File([JSON.stringify(archive)], "backup.json", { type: "application/json" })],
       });
       input.dispatchEvent(new Event("change", { bubbles: true }));
       return true;
