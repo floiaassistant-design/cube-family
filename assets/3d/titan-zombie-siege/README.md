@@ -5,6 +5,7 @@
 Boss original voxel pour les grandes vagues de la forteresse : silhouette d'environ 14 mètres, plaques rouillées, œil lumineux, armure de pierre au poing droit et point faible au torse. Aucun élément provenant d'un autre jeu.
 
 ## Modèle
+
 - `titan_zombie_siege_v1.glb` : véritable GLB glTF 2.0, couleurs et normales embarquées. Aucun fichier externe.
 - Axes : **Y vers le haut**, **Z positif vers l'avant**, pieds autour de Y=0.
 - 9 pièces articulées : `Body`, `Head`, `Jaw`, `Arm_Left`, `Arm_Right`, `Leg_Left`, `Leg_Right`, `Back_Spines`, `Core_WeakPoint`.
@@ -13,6 +14,7 @@ Boss original voxel pour les grandes vagues de la forteresse : silhouette d'envi
 - Matières et couleurs embarquées, sans dépendance réseau, utilisables par `THREE.GLTFLoader`.
 
 ## Proposition d'intégration ultérieure par Work
+
 1. Lire `AGENTS.md` et ne modifier aucun moteur partagé hors d'une PR dédiée.
 2. Charger le fichier GLB localement; piloter les clips avec `THREE.AnimationMixer`.
 3. Créer un contrôleur de boss indépendant dans `src/game/siege/`, lié aux grosses vagues de l'événement des Cinq Bastions.
