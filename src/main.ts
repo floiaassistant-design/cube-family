@@ -886,7 +886,9 @@ function boot(): void {
       player.position.z - (fortress.z + FORTRESS_CENTER),
     );
     if (distance > 72 || !siege.buy(item)) return;
-    hud.announce(t.locale === "fr" ? "Achat effectué dans l’armurerie." : "Armory purchase complete.");
+    hud.announce(
+      t.locale === "fr" ? "Achat effectué dans l’armurerie." : "Armory purchase complete.",
+    );
   };
   const siegePanel = new SiegePanel(
     app,
