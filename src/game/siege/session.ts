@@ -84,7 +84,8 @@ export class SiegeController {
 
   start(options: SiegeOptions = { waves: 10, difficulty: "normal" }): void {
     if (![5, 10, 20].includes(options.waves)) throw new Error("Invalid number of waves");
-    if (!["easy", "normal", "hard"].includes(options.difficulty)) throw new Error("Invalid difficulty");
+    if (!["easy", "normal", "hard"].includes(options.difficulty))
+      throw new Error("Invalid difficulty");
     this.phase = "preparation";
     this.totalWaves = options.waves;
     this.currentDifficulty = options.difficulty;
@@ -110,7 +111,8 @@ export class SiegeController {
   private beginWave(): void {
     this.phase = "wave";
     this.wave++;
-    const factor = this.currentDifficulty === "easy" ? 0.72 : this.currentDifficulty === "hard" ? 1.35 : 1;
+    const factor =
+      this.currentDifficulty === "easy" ? 0.72 : this.currentDifficulty === "hard" ? 1.35 : 1;
     this.budget = Math.ceil((4 + this.wave * 2) * factor);
     this.spawned = 0;
     this.nextSpawn = 0;
@@ -132,7 +134,8 @@ export class SiegeController {
     const firstPoint = path[0];
     if (!firstPoint) return;
     const { x, z } = firstPoint;
-    const maxHealth = variant === "boss" ? 35 : variant === "armored" ? 12 : variant === "runner" ? 5 : 8;
+    const maxHealth =
+      variant === "boss" ? 35 : variant === "armored" ? 12 : variant === "runner" ? 5 : 8;
     const id = `siege:${(this.sequence++).toString()}`;
     this.enemies.set(id, {
       id,
@@ -160,7 +163,11 @@ export class SiegeController {
     }
     this.clock += step;
     this.nextSpawn -= step;
-    if (this.spawned < this.budget && this.enemies.size < MAX_SIEGE_ZOMBIES && this.nextSpawn <= 0) {
+    if (
+      this.spawned < this.budget &&
+      this.enemies.size < MAX_SIEGE_ZOMBIES &&
+      this.nextSpawn <= 0
+    ) {
       this.spawn();
       this.nextSpawn = 0.75;
     }
@@ -179,7 +186,8 @@ export class SiegeController {
       const dx = target.x - enemy.position.x;
       const dz = target.z - enemy.position.z;
       const distance = Math.hypot(dx, dz);
-      const speed = (enemy.variant === "runner" ? 2.2 : enemy.variant === "boss" ? 0.85 : 1.35) * step;
+      const speed =
+        (enemy.variant === "runner" ? 2.2 : enemy.variant === "boss" ? 0.85 : 1.35) * step;
       if (distance <= speed + 0.05) {
         enemy.position = {
           x: target.x,
@@ -208,22 +216,32 @@ export class SiegeController {
 
   private ground(x: number, z: number): number {
     // Courtyard and approach roads belong to the fortress's level.
-    if (x >= this.site.x - 9 && x <= this.site.x + 104 &&
-        z >= this.site.z - 9 && z <= this.site.z + 104) return this.site.y + 1;
+    if (
+      x >= this.site.x - 9 &&
+      x <= this.site.x + 104 &&
+      z >= this.site.z - 9 &&
+      z <= this.site.z + 104
+    )
+      return this.site.y + 1;
     return this.sampler(x, z) + 1;
   }
 
   /** Player sword — existing interaction's close-range raycast selects the enemy. */
   melee(enemy: SiegeZombie, damage: number, now: number): boolean {
-    if (this.phase !== "wave" || now - this.lastMelee < 0.45 ||
-        !this.enemies.has(enemy.id)) return false;
+    if (this.phase !== "wave" || now - this.lastMelee < 0.45 || !this.enemies.has(enemy.id))
+      return false;
     this.lastMelee = now;
     this.damage(enemy, Math.max(1, Math.min(6, damage)));
     return true;
   }
 
   /** Virtual arrow: the same aim works from mouse, gamepad and touch. */
-  shoot(origin: Vec3, direction: Vec3, now: number, clear: (from: Vec3, to: Vec3) => boolean): boolean {
+  shoot(
+    origin: Vec3,
+    direction: Vec3,
+    now: number,
+    clear: (from: Vec3, to: Vec3) => boolean,
+  ): boolean {
     if (this.phase !== "wave" || now - this.lastArrow < 0.8 || this.arrows <= 0) return false;
     this.lastArrow = now;
     this.arrows--;
