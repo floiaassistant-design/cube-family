@@ -815,7 +815,10 @@ function boot(): void {
       loaded.add(`${cx.toString()},${cz.toString()}`);
     }
     for (const key of loaded) {
-      const [cx, cz] = key.split(",").map(Number);
+      const [rawCx, rawCz] = key.split(",");
+      if (rawCx === undefined || rawCz === undefined) continue;
+      const cx = Number(rawCx);
+      const cz = Number(rawCz);
       chunkMeshes?.chunkLoaded(cx, cz);
       chunkMeshes?.updateChunk(cx, cz, true);
     }
