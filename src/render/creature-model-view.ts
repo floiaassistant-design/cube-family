@@ -178,7 +178,9 @@ export class CreatureModelView {
             ? creature.coat === 0
               ? new OrangeCatModel()
               : new CatModel(creature.coat)
-            : creature.kind === "siege-zombie" ? new SiegeZombieModel() : new RoamerModel(),
+            : creature.kind === "siege-zombie"
+              ? new SiegeZombieModel()
+              : new RoamerModel(),
         phase,
         lastPosition: new THREE.Vector3(x, y, z),
         yaw: phase,
