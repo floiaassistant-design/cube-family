@@ -47,3 +47,32 @@ Cette base reprend le moteur libre de Lumenwild, © Vincent Plessy. La licence [
 - Cibles de validation proposées sur appareils réels avec le profil adapté. Viser 60 FPS sur ordinateur et au moins 30 FPS sur téléphone ou tablette en jeu actif. Documenter le matériel et vérifier que les déplacements restent fluides lorsque la génération de chunks est en cours. Traiter les mesures du rendu logiciel comme une référence de CI.
 - Tester portrait et paysage, écran à encoche, pointeur et tactile combinés, gestes simultanés avec les deux pouces, pression des boutons pendant un geste et récupération après interruption ou rotation. Garder les commandes accessibles sans clavier et éviter les contrôles qui se chevauchent.
 - Tester au minimum Chromium sur ordinateur, Chrome sur Android et Safari sur iOS/iPadOS avant publication. Ajouter une session Firefox et une session clavier/souris AZERTY lors de toute modification des entrées ou de l’affichage.
+
+## Instructions supplémentaires pour toute IA ou personne intervenant
+
+1. Avant de modifier un fichier, consulter [l'architecture](docs/ARCHITECTURE.md),
+   le [processus GitHub–Notion](docs/PROCESSUS_GITHUB_NOTION.md) et les
+   décisions à jour dans Notion. Lire les derniers commits et tickets.
+2. Le code est la source de vérité des fonctionnalités, et les catalogues
+   `docs/catalogues/` en sont l'inventaire. Les modèles et leur statut
+   technique restent consignés dans `assets/3d/INDEX.json`.
+3. Ne jamais présenter un fichier GLB comme une créature jouable si son
+   comportement, ses collisions et son affichage n'existent pas dans
+   `src/`. Ne pas confondre « intégré dans le code » avec « publié ».
+4. Préserver une **base de gameplay partagée** web, PC et mobile.
+   Tester les interfaces clavier/souris, tactile et les cibles natives
+   pertinentes ; signaler précisément les vérifications non faites.
+5. Travailler sur branche/PR avec une portée lisible et des tests.
+   Mettre à jour le catalogue, les documents de conception et la
+   documentation d'architecture lors de chaque évolution correspondante.
+6. Après fusion, renseigner Notion avec le lien PR, le commit, les tests,
+   les écarts et l'étape de publication. Après mise en ligne, vérifier
+   l'URL du site et actualiser son statut dans Notion.
+7. Ne jamais prétendre avoir modifié Notion, GitHub ou le site sans
+   réponse de l'outil confirmant l'action. Aucun synchronisme
+   automatique n'est implicite.
+8. Utiliser le [modèle de PR](.github/PULL_REQUEST_TEMPLATE.md).
+   Ne pas supprimer les crédits historiques et ne pas introduire
+   de ressources ou de noms protégés sans droits clairs.
+
+Consulter aussi [les instructions prêtes à coller dans le projet ChatGPT](docs/INSTRUCTIONS_PROJET_CHATGPT.md).

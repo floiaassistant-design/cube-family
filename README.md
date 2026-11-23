@@ -1,5 +1,13 @@
 # Cube Family
 
+## Références du projet
+
+- [Architecture du code](docs/ARCHITECTURE.md)
+- [Processus GitHub, Notion et publication](docs/PROCESSUS_GITHUB_NOTION.md)
+- [Registre des créatures et équipements](docs/catalogues/README.md)
+- [Bibliothèque des modèles 3D](assets/3d/README.md)
+- [Instructions du projet ChatGPT](docs/INSTRUCTIONS_PROJET_CHATGPT.md)
+
 Cette base web dérive de Lumenwild de Vincent Plessy. Voir [AGENTS.md](AGENTS.md) et la [feuille de route](docs/feuille-de-route.md). Les sections d’origine ci-dessous décrivent le jeu hérité.
 
 Le dragon rouge se trouve près du point de départ. Approche-toi et appuie sur **R** pour monter en selle. Maintiens **Espace** pour décoller et **C** pour te poser. [Commandes de la monture et modèle 3D](assets/3d/dragon-rouge/README.md)
