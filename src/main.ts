@@ -360,6 +360,18 @@ function boot(): void {
     if (!stuck && saved.y > 0 && saved.y < CHUNK_HEIGHT + 64) player.restore(saved);
   }
 
+  if (fortressActive) {
+    // The event terrain is leveled to y=64, which differs from the
+    // procedural height sampler used by ordinary world spawns.
+    player.restore({
+      ...player.pose(),
+      x: 48.5,
+      y: 65.015,
+      z: 68.5,
+      flying: false,
+    });
+  }
+
   const dragon = new DragonMount(world);
   const dragonOrigin = saved?.dragon ?? { ...player.position };
   const terrainSurface = (x: number, z: number): number => sampleColumn(x, z).terrainHeight + 1;
