@@ -72,6 +72,26 @@ describe("fortress world metadata and placement", () => {
     const sampler = createColumnSampler(2026);
     const spawn = findPleasantSpawn(2026);
     const site = findFortressSite(spawn.x, spawn.z, sampler, () => false);
+    if (!site) {
+      const examples = [
+        [0, 0],
+        [128, -48],
+        [512, 0],
+        [-608, 0],
+        [1024, 1024],
+        [-1536, -1536],
+        [2048, 0],
+      ].map(([dx, dz]) => {
+        const x = spawn.x + (dx ?? 0);
+        const z = spawn.z + (dz ?? 0);
+        const heights = [];
+        for (let sx = 0; sx <= 96; sx += 8)
+          for (let sz = 0; sz <= 96; sz += 8)
+            heights.push(sampler(x + sx, z + sz).terrainHeight);
+        return { dx, dz, low: Math.min(...heights), high: Math.max(...heights) };
+      });
+      console.warn("FORTRESS_SITE_DIAGNOSTIC", JSON.stringify({ spawn, examples }));
+    }
     expect(site).not.toBeNull();
     if (!site) return;
     expect(site.y).toBeGreaterThan(SEA_LEVEL + 2);
