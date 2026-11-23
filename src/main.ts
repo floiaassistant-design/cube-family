@@ -1073,12 +1073,20 @@ function boot(): void {
     }
     player.update(dt);
     const dragonPosition = player.dragonRenderPosition ?? dragon.position;
+    const { x, z } = player.position;
+    const dragonDistance = dragonPosition
+      ? Math.hypot(x - dragonPosition.x, z - dragonPosition.z)
+      : Infinity;
     if (dragonPosition) {
-      const { x, z } = player.position;
-      const distance = Math.hypot(x - dragonPosition.x, z - dragonPosition.z);
-      if (!player.riding && player.isActive && distance < 25)
+      if (!player.riding && player.isActive && dragonDistance < 25)
         dragon.step(Math.min(dt, 1 / 30), null);
-      dragonModel.update(player.isActive ? dt : 0, dragon, dragonPosition, distance, player.riding);
+      dragonModel.update(
+        player.isActive ? dt : 0,
+        dragon,
+        dragonPosition,
+        dragonDistance,
+        player.riding,
+      );
     }
     const rideAvailable = controlsVisible && (player.riding || canMountDragon());
     if (touchControls) {
@@ -1089,15 +1097,18 @@ function boot(): void {
       );
       touchControls.setFlying(player.riding ? dragon.flying : player.isFlying);
     }
-    if (rideAvailable && (!touch || player.riding)) {
-      const hint = touch
+    let hint = "";
+    if (controlsVisible && !rideAvailable && dragonModel.ready && dragonDistance < 18) {
+      hint = t("dragonApproachHint");
+    } else if (rideAvailable && (!touch || player.riding)) {
+      hint = touch
         ? t(dragon.flying ? "dragonTouchFlyingHint" : "dragonTouchTakeoffHint")
         : player.riding
           ? t(dragon.flying ? "dragonFlyingHint" : "dragonTakeoffHint")
           : `[R] ${t("dragonMount")}`;
-      if (dragonHint.textContent !== hint) dragonHint.textContent = hint;
     }
-    dragonHint.hidden = !rideAvailable || (touch && !player.riding);
+    if (dragonHint.textContent !== hint) dragonHint.textContent = hint;
+    dragonHint.hidden = hint === "";
 
     if (chunkMeshes) {
       chunkMeshes.setFocus(player.position.x, player.position.z);

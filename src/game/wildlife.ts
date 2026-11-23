@@ -168,7 +168,7 @@ export class Wildlife {
     if (this.cats.has(STARTER_CAT_ID)) return;
     const eye = { ...player, y: player.y + PLAYER_EYE_HEIGHT };
     for (const radius of [4, 6, 8]) {
-      for (const offset of [0.36, -0.36, 0.7, -0.7]) {
+      for (const offset of [0.22, -0.22, 0.46, -0.46, 0.7, -0.7]) {
         const direction = forwardVector(yaw + offset);
         const x = player.x + direction.x * radius;
         const z = player.z + direction.z * radius;

@@ -829,10 +829,13 @@ try {
       );
   });
   report("the orange cat is near the player in Creative mode", catsVisible);
+  const approach = await dragonPhone.touchscreen.touchStart(95, 445);
+  await approach.move(95, 394);
   const rideVisible = await until(dragonPhone, () => {
     const button = document.querySelector(".touch-ride");
     return window.__mc.dragon().ready && button?.getBoundingClientRect().width > 0;
   });
+  await approach.end();
   report("the dragon mount button is available on a phone", rideVisible);
   if (rideVisible) {
     await dragonPhone.tap(".touch-ride");
@@ -840,18 +843,14 @@ try {
     report("tapping the dragon button puts the player in the saddle", mounted);
     if (mounted) {
       const onGround = await dragonPhone.evaluate(() => window.__mc.dragon().position.y);
-      const pressFlight = async (button, pressed) => {
+      const holdFlight = async (button) => {
         const rect = await (await dragonPhone.$(button)).boundingBox();
-        if (pressed) {
-          await dragonPhone.touchscreen.touchStart(
-            rect.x + rect.width / 2,
-            rect.y + rect.height / 2,
-          );
-        } else {
-          await dragonPhone.touchscreen.touchEnd();
-        }
+        return dragonPhone.touchscreen.touchStart(
+          rect.x + rect.width / 2,
+          rect.y + rect.height / 2,
+        );
       };
-      await pressFlight(".touch-jump", true);
+      const ascend = await holdFlight(".touch-jump");
       const airborne = await until(
         dragonPhone,
         (ground) => {
@@ -860,15 +859,15 @@ try {
         },
         onGround,
       );
-      await pressFlight(".touch-jump", false);
+      await ascend.end();
       report("holding ascent takes the dragon into the air", airborne);
       if (airborne) {
-        await pressFlight(".touch-descend", true);
+        const descend = await holdFlight(".touch-descend");
         const landed = await until(
           dragonPhone,
           () => window.__mc.dragon().grounded && !window.__mc.dragon().flying,
         );
-        await pressFlight(".touch-descend", false);
+        await descend.end();
         report("holding descent lands the dragon", landed);
         if (landed) {
           await dragonPhone.tap(".touch-ride");
