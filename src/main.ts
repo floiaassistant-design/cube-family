@@ -7,6 +7,7 @@ import { DragonMount } from "./game/dragon";
 import { attackDamage } from "./game/equipment";
 import { createFortressBlueprint, FORTRESS_CENTER } from "./game/siege/fortress";
 import { findFortressSite, FortressStore } from "./game/siege/fortress-store";
+import { SiegeGateOverlay, type UpdatedGateChunk } from "./game/siege/gate-overlay";
 import type { ArmoryPurchase } from "./game/siege/armory";
 import { SiegeController, type SiegeReport } from "./game/siege/session";
 import {
@@ -307,6 +308,7 @@ function boot(): void {
   }
 
   const editStore = new EditStore(storage, SEED);
+  let gateOverlay: SiegeGateOverlay | null = null;
   const streamer = new ChunkStreamer(world, {
     // One extra ring of data beyond what's drawn: lighting a chunk reads
     // all eight of its neighbors.
@@ -315,9 +317,11 @@ function boot(): void {
     shape: webgl ? "disc" : "square",
     meshWhenSurrounded: webgl !== null,
     onLoad: (cx, cz) => {
+      gateOverlay?.applyToLoadedChunk(world, cx, cz);
       chunkMeshes?.chunkLoaded(cx, cz);
     },
     onUnload: (cx, cz) => {
+      gateOverlay?.forgetChunk(cx, cz);
       chunkMeshes?.chunkUnloaded(cx, cz);
     },
   });
@@ -389,12 +393,39 @@ function boot(): void {
   const bag = new Bag(saved?.bag);
   const fortressStore = new FortressStore(storage, SEED);
   let fortress = fortressStore.read();
+  const siegeZombieCap = cpu ? 14 : touch ? 24 : 44;
   let siege: SiegeController | null = fortress
     ? new SiegeController(
         fortress,
         (x, z) => sampleColumn(Math.floor(x), Math.floor(z)).terrainHeight,
+        siegeZombieCap,
       )
     : null;
+  if (fortress) gateOverlay = new SiegeGateOverlay(fortress);
+
+  // Batch temporary door changes into one chunk mirror and remesh per chunk.
+  // Never call editStore.record(): destruction belongs to the event only.
+  const syncGateVisuals = (): void => {
+    if (!gateOverlay) return;
+    const report = siege?.report;
+    const active = siege?.active ?? false;
+    const modified: UpdatedGateChunk[] = gateOverlay.sync(
+      world,
+      active && (report?.outerGate.health ?? 0) > 0,
+      active && (report?.innerGate.health ?? 0) > 0,
+    );
+    for (const { cx, cz } of modified) {
+      chunkMeshes?.chunkLoaded(cx, cz);
+      chunkMeshes?.updateChunk(cx, cz, true);
+      // Adjacent lighting is influenced by door blocks too.
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dz = -1; dz <= 1; dz++) {
+          if (dx === 0 && dz === 0) continue;
+          if (world.hasChunk(cx + dx, cz + dz)) chunkMeshes?.updateChunk(cx + dx, cz + dz);
+        }
+      }
+    }
+  };
   const standNear = (x: number, z: number, y: number, tall: boolean): number | null => {
     const bx = Math.floor(x);
     const bz = Math.floor(z);
@@ -848,7 +879,9 @@ function boot(): void {
     siege = new SiegeController(
       site,
       (x, z) => sampleColumn(Math.floor(x), Math.floor(z)).terrainHeight,
+      siegeZombieCap,
     );
+    gateOverlay = new SiegeGateOverlay(site);
     visitFortress();
     hud.announce(
       t.locale === "fr" ? "Forteresse construite et enregistrée." : "Fortress built and saved.",
@@ -870,6 +903,7 @@ function boot(): void {
     );
     if (distance > 72) return;
     siege.start();
+    syncGateVisuals();
     hud.announce(
       t.locale === "fr"
         ? "Prépare-toi : attaque dans 20 secondes !"
@@ -1326,12 +1360,27 @@ function boot(): void {
 
     const adventure = mode === "adventure";
     const night = timeIsNight(clock);
+    const beforeSiegeUpdate = siege?.report;
     if (player.isActive && !inventory.isOpen && !document.hidden) siege?.update(dt);
+    if (siege && fortress && beforeSiegeUpdate) {
+      const report = siege.report;
+      if (beforeSiegeUpdate.outerGate.health > 0 && report.outerGate.health === 0) {
+        sound.breakBlock(BlockId.PLANKS);
+        particles?.burst(fortress.x + 47, fortress.y + 3, fortress.z + 2, BlockId.WOOD);
+        hud.announce(t.locale === "fr" ? "Porte extérieure détruite !" : "Outer gate destroyed!");
+      }
+      if (beforeSiegeUpdate.innerGate.health > 0 && report.innerGate.health === 0) {
+        sound.breakBlock(BlockId.PLANKS);
+        particles?.burst(fortress.x + 47, fortress.y + 3, fortress.z + 15, BlockId.WOOD);
+        hud.announce(t.locale === "fr" ? "Porte intérieure détruite !" : "Inner gate destroyed!");
+      }
+    }
+    syncGateVisuals();
     const nearbySiege =
       siege?.zombies.filter(
         (enemy) =>
           Math.hypot(player.position.x - enemy.position.x, player.position.z - enemy.position.z) <
-          24,
+          68,
       ) ?? [];
     const distanceToFortress = fortress
       ? Math.hypot(
