@@ -521,6 +521,77 @@ kbd {
   user-select: text;
 }
 
+/* Named local worlds — vertically scrollable for short landscape screens. */
+.world-screen {
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  text-align: left;
+  overscroll-behavior: contain;
+}
+.world-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.world-card {
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.world-card.current {
+  border-color: var(--accent);
+}
+.world-card h3,
+.world-section-title {
+  margin: 0;
+  font-size: 1rem;
+}
+.world-card h3 {
+  overflow-wrap: anywhere;
+}
+.world-meta {
+  margin: 4px 0 8px;
+  font-size: 0.78rem;
+  color: var(--ink-dim);
+}
+.world-actions,
+.world-rename {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.world-actions .btn,
+.world-rename .btn {
+  padding: 7px 9px;
+  font-size: 0.82rem;
+}
+.world-rename input {
+  min-width: 100px;
+  flex: 1 1 140px;
+  padding: 7px;
+  color: var(--ink);
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.world-feedback {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--danger);
+}
+.world-feedback:empty {
+  display: none;
+}
+.seed-form select {
+  padding: 12px 14px;
+  font: inherit;
+  color: var(--ink);
+  background: #202630;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
 /* --- Inventory panel --- */
 .panel {
   position: fixed;

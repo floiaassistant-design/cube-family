@@ -1291,6 +1291,45 @@ try {
   }
   await fortressPage.browserContext().close();
 
+  // Named-world menu must preserve old saves and open a fresh Adventure world.
+  const library = await openPage("world-library", pageUrl(991291, "quality=low&view=4"));
+  await waitForWorld(library, 5);
+  await library.click("#world-button");
+  const legacyListed = await library.evaluate(
+    () =>
+      document.querySelectorAll(".world-card").length >= 1 &&
+      document.querySelector(".world-card.current h3")?.textContent === "World 991291",
+  );
+  report("world library lists the current legacy-compatible save", legacyListed);
+  await library.type('.world-screen input[aria-label="World name"]', "Family castle");
+  await library.type(
+    '.world-screen input[placeholder="Seed (optional, random if blank)"]',
+    "991292",
+  );
+  await library.select('.world-screen select[aria-label="Game mode"]', "adventure");
+  await library.click(".world-screen .seed-form .primary");
+  const openedNew = await until(
+    library,
+    () => window.__mc?.seed === 991292 && window.__mc?.gameMode() === "adventure",
+    undefined,
+    15000,
+  );
+  report("creating a named Adventure world opens its unique seed", openedNew);
+  if (openedNew) {
+    await library.click("#world-button");
+    const savesKept = await library.evaluate(() => {
+      const registry = JSON.parse(window.localStorage.getItem("cube-family:world-registry:v1"));
+      return (
+        registry.worlds.some((w) => w.seed === 991291) &&
+        registry.worlds.some((w) => w.seed === 991292 && w.name === "Family castle") &&
+        document.querySelectorAll(".world-card").length >= 2 &&
+        Boolean(window.localStorage.getItem("voxel-world:player:v2:991291"))
+      );
+    });
+    report("world library keeps the earlier save after creating a second world", savesKept);
+  }
+  await library.browserContext().close();
+
   // Boot the real production build with local storage denied by the browser.
   // Only the test build should expose the debug API used above.
   const production = await openPage(

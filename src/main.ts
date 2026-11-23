@@ -64,6 +64,7 @@ import { BLOCKS, BlockId, isSolid } from "./world/blocks";
 import { CHUNK_HEIGHT, worldToChunk } from "./world/coords";
 import { EditStore, type KeyValueStorage } from "./world/edit-store";
 import { loadPlayerSave, storePlayerSave } from "./world/player-save";
+import { WorldRegistry } from "./world/world-registry";
 import { findPleasantSpawn } from "./world/spawn";
 import {
   type ChunkGenerator,
@@ -179,6 +180,7 @@ function boot(): void {
     text === null ? NaN : Number.parseInt(text, 10);
   const fromUrl = parseSeed(params.get("seed"));
   const storage = getStorage();
+  const worldRegistry = new WorldRegistry(storage);
   let fromLast = NaN;
   try {
     fromLast = parseSeed(storage?.getItem(LAST_SEED_KEY) ?? null);
@@ -389,7 +391,10 @@ function boot(): void {
   // ---- game mode: Creative (everything, unlimited) or Adventure ----
   const modeParam = params.get("mode");
   let mode: "creative" | "adventure" =
-    modeParam === "adventure" || modeParam === "creative" ? modeParam : (saved?.mode ?? "creative");
+    modeParam === "adventure" || modeParam === "creative"
+      ? modeParam
+      : (saved?.mode ?? worldRegistry.get(SEED)?.mode ?? "creative");
+  worldRegistry.visit(SEED, mode);
   const bag = new Bag(saved?.bag);
   const fortressStore = new FortressStore(storage, SEED);
   let fortress = fortressStore.read();
@@ -943,6 +948,18 @@ function boot(): void {
     seed: SEED,
     touch,
     t,
+    listWorlds: () => worldRegistry.list(),
+    onCreateWorld: (name, chosenMode, chosenSeed) => {
+      const entry = worldRegistry.create(name, chosenMode, chosenSeed);
+      if (!entry) return false;
+      persist();
+      const url = new URL(window.location.href);
+      url.searchParams.set("seed", entry.seed.toString());
+      window.location.href = url.toString();
+      return true;
+    },
+    onRenameWorld: (seed, name) => worldRegistry.rename(seed, name),
+    onDeleteWorld: (seed) => worldRegistry.remove(seed, SEED),
     onLanguageChange: () => {
       persist();
       window.location.reload();
@@ -950,6 +967,7 @@ function boot(): void {
     mode,
     onModeChange: (next) => {
       mode = next;
+      worldRegistry.setMode(SEED, next);
       applyMode();
       persist();
     },
@@ -962,6 +980,7 @@ function boot(): void {
       persist();
       const url = new URL(window.location.href);
       url.searchParams.set("seed", seed.toString());
+      url.searchParams.delete("mode");
       window.location.href = url.toString();
     },
     onResetWorld: () => {
