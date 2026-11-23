@@ -5,6 +5,9 @@ import { GAME_NAME } from "./branding";
 import { type DiscoveryId, Journal } from "./game/discoveries";
 import { DragonMount } from "./game/dragon";
 import { attackDamage } from "./game/equipment";
+import { createFortressBlueprint, FORTRESS_CENTER } from "./game/siege/fortress";
+import { findFortressSite, FortressStore } from "./game/siege/fortress-store";
+import { SiegeController, type SiegeReport } from "./game/siege/session";
 import {
   Bag,
   COPPER_ARMOR,
@@ -53,6 +56,7 @@ import { Hotbar, sanitizeHotbar } from "./ui/hotbar";
 import { Hud } from "./ui/hud";
 import { Inventory, type InventoryState } from "./ui/inventory";
 import { Menu } from "./ui/menu";
+import { SiegePanel } from "./ui/siege-panel";
 import { isTouchDevice, TouchControls } from "./ui/touch-controls";
 import { BLOCKS, BlockId, isSolid } from "./world/blocks";
 import { CHUNK_HEIGHT, worldToChunk } from "./world/coords";
@@ -124,6 +128,7 @@ declare global {
       setWeather: (overcast: number | null, rain?: number) => void;
       /** Stages a scene for screenshots; not recorded as a player edit. */
       setBlock: (x: number, y: number, z: number, id: number) => void;
+      siege: () => SiegeReport | null;
     };
   }
 }
@@ -381,6 +386,13 @@ function boot(): void {
   let mode: "creative" | "adventure" =
     modeParam === "adventure" || modeParam === "creative" ? modeParam : (saved?.mode ?? "creative");
   const bag = new Bag(saved?.bag);
+  const fortressStore = new FortressStore(storage, SEED);
+  let fortress = fortressStore.read();
+  let siege: SiegeController | null = fortress
+    ? new SiegeController(fortress, (x, z) =>
+        sampleColumn(Math.floor(x), Math.floor(z)).terrainHeight,
+      )
+    : null;
   const standNear = (x: number, z: number, y: number, tall: boolean): number | null => {
     const bx = Math.floor(x);
     const bz = Math.floor(z);
@@ -430,7 +442,9 @@ function boot(): void {
       sight.copy(center).sub(camera.position);
       const distance = forward.dot(sight);
       if (distance <= 0 || distance >= best) continue;
-      const radius = creature.kind === "roamer" ? 0.52 : creature.growsIn > 0 ? 0.24 : 0.38;
+      const radius = creature.kind === "roamer" ? 0.52 :
+        creature.kind === "siege-zombie" ? (creature.variant === "boss" ? 0.86 : 0.52) :
+          creature.growsIn > 0 ? 0.24 : 0.38;
       if (sight.lengthSq() - distance * distance > radius * radius) continue;
       if (!clearSight(camera.position, center)) continue;
       closest = creature;
@@ -537,7 +551,8 @@ function boot(): void {
   const applyMode = (): void => {
     const adventure = mode === "adventure";
     interaction.digSeconds = adventure ? adventureDigSeconds : undefined;
-    interaction.canPlace = adventure ? (block) => bag.count(block) > 0 : undefined;
+    interaction.canBreak = () => !siege?.active;
+    interaction.canPlace = (block) => !siege?.active && (!adventure || bag.count(block) > 0);
     hotbar.setCounts(adventure ? (block) => bag.count(block) : null);
     player.setFlightAllowed(!adventure);
   };
@@ -585,6 +600,13 @@ function boot(): void {
     if (!creature) return false;
     // Cats and kittens are companions and never take damage.
     if (creature.kind === "cat") return true;
+    if (creature.kind === "siege-zombie") {
+      if (siege?.melee(creature, attackDamage(siege.active ? COPPER_SWORD : heldEquipment), performance.now() / 1000)) {
+        swingHand();
+        sound.breakBlock(BlockId.STONE);
+      }
+      return true;
+    }
     const result = wildlife.strike(creature, attackDamage(heldEquipment));
     if (result !== "recovering") {
       swingHand();
@@ -753,6 +775,79 @@ function boot(): void {
   touchControls?.setFlying(player.isFlying);
   applyMode();
 
+  // ---- reusable mini-game: player-triggered fortress, never a new world ----
+  const visitFortress = (): void => {
+    if (!fortress || player.riding) {
+      hud.announce(t.locale === "fr" ? "Descends du dragon avant d'entrer." : "Dismount before entering.");
+      return;
+    }
+    const x = fortress.x + FORTRESS_CENTER + 0.5;
+    const z = fortress.z + 26.5;
+    streamer.warmUp(x, z, WARMUP_RADIUS_CHUNKS);
+    player.restore({ ...player.pose(), x, y: fortress.y + 1.02, z, flying: false });
+    persist();
+  };
+  const buildFortress = (): void => {
+    if (mode !== "creative" || fortress || !player.isActive || player.riding) return;
+    const site = findFortressSite(
+      player.position.x,
+      player.position.z,
+      sampleColumn,
+      (minX, maxX, minZ, maxZ) => editStore.hasEditsInRect(minX, maxX, minZ, maxZ),
+    );
+    if (!site) {
+      hud.announce(t.locale === "fr" ? "Aucun terrain plat libre à proximité." : "No empty level site nearby.");
+      return;
+    }
+    const agree = window.confirm(t.locale === "fr"
+      ? "Construire la forteresse de 96 × 96 blocs sur un terrain vierge voisin ?"
+      : "Build the 96 × 96 fortress on a nearby unedited site?");
+    if (!agree) return;
+    const edits = createFortressBlueprint(site);
+    editStore.recordMany(edits);
+    const loaded = new Set<string>();
+    // Keep already loaded chunks in sync; unloaded ones get the edit overlay on arrival.
+    for (const edit of edits) {
+      const cx = worldToChunk(edit.x);
+      const cz = worldToChunk(edit.z);
+      if (!world.hasChunk(cx, cz)) continue;
+      world.setBlock(edit.x, edit.y, edit.z, edit.id);
+      loaded.add(`${cx.toString()},${cz.toString()}`);
+    }
+    for (const key of loaded) {
+      const [cx, cz] = key.split(",").map(Number);
+      chunkMeshes?.chunkLoaded(cx, cz);
+      chunkMeshes?.updateChunk(cx, cz, true);
+    }
+    fortress = site;
+    fortressStore.write(site);
+    siege = new SiegeController(site, (x, z) => sampleColumn(Math.floor(x), Math.floor(z)).terrainHeight);
+    visitFortress();
+    hud.announce(t.locale === "fr" ? "Forteresse construite et enregistrée." : "Fortress built and saved.");
+  };
+  const shootSiege = (): void => {
+    if (!siege || !player.isActive || inventory.isOpen) return;
+    camera.updateMatrixWorld();
+    camera.getWorldDirection(forward);
+    if (siege.shoot(camera.position, forward, performance.now() / 1000, clearSight)) {
+      sound.breakBlock(BlockId.WOOD);
+    }
+  };
+  const siegePanel = new SiegePanel(app, {
+    build: buildFortress,
+    visit: visitFortress,
+    start: () => {
+      if (!siege || !player.isActive) return;
+      siege.start();
+      hud.announce(t.locale === "fr" ? "Prépare-toi : attaque dans 20 secondes !" : "Get ready: attack in 20 seconds!");
+    },
+    stop: () => siege?.stop(),
+    shoot: shootSiege,
+    repair: () => {
+      if (siege?.repair()) hud.announce(t.locale === "fr" ? "Cristal réparé !" : "Crystal repaired!");
+    },
+  }, t.locale === "fr");
+
   // ---- menu and settings ----
   const menu = new Menu(menuRoot, settings, {
     seed: SEED,
@@ -781,6 +876,7 @@ function boot(): void {
     },
     onResetWorld: () => {
       editStore.clear();
+      fortressStore.clear();
       window.location.reload();
     },
   });
@@ -870,6 +966,11 @@ function boot(): void {
 
   window.addEventListener("keydown", (e) => {
     if (e.repeat) return;
+    if (e.code === "KeyF" && siege?.active && player.isActive && !inventory.isOpen) {
+      e.preventDefault();
+      shootSiege();
+      return;
+    }
     if (e.code === "KeyR" && !e.altKey && !e.ctrlKey && !e.metaKey && toggleRide()) {
       e.preventDefault();
     } else if (e.code === "KeyE") {
@@ -1016,6 +1117,7 @@ function boot(): void {
         nearbyCreatures.map((entity) => ({ ...entity, position: { ...entity.position } })),
       discoveries: () => journal.toJSON().found,
       digging: () => interaction.digProgress?.fraction ?? 0,
+      siege: () => siege?.report ?? null,
       settings: () => ({ ...settings.values }),
       setWeather: (overcast, amount = 0) => {
         forcedWeather = overcast === null ? null : { overcast, rain: amount };
@@ -1047,7 +1149,9 @@ function boot(): void {
     const dt = Math.min(frameDelta / 1000, 0.1); // clamp to avoid a huge step after a tab switch
     lastTime = time;
     gameTime += dt;
-    const clock = frozenTime ?? gameTime;
+    const clock = siege?.active
+      ? (Math.floor(gameTime / DAY_LENGTH_SECONDS) + 0.86) * DAY_LENGTH_SECONDS
+      : frozenTime ?? gameTime;
 
     // Adaptive quality: feed the real frame cadence so the renderer can
     // trade resolution for a fluid frame rate on weaker (mobile) hardware.
@@ -1151,6 +1255,20 @@ function boot(): void {
 
     const adventure = mode === "adventure";
     const night = timeIsNight(clock);
+    if (player.isActive && !inventory.isOpen && !document.hidden) siege?.update(dt);
+    const nearbySiege = siege?.zombies.filter((enemy) =>
+      Math.hypot(player.position.x - enemy.position.x, player.position.z - enemy.position.z) < 24,
+    ) ?? [];
+    const distanceToFortress = fortress
+      ? Math.hypot(player.position.x - (fortress.x + FORTRESS_CENTER), player.position.z - (fortress.z + FORTRESS_CENTER))
+      : Infinity;
+    siegePanel.update({
+      creative: mode === "creative",
+      playing: player.isActive && !inventory.isOpen,
+      hasFortress: fortress !== null,
+      nearby: distanceToFortress < 72,
+      report: siege?.report ?? null,
+    });
     const wildlifeEvent = wildlife.update(
       dt,
       player.position,
@@ -1159,7 +1277,7 @@ function boot(): void {
       bag.count(COPPER_ARMOR) > 0,
       heldEquipment === WOOD_SHIELD && bag.count(WOOD_SHIELD) > 0,
     );
-    nearbyCreatures = wildlife.nearby(player.position);
+    nearbyCreatures = [...wildlife.nearby(player.position), ...nearbySiege];
     if (wildlifeEvent === "hurt") hud.announce(t("playerHurt"));
     if (wildlifeEvent === "blocked") hud.announce(t("shieldBlocked"));
     if (wildlifeEvent === "retreat") {
@@ -1206,6 +1324,8 @@ function boot(): void {
             : "catAdopt",
         { use },
       );
+    } else if (targetedCreature?.kind === "siege-zombie") {
+      digHint = `${t.locale === "fr" ? "Zombie" : "Zombie"} · ${targetedCreature.health.toString()} PV · ${t.locale === "fr" ? "Attaquer ou tirer (F)" : "Attack or fire (F)"}`;
     } else if (targetedCreature?.kind === "roamer") {
       const attack = t(
         padDriving ? "attackPad" : touch && !player.isLocked ? "attackTouch" : "attackMouse",
@@ -1300,11 +1420,12 @@ function boot(): void {
 
     const handVisible = controlsVisible && !hudHidden && !player.riding;
     const heldItem =
+      (siege?.active ? COPPER_SWORD : null) ??
       (mode === "adventure" && heldEquipment && bag.count(heldEquipment) > 0
         ? heldEquipment
         : null) ?? hotbar.selectedBlock;
     if (cpuHand) {
-      const hideHand = !handVisible || mode !== "adventure";
+      const hideHand = !handVisible || (mode !== "adventure" && !siege?.active);
       if (cpuHand.hidden !== hideHand) cpuHand.hidden = hideHand;
       if (!hideHand && cpuHeldItem !== heldItem) {
         const showEquipment = typeof heldItem === "string";
