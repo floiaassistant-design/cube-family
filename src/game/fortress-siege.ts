@@ -22,11 +22,11 @@ const ROUTES: readonly Route[] = [
   [{ x: 48, z: 103 }, ...SOUTH],
   [{ x: 102, z: 102 }, { x: 48, z: 103 }, ...SOUTH],
   [{ x: -6, z: 102 }, { x: 48, z: 103 }, ...SOUTH],
-  [{ x: 102, z: -6 }, { x: 105, z: 102 }, { x: 48, z: 103 }, ...SOUTH],
+  [{ x: 102, z: 8 }, { x: 105, z: 102 }, { x: 48, z: 103 }, ...SOUTH],
 ];
 const STARTS = [
   { x: 48, z: 105 }, { x: 48, z: 107 }, { x: 105, z: 48 },
-  { x: -8, z: 48 }, { x: 105, z: -8 },
+  { x: -8, z: 48 }, { x: 94, z: 8 },
 ] as const;
 
 /** Standalone cooperative-ready wave simulation, with no DOM or storage. */
