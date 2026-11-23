@@ -1244,8 +1244,7 @@ try {
         const purchased = await until(
           fortressPage,
           () =>
-            window.__mc.siege()?.armory.swordTier === 1 &&
-            window.__mc.siege()?.armory.coins === 0,
+            window.__mc.siege()?.armory.swordTier === 1 && window.__mc.siege()?.armory.coins === 0,
         );
         report("buying a siege sword spends coins and increases its rank", purchased);
       }
