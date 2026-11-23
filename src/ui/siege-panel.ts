@@ -129,6 +129,12 @@ export class SiegePanel {
       if (report.phase !== "wave") status += ` · ${report.timer.toString()}s`;
       else status += ` · ${report.pending.toString()} ${this.french ? "restants" : "remaining"}`;
     }
+    // The browser captures the mouse in first-person mode. The panel is
+    // clickable with a mouse only after the player frees the cursor using M.
+    // Keyboard N works directly during play; touch controls need no M.
+    if (!window.matchMedia("(pointer: coarse)").matches) {
+      status += this.french ? " · M : souris, N : lancer" : " · M: mouse, N: start";
+    }
     if (this.reportText.textContent !== status) this.reportText.textContent = status;
   }
 }
