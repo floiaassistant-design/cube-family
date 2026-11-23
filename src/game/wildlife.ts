@@ -1,4 +1,4 @@
-import type { Vec3 } from "../player/physics";
+import { forwardVector, PLAYER_EYE_HEIGHT, type Vec3 } from "../player/physics";
 import { DAY_LENGTH_SECONDS, SUNSET_PHASE } from "../render/sky";
 import { CHUNK_HEIGHT } from "../world/coords";
 import { hash3 } from "../world/terrain";
@@ -8,6 +8,7 @@ const MAX_PETS = 24;
 const MAX_WILD_CATS = 18;
 export const MAX_CATS = MAX_PETS + MAX_WILD_CATS;
 const CAT_CELL = 14;
+const STARTER_CAT_ID = "s:0";
 export const MAX_NIGHT_CREATURES = 4;
 export const ROAMER_MAX_HEALTH = 6;
 const PET_REST = 90;
@@ -75,7 +76,7 @@ function restoreCats(raw: unknown): Cat[] {
       !data ||
       !pos ||
       typeof data.id !== "string" ||
-      !/^(w:-?\d+:-?\d+:[01]|k:\d+)$/.test(data.id)
+      !/^(s:0|w:-?\d+:-?\d+:[01]|k:\d+)$/.test(data.id)
     ) {
       continue;
     }
@@ -162,10 +163,38 @@ export class Wildlife {
     };
   }
 
+  /** Give the player a visible encounter near their starting position on dry ground. */
+  spawnStarterCat(player: Vec3, yaw: number): void {
+    if (this.cats.has(STARTER_CAT_ID)) return;
+    const eye = { ...player, y: player.y + PLAYER_EYE_HEIGHT };
+    for (const radius of [4, 6, 8]) {
+      for (const offset of [0.22, -0.22, 0.46, -0.46, 0.7, -0.7]) {
+        const direction = forwardVector(yaw + offset);
+        const x = player.x + direction.x * radius;
+        const z = player.z + direction.z * radius;
+        const y = this.terrain.stand(x, z, this.terrain.surface(x, z), false);
+        if (y === null || Math.abs(y - player.y) > 2) continue;
+        const cat: Cat = {
+          id: STARTER_CAT_ID,
+          kind: "cat",
+          coat: 0,
+          owned: false,
+          growsIn: 0,
+          rest: 0,
+          position: { x, y, z },
+          moving: false,
+        };
+        if (!this.terrain.clear(eye, creatureCenter(cat))) continue;
+        this.cats.set(cat.id, cat);
+        return;
+      }
+    }
+  }
+
   update(
     dt: number,
     player: Vec3,
-    night: boolean,
+    night: boolean | null,
     active: boolean,
     protectedByCopper: boolean,
   ): WildlifeEvent | null {
@@ -184,6 +213,7 @@ export class Wildlife {
       this.spawnCats(player);
     }
     this.moveCats(player, step);
+    if (night === null) return null;
     if (!night && this.life < MAX_HEALTH && this.elapsed >= this.healAt) {
       this.life++;
       this.healAt = this.elapsed + 5;

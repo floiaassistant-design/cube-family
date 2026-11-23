@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { MAX_CATS, MAX_NIGHT_CREATURES, type Creature } from "../game/wildlife";
-import { CatModel } from "./cat-model";
+import { CatModel, OrangeCatModel } from "./cat-model";
 import type { CreatureModel } from "./creature-model";
 import { RoamerModel } from "./roamer-model";
 
@@ -133,7 +133,7 @@ export class CreatureModelView {
     this.instances = new THREE.InstancedMesh(
       geometry,
       material,
-      MAX_CATS * new CatModel(0).boxes.length +
+      MAX_CATS * new OrangeCatModel().boxes.length +
         MAX_NIGHT_CREATURES * new RoamerModel().boxes.length,
     );
     this.instances.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -170,7 +170,12 @@ export class CreatureModelView {
         phase = (phase * 31 + creature.id.charCodeAt(i)) >>> 0;
       phase = (phase % 6283) / 1000;
       pose = {
-        model: creature.kind === "cat" ? new CatModel(creature.coat) : new RoamerModel(),
+        model:
+          creature.kind === "cat"
+            ? creature.coat === 0
+              ? new OrangeCatModel()
+              : new CatModel(creature.coat)
+            : new RoamerModel(),
         phase,
         lastPosition: new THREE.Vector3(x, y, z),
         yaw: phase,

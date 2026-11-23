@@ -348,14 +348,14 @@ function boot(): void {
   }
 
   const dragon = new DragonMount(world);
-  const dragonOrigin = saved?.dragon ?? spawn;
+  const dragonOrigin = saved?.dragon ?? { ...player.position };
   const terrainSurface = (x: number, z: number): number => sampleColumn(x, z).terrainHeight + 1;
   const spawnDragon = (): void => {
     const p = player.position;
     if (dragon.position || Math.hypot(p.x - dragonOrigin.x, p.z - dragonOrigin.z) > 35) {
       return;
     }
-    dragon.spawn(saved?.dragon ?? spawn, terrainSurface, saved?.dragon);
+    dragon.spawn(dragonOrigin, terrainSurface, saved?.dragon);
   };
   spawnDragon();
   if (!saved && dragon.position) {
@@ -409,6 +409,7 @@ function boot(): void {
     },
     saved?.wildlife,
   );
+  wildlife.spawnStarterCat(player.position, player.pose().yaw);
   const creatureView = new CreatureView(app, camera, clearSight, webgl?.scene ?? null);
   let nearbyCreatures: Creature[] = [];
   const forward = new THREE.Vector3();
@@ -450,6 +451,7 @@ function boot(): void {
   hud.setStatsVisible(settings.values.showStats);
   const dragonHint = document.createElement("div");
   dragonHint.id = "dragon-hint";
+  dragonHint.classList.toggle("touch", touch);
   dragonHint.hidden = true;
   app.append(dragonHint);
 
@@ -559,7 +561,7 @@ function boot(): void {
   };
 
   interaction.onAttack = () => {
-    const creature = mode === "adventure" ? findCreature() : null;
+    const creature = findCreature();
     if (!creature) return false;
     // Cats and kittens are companions and never take damage.
     if (creature.kind === "cat") return true;
@@ -578,7 +580,6 @@ function boot(): void {
     return true;
   };
   interaction.onUse = (hit) => {
-    if (mode !== "adventure") return false;
     const creature = findCreature();
     if (creature?.kind === "cat") {
       const feedback = {
@@ -594,7 +595,11 @@ function boot(): void {
       if (result === "adopted" || result === "kitten") persist();
       return true;
     }
-    if (!hit || world.getBlock(hit.blockX, hit.blockY, hit.blockZ) !== BlockId.CAMP_BED)
+    if (
+      mode !== "adventure" ||
+      !hit ||
+      world.getBlock(hit.blockX, hit.blockY, hit.blockZ) !== BlockId.CAMP_BED
+    )
       return false;
     const now = frozenTime ?? gameTime;
     if (timeIsNight(now)) {
@@ -1068,12 +1073,20 @@ function boot(): void {
     }
     player.update(dt);
     const dragonPosition = player.dragonRenderPosition ?? dragon.position;
+    const { x, z } = player.position;
+    const dragonDistance = dragonPosition
+      ? Math.hypot(x - dragonPosition.x, z - dragonPosition.z)
+      : Infinity;
     if (dragonPosition) {
-      const { x, z } = player.position;
-      const distance = Math.hypot(x - dragonPosition.x, z - dragonPosition.z);
-      if (!player.riding && player.isActive && distance < 25)
+      if (!player.riding && player.isActive && dragonDistance < 25)
         dragon.step(Math.min(dt, 1 / 30), null);
-      dragonModel.update(player.isActive ? dt : 0, dragon, dragonPosition, distance, player.riding);
+      dragonModel.update(
+        player.isActive ? dt : 0,
+        dragon,
+        dragonPosition,
+        dragonDistance,
+        player.riding,
+      );
     }
     const rideAvailable = controlsVisible && (player.riding || canMountDragon());
     if (touchControls) {
@@ -1084,13 +1097,18 @@ function boot(): void {
       );
       touchControls.setFlying(player.riding ? dragon.flying : player.isFlying);
     }
-    if (!touch && rideAvailable) {
-      const hint = player.riding
-        ? t(dragon.flying ? "dragonFlyingHint" : "dragonTakeoffHint")
-        : `[R] ${t("dragonMount")}`;
-      if (dragonHint.textContent !== hint) dragonHint.textContent = hint;
+    let hint = "";
+    if (controlsVisible && !rideAvailable && dragonModel.ready && dragonDistance < 18) {
+      hint = t("dragonApproachHint");
+    } else if (rideAvailable && (!touch || player.riding)) {
+      hint = touch
+        ? t(dragon.flying ? "dragonTouchFlyingHint" : "dragonTouchTakeoffHint")
+        : player.riding
+          ? t(dragon.flying ? "dragonFlyingHint" : "dragonTakeoffHint")
+          : `[R] ${t("dragonMount")}`;
     }
-    dragonHint.hidden = touch || !rideAvailable;
+    if (dragonHint.textContent !== hint) dragonHint.textContent = hint;
+    dragonHint.hidden = hint === "";
 
     if (chunkMeshes) {
       chunkMeshes.setFocus(player.position.x, player.position.z);
@@ -1103,11 +1121,11 @@ function boot(): void {
     const wildlifeEvent = wildlife.update(
       dt,
       player.position,
-      adventure && night,
-      adventure && controlsVisible,
+      adventure ? night : null,
+      controlsVisible,
       bag.count(COPPER_ARMOR) > 0,
     );
-    nearbyCreatures = adventure ? wildlife.nearby(player.position) : [];
+    nearbyCreatures = wildlife.nearby(player.position);
     if (wildlifeEvent === "hurt") hud.announce(t("playerHurt"));
     if (wildlifeEvent === "retreat") {
       if (player.riding) {

@@ -110,4 +110,20 @@ describe("adventure wildlife", () => {
     expect(world.health).toBe(MAX_HEALTH);
     expect(world.petCount).toBe(0);
   });
+
+  it("places an orange cat ahead of the player in Creative and restores it if adopted", () => {
+    const world = new Wildlife(2026, flat, { health: 4 });
+    world.spawnStarterCat(home, 0);
+    world.update(0.15, home, null, true, false);
+    const cat = catsNearHome(world).find((cat) => cat.id === "s:0");
+    expect(cat?.coat).toBe(0);
+    expect(cat?.position.z).toBeLessThan(home.z);
+    expect(world.health).toBe(4);
+    if (!cat) throw new Error("Expected the starting cat");
+    expect(world.useCat(cat)).toBe("adopted");
+
+    const restored = new Wildlife(2026, flat, world.save());
+    restored.spawnStarterCat(home, 0);
+    expect(catsNearHome(restored).filter((cat) => cat.id === "s:0")).toEqual([cat]);
+  });
 });
