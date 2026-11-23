@@ -14,10 +14,15 @@ for (const asset of assets) {
   assert(typeof asset.id === "string" && !assetIds.has(asset.id), "Asset ID dupliqué");
   assetIds.add(asset.id);
   assert(isFile(asset.model_source), `Modèle absent : ${asset.model_source}`);
+  if (asset.format === "glb") {
+    const bytes = readFileSync(resolve(root, asset.model_source));
+    assert(bytes.toString("ascii", 0, 4) === "glTF", "En-tête GLB invalide");
+    assert(bytes.readUInt32LE(8) === bytes.length, "Taille GLB invalide");
+  }
 }
 
 const validStates = new Set(["asset_only", "integrated_in_code"]);
-const creatureIds = new Set();
+const catalogAssetIds = new Set();
 
 for (const name of ["creatures", "equipements"]) {
   const catalog = load(`docs/catalogues/${name}.json`);
@@ -42,12 +47,12 @@ for (const name of ["creatures", "equipements"]) {
     if (entry.asset_id !== null) {
       assert(assetIds.has(entry.asset_id), `Asset inconnu : ${entry.id}`);
     }
-    if (name === "creatures") creatureIds.add(entry.id);
+    if (entry.asset_id !== null) catalogAssetIds.add(entry.asset_id);
   }
 }
 
 for (const id of assetIds) {
-  assert(creatureIds.has(id), `Modèle sans fiche créature : ${id}`);
+  assert(catalogAssetIds.has(id), `Modèle sans fiche : ${id}`);
 }
 
 console.log("Catalogues et références de modèles vérifiés.");
