@@ -133,7 +133,15 @@ export function createFortressBlueprint(site: FortressLocation): FortressBlock[]
     put(35, 15, z, BlockId.COBBLE);
     put(60, 15, z, BlockId.COBBLE);
   }
-  for (let y = 1; y <= 7; y++) for (let x = 45; x <= 50; x++) put(x, y, 35, BlockId.AIR);
+  // The four cardinal entrances let all enemy approaches reach the crystal.
+  for (let y = 1; y <= 7; y++) {
+    for (let p = 45; p <= 50; p++) {
+      put(p, y, 35, BlockId.AIR);
+      put(p, y, 60, BlockId.AIR);
+      put(35, y, p, BlockId.AIR);
+      put(60, y, p, BlockId.AIR);
+    }
+  }
   fill(44, 51, 44, 51, 1, 1, BlockId.COBBLE);
   fill(46, 49, 46, 49, 2, 2, BlockId.COPPER_BLOCK);
   put(FORTRESS_CRYSTAL, 3, FORTRESS_CRYSTAL, BlockId.CRYSTAL);
