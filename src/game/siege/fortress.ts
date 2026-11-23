@@ -118,9 +118,21 @@ export function createFortressBlueprint(site: FortressLocation): FortressBlock[]
       // A spiral staircase joins the lower door to the upper fighting platform.
       // The headroom is cleared at intermediate floors, so both roofs are usable.
       const staircase = [
-        [6, 10], [7, 10], [8, 10], [9, 10], [9, 9],
-        [9, 8], [9, 7], [9, 6], [9, 5], [8, 5],
-        [7, 5], [6, 5], [5, 5], [4, 5], [3, 5],
+        [6, 10],
+        [7, 10],
+        [8, 10],
+        [9, 10],
+        [9, 9],
+        [9, 8],
+        [9, 7],
+        [9, 6],
+        [9, 5],
+        [8, 5],
+        [7, 5],
+        [6, 5],
+        [5, 5],
+        [4, 5],
+        [3, 5],
       ] as const;
       for (const [step, [lx, lz]] of staircase.entries()) {
         const x = tx + lx;
