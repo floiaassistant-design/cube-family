@@ -87,5 +87,6 @@ PC et mobile, plutôt que de maintenir des versions du gameplay divergentes.
 - `src/ui/siege-panel.ts` fournit les commandes clavier, souris et tactile. `src/main.ts` se limite à raccorder les systèmes.
 - `src/world/edit-store.ts` enregistre les plans en une seule sauvegarde et protège les modifications déjà effectuées par le joueur.
 - Le tir à l'arc du mini-jeu est une mécanique temporaire de l'événement, indépendante de l'inventaire général ; un objet et des recettes durables seraient un chantier séparé.
+- `src/game/siege/armory.ts` gère les pièces temporaires, tarifs et améliorations des armes de siège. `src/ui/siege-armory-panel.ts` affiche les offres localisées. Les achats sont autorisés seulement entre les vagues ; ils ne créent pas d'objets persistants ni de modèles 3D. Voir [la fiche d'armurerie](FORTERESSE_ARMURERIE.md).
 - La phase actuelle est solo. Le multijoueur du moteur principal devra disposer d'une autorité serveur et synchroniser joueurs, vagues, zombies, projectiles et dégâts avant toute annonce de mode cinq joueurs.
 - Le site public et la version GitHub sont deux états distincts ; Work assurera la publication après validation des tests.
