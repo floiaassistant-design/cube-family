@@ -13,6 +13,7 @@ PC et mobile, plutôt que de maintenir des versions du gameplay divergentes.
 
 - `src/main.ts` : démarrage et coordination, sans y concentrer toute
   la logique métier des nouveautés.
+- `src/world/world-registry.ts` : liste locale des mondes nommés, découverte non destructive des anciennes sauvegardes, création à graine unique, renommage et suppression explicite hors monde actif. Les fichiers player/edits/forteresse restent identifiés par graine ; les mondes en ligne exigent un stockage serveur distinct.
 - `src/world/` : génération, blocs, chunks, sauvegardes et formats stables.
 - `src/player/` et `src/input/` : déplacements, physiques et commandes.
 - `src/game/` : règles des créatures, montures, équipement, recettes et combats.

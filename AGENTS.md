@@ -9,7 +9,7 @@ Cette base reprend le moteur libre de Lumenwild, © Vincent Plessy. La licence [
 | Chemin                                 | Responsabilité                                                                                     |
 | -------------------------------------- | -------------------------------------------------------------------------------------------------- |
 | `src/main.ts`                          | Amorçage, orchestration des systèmes, boucle de jeu et cycle de sauvegarde                         |
-| `src/world/`                           | Monde déterministe par graine, chunks, génération en workers, modifications et sauvegardes locales |
+| `src/world/`                           | Monde déterministe par graine, chunks, génération en workers, modifications, registre et sauvegardes locales |
 | `src/player/`, `src/input/`            | Contrôleur, collisions, rayon d’interaction, commandes clavier, souris et manette                  |
 | `src/render/`                          | Three.js/WebGL2, maillage en workers, qualité adaptative et rendu CPU de secours                   |
 | `src/ui/`, `src/i18n.ts`, `src/audio/` | Interface, tactile, textes français et anglais, audio procédural                                   |

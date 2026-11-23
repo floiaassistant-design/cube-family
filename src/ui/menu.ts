@@ -2,6 +2,7 @@ import { GAME_NAME, GAME_VERSION } from "../branding";
 import { type LanguageSetting, type TextKey, type Translator } from "../i18n";
 import { QUALITY_LEVELS, type QualityLevel } from "../render/renderer";
 import { FOV_RANGE, type SettingsStore, VIEW_DISTANCE_RANGE } from "../settings";
+import type { WorldEntry, WorldMode } from "../world/world-registry";
 
 /** Turns whatever the player typed into a world seed: a plain number is
  * used as-is, anything else is hashed, and nothing at all rolls a random
@@ -21,6 +22,10 @@ export function seedFromText(text: string, random: () => number = Math.random): 
 export interface MenuHandlers {
   /** Load a different world (reloads the page with that seed). */
   readonly onOpenWorld: (seed: number) => void;
+  readonly listWorlds: () => readonly WorldEntry[];
+  readonly onCreateWorld: (name: string, mode: WorldMode, seed?: number) => boolean;
+  readonly onRenameWorld: (seed: number, name: string) => boolean;
+  readonly onDeleteWorld: (seed: number) => boolean;
   /** Forget every edit made to the current world. */
   readonly onResetWorld: () => void;
   readonly onClick: () => void;
@@ -265,13 +270,155 @@ export class Menu {
     return screen;
   }
 
+
   private buildWorld(worldButton: HTMLButtonElement | null): HTMLElement {
-    const screen = el("div", "menu-screen");
+    const screen = el("div", "menu-screen world-screen");
     screen.dataset.screen = "world";
     screen.append(el("h2", undefined, this.t("worlds")));
-    screen.append(el("p", "panel-hint", this.t("worldsIntro", { seed: this.handlers.seed })));
+    screen.append(el("p", "panel-hint", this.t("worldsLocalIntro")));
 
-    // Game mode for this world: switchable at any time, nothing is lost.
+    const list = el("div", "world-list");
+    const feedback = el("p", "world-feedback");
+    feedback.setAttribute("role", "status");
+    const refresh = (): void => {
+      list.replaceChildren();
+      for (const world of this.handlers.listWorlds()) {
+        const card = el("section", "world-card");
+        if (world.seed === this.handlers.seed) card.classList.add("current");
+        const heading = el("h3", undefined, world.name);
+        const mode = this.t(world.mode === "adventure" ? "modeAdventure" : "modeCreative");
+        const last = world.lastPlayed
+          ? new Date(world.lastPlayed).toLocaleDateString(this.t.locale)
+          : this.t("worldLegacy");
+        card.append(
+          heading,
+          el(
+            "p",
+            "world-meta",
+            this.t("worldCardDetails", { mode, seed: world.seed, date: last }),
+          ),
+        );
+        const actions = el("div", "world-actions");
+        const open = el(
+          "button",
+          "btn",
+          this.t(world.seed === this.handlers.seed ? "worldCurrent" : "worldOpen"),
+        );
+        open.type = "button";
+        open.addEventListener("click", () => {
+          if (world.seed === this.handlers.seed) this.show("main");
+          else this.handlers.onOpenWorld(world.seed);
+        });
+
+        const rename = el("button", "btn", this.t("worldRename"));
+        rename.type = "button";
+        rename.addEventListener("click", () => {
+          const edit = el("div", "world-rename");
+          const input = el("input");
+          input.value = world.name;
+          input.maxLength = 40;
+          input.setAttribute("aria-label", this.t("worldName"));
+          const save = el("button", "btn", this.t("worldSaveName"));
+          save.type = "button";
+          save.addEventListener("click", () => {
+            if (this.handlers.onRenameWorld(world.seed, input.value)) {
+              feedback.textContent = "";
+              refresh();
+            } else feedback.textContent = this.t("worldSaveFailed");
+          });
+          const cancel = el("button", "btn", this.t("close"));
+          cancel.type = "button";
+          cancel.addEventListener("click", () => refresh());
+          edit.append(input, save, cancel);
+          actions.replaceChildren(edit);
+          input.focus();
+          input.select();
+        });
+        actions.append(open, rename);
+
+        // Never delete the currently loaded world: it can be autosaved again.
+        if (world.seed !== this.handlers.seed) {
+          const remove = el("button", "btn danger", this.t("worldDelete"));
+          remove.type = "button";
+          let armed = false;
+          remove.addEventListener("click", () => {
+            if (!armed) {
+              armed = true;
+              remove.textContent = this.t("worldDeleteConfirm");
+              window.setTimeout(() => {
+                armed = false;
+                remove.textContent = this.t("worldDelete");
+              }, 5000);
+              return;
+            }
+            if (this.handlers.onDeleteWorld(world.seed)) {
+              feedback.textContent = "";
+              refresh();
+            } else feedback.textContent = this.t("worldSaveFailed");
+          });
+          actions.append(remove);
+        }
+        card.append(actions);
+        list.append(card);
+      }
+    };
+    screen.append(list, feedback);
+    refresh();
+
+    // A newly created world gets a distinct unused seed; its mode is separate
+    // from the current world's mode until the player actually opens it.
+    screen.append(el("h3", "world-section-title", this.t("worldCreate")));
+    const createForm = el("form", "seed-form");
+    const nameInput = el("input");
+    nameInput.required = true;
+    nameInput.maxLength = 40;
+    nameInput.placeholder = this.t("worldName");
+    nameInput.setAttribute("aria-label", this.t("worldName"));
+    const seedInput = el("input");
+    seedInput.placeholder = this.t("worldOptionalSeed");
+    seedInput.maxLength = 40;
+    seedInput.setAttribute("aria-label", this.t("seedLabel"));
+    const modeSelect = el("select");
+    modeSelect.setAttribute("aria-label", this.t("mode"));
+    for (const m of ["creative", "adventure"] as const) {
+      const option = el("option", undefined, this.t(m === "adventure" ? "modeAdventure" : "modeCreative"));
+      option.value = m;
+      option.selected = m === this.handlers.mode;
+      modeSelect.append(option);
+    }
+    const createButton = el("button", "btn primary", this.t("worldCreate"));
+    createButton.type = "submit";
+    createForm.append(nameInput, seedInput, modeSelect, createButton);
+    createForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const requested = seedInput.value.trim();
+      const seed = requested ? seedFromText(requested) : undefined;
+      const mode = modeSelect.value === "adventure" ? "adventure" : "creative";
+      if (!this.handlers.onCreateWorld(nameInput.value, mode, seed)) {
+        feedback.textContent = this.t("worldCreateFailed");
+      }
+    });
+    screen.append(createForm);
+
+    // Keep the legacy seed entry point for existing bookmarks and worlds.
+    screen.append(el("h3", "world-section-title", this.t("worldOpenSeed")));
+    const form = el("form", "seed-form");
+    const input = el("input");
+    input.type = "text";
+    input.placeholder = this.t("seedPlaceholder");
+    input.maxLength = 40;
+    input.setAttribute("aria-label", this.t("seedLabel"));
+    const explore = el("button", "btn", this.t("exploreWorld"));
+    explore.type = "submit";
+    form.append(input, explore);
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      this.handlers.onOpenWorld(seedFromText(input.value));
+    });
+    screen.append(form);
+    screen.append(el("p", "panel-hint", this.t("worldSeedNotSharing")));
+
+    // Preserve the existing mode switch and block-reset controls.
     const modes = el("div", "segmented");
     const hint = el("p", "mode-hint");
     let current = this.handlers.mode;
@@ -287,17 +434,14 @@ export class Menu {
       hint.textContent = this.t(current === "adventure" ? "modeAdventureHint" : "modeCreativeHint");
     };
     for (const mode of ["creative", "adventure"] as const) {
-      const button = el(
-        "button",
-        undefined,
-        this.t(mode === "adventure" ? "modeAdventure" : "modeCreative"),
-      );
+      const button = el("button", undefined, this.t(mode === "adventure" ? "modeAdventure" : "modeCreative"));
       button.type = "button";
       button.dataset.mode = mode;
       button.addEventListener("click", () => {
         current = mode;
         showMode();
         this.handlers.onModeChange(mode);
+        refresh();
       });
       modeButtons.push(button);
       modes.appendChild(button);
@@ -305,27 +449,8 @@ export class Menu {
     showMode();
     const modeRow = el("div", "setting-row");
     modeRow.append(el("span", "setting-name", this.t("mode")), modes);
+    screen.append(el("h3", "world-section-title", this.t("worldCurrentSettings")));
     screen.append(modeRow, hint);
-
-    const form = el("form", "seed-form");
-    const input = el("input");
-    input.type = "text";
-    input.placeholder = this.t("seedPlaceholder");
-    input.maxLength = 40;
-    input.setAttribute("aria-label", this.t("seedLabel"));
-    const create = el("button", "btn primary", this.t("exploreWorld"));
-    create.type = "submit";
-    form.append(input, create);
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
-      this.handlers.onOpenWorld(seedFromText(input.value));
-    });
-
-    const random = el("button", "btn", this.t("surpriseMe"));
-    random.type = "button";
-    random.addEventListener("click", () => {
-      this.handlers.onOpenWorld(seedFromText(""));
-    });
 
     const reset = el("button", "btn danger", this.t("resetWorld"));
     reset.type = "button";
@@ -342,8 +467,7 @@ export class Menu {
       }
       this.handlers.onResetWorld();
     });
-
-    screen.append(form, random, reset, this.backButton());
+    screen.append(reset, this.backButton());
     return screen;
   }
 
