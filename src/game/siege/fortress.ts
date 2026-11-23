@@ -115,6 +115,21 @@ export function createFortressBlueprint(site: FortressLocation): FortressBlock[]
         put(tx, 17, tz + p, BlockId.COBBLE);
         put(tx + 12, 17, tz + p, BlockId.COBBLE);
       }
+      // A spiral staircase joins the lower door to the upper fighting platform.
+      // The headroom is cleared at intermediate floors, so both roofs are usable.
+      const staircase = [
+        [6, 10], [7, 10], [8, 10], [9, 10], [9, 9],
+        [9, 8], [9, 7], [9, 6], [9, 5], [8, 5],
+        [7, 5], [6, 5], [5, 5], [4, 5], [3, 5],
+      ] as const;
+      for (const [step, [lx, lz]] of staircase.entries()) {
+        const x = tx + lx;
+        const z = tz + (tz === 0 ? lz : 12 - lz);
+        const y = step + 2;
+        put(x, y, z, BlockId.COBBLE);
+        put(x, y + 1, z, BlockId.AIR);
+        put(x, y + 2, z, BlockId.AIR);
+      }
       // Door on the courtyard-facing side and a visible lantern on the roof.
       const entranceZ = tz === 0 ? tz + 12 : tz;
       for (let y = 1; y <= 3; y++) put(tx + 6, y, entranceZ, BlockId.AIR);
@@ -141,16 +156,17 @@ export function createFortressBlueprint(site: FortressLocation): FortressBlock[]
       }
     }
   }
-  // Staircases to the outer wall at the four corners of the courtyard.
+  // Four interior stairways connect the courtyard directly to each outer wall.
   for (const tx of [5, 90])
-    for (const tz of [15, 80]) {
-      const direction = tz === 15 ? 1 : -1;
+    for (const north of [true, false]) {
+      const startZ = north ? 4 : 91;
+      const direction = north ? 1 : -1;
       for (let step = 0; step < 10; step++) {
-        const z = tz + direction * step;
-        fill(tx, tx + 1, z, z, 10 - step, 10 - step, BlockId.COBBLE);
+        const z = startZ + direction * step;
+        const y = 10 - step;
+        fill(tx, tx + 1, z, z, y, y, BlockId.COBBLE);
+        fill(tx, tx + 1, z, z, y + 1, y + 2, BlockId.AIR);
       }
-      put(tx, 11, tz, BlockId.AIR);
-      put(tx + 1, 11, tz, BlockId.AIR);
     }
   // Central keep, open door to south, crystal on a protective plinth.
   ring(35, 60, 1, 13, 2, BlockId.STONE_BRICK);
