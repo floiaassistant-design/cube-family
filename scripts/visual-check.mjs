@@ -1203,8 +1203,7 @@ try {
       undefined,
       10000,
     );
-    if (pointerUnlocked && canStart)
-      await fortressPage.click("#siege-panel button:nth-of-type(3)");
+    if (pointerUnlocked && canStart) await fortressPage.click("#siege-panel button:nth-of-type(3)");
     const siegeStarted = await until(
       fortressPage,
       () => window.__mc.siege()?.phase === "preparation",
@@ -1232,19 +1231,13 @@ try {
     );
     if (siegeStarted) {
       await fortressPage.keyboard.press("KeyX");
-      const stopped = await until(
-        fortressPage,
-        () => window.__mc.siege()?.phase === "idle",
-      );
+      const stopped = await until(fortressPage, () => window.__mc.siege()?.phase === "idle");
       await fortressPage.keyboard.press("KeyN");
       const restarted = await until(
         fortressPage,
         () => window.__mc.siege()?.phase === "preparation",
       );
-      report(
-        "keyboard controls can stop and restart the fortress waves",
-        stopped && restarted,
-      );
+      report("keyboard controls can stop and restart the fortress waves", stopped && restarted);
     }
   }
   await fortressPage.browserContext().close();
