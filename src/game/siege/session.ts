@@ -182,12 +182,7 @@ export class SiegeController {
           : this.wave >= 3 && this.spawned % 3 === 0
             ? "runner"
             : "normal";
-    const path = southAssaultPath(
-      this.site,
-      formation.lane,
-      formation.spread,
-      formation.row,
-    );
+    const path = southAssaultPath(this.site, formation.lane, formation.spread, formation.row);
     const firstPoint = path[0];
     if (!firstPoint) return;
     const { x, z } = firstPoint;
@@ -253,8 +248,7 @@ export class SiegeController {
         enemy.moving = false;
         enemy.attackClock -= step;
         if (enemy.attackClock <= 0) {
-          const force =
-            enemy.variant === "boss" ? 20 : enemy.variant === "armored" ? 8 : 6;
+          const force = enemy.variant === "boss" ? 20 : enemy.variant === "armored" ? 8 : 6;
           this.gateHealth[gate] = Math.max(0, this.gateHealth[gate] - force);
           enemy.attackClock = 1.05;
         }
