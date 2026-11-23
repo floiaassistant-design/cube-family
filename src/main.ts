@@ -876,8 +876,7 @@ function boot(): void {
     );
   };
   const repairSiege = (): void => {
-    if (siege?.repair())
-      hud.announce(t.locale === "fr" ? "Cristal réparé !" : "Crystal repaired!");
+    if (siege?.repair()) hud.announce(t.locale === "fr" ? "Cristal réparé !" : "Crystal repaired!");
   };
   const siegePanel = new SiegePanel(
     app,
