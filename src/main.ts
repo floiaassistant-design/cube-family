@@ -181,11 +181,13 @@ function boot(): void {
   } catch {
     // Storage may be blocked by browser or iframe policy.
   }
-  const SEED = fortressActive ? FORTRESS_WORLD_SEED : Number.isFinite(fromUrl)
-    ? fromUrl
-    : Number.isFinite(fromLast)
-      ? fromLast
-      : DEFAULT_SEED;
+  const SEED = fortressActive
+    ? FORTRESS_WORLD_SEED
+    : Number.isFinite(fromUrl)
+      ? fromUrl
+      : Number.isFinite(fromLast)
+        ? fromLast
+        : DEFAULT_SEED;
   try {
     if (!fortressActive) storage?.setItem(LAST_SEED_KEY, SEED.toString());
   } catch {
@@ -432,7 +434,8 @@ function boot(): void {
   if (fortressStatus) {
     fortressStatus.id = "fortress-status";
     fortressStatus.setAttribute("role", "status");
-    fortressStatus.style.cssText = "position:absolute;top:72px;left:50%;transform:translateX(-50%);z-index:5;background:#18222ddd;color:white;padding:10px 14px;border-radius:12px;font:600 14px system-ui;text-align:center;pointer-events:none;max-width:calc(100% - 30px)";
+    fortressStatus.style.cssText =
+      "position:absolute;top:72px;left:50%;transform:translateX(-50%);z-index:5;background:#18222ddd;color:white;padding:10px 14px;border-radius:12px;font:600 14px system-ui;text-align:center;pointer-events:none;max-width:calc(100% - 30px)";
     fortressStatus.textContent = "Forteresse des Cinq Bastions";
     app.appendChild(fortressStatus);
   }
@@ -459,8 +462,9 @@ function boot(): void {
   };
   // Old saves only know pickInHand; new saves preserve the exact held tool.
   const previousEquipment = saved?.heldEquipment;
-  let heldEquipment: HandEquipment | null =
-    fortressActive ? COPPER_SWORD : previousEquipment === undefined
+  let heldEquipment: HandEquipment | null = fortressActive
+    ? COPPER_SWORD
+    : previousEquipment === undefined
       ? saved?.pickInHand === false
         ? null
         : bag.pick
@@ -604,9 +608,10 @@ function boot(): void {
     if (!creature) return false;
     // Cats and kittens are companions and never take damage.
     if (creature.kind === "cat") return true;
-    const result = fortressSiege && creature.id.startsWith("siege:")
-      ? fortressSiege.strike(creature.id, attackDamage(heldEquipment))
-      : wildlife.strike(creature, attackDamage(heldEquipment));
+    const result =
+      fortressSiege && creature.id.startsWith("siege:")
+        ? fortressSiege.strike(creature.id, attackDamage(heldEquipment))
+        : wildlife.strike(creature, attackDamage(heldEquipment));
     if (result !== "recovering") {
       swingHand();
       sound.breakBlock(BlockId.STONE);
@@ -812,8 +817,12 @@ function boot(): void {
     const fortressButton = document.createElement("button");
     fortressButton.className = "secondary-button";
     fortressButton.textContent = fortressActive
-      ? (t.locale === "fr" ? "Retour au monde libre" : "Return to free world")
-      : (t.locale === "fr" ? "Forteresse : siège des zombies" : "Fortress: zombie siege");
+      ? t.locale === "fr"
+        ? "Retour au monde libre"
+        : "Return to free world"
+      : t.locale === "fr"
+        ? "Forteresse : siège des zombies"
+        : "Fortress: zombie siege";
     fortressButton.addEventListener("click", () => {
       persist();
       const url = new URL(window.location.href);
@@ -1209,10 +1218,16 @@ function boot(): void {
     nearbyCreatures = [...wildlife.nearby(player.position), ...(fortressSiege?.creatures ?? [])];
     if (fortressStatus && fortressSiege) {
       const phase = fortressSiege.phase;
-      const status = phase === "preparation" || phase === "intermission"
-        ? `Préparation : ${Math.ceil(fortressSiege.countdown)} s`
-        : phase === "victory" ? "Victoire !" : phase === "defeat" ? "Défaite"
-          : phase === "wave" ? `${fortressSiege.creatures.length} zombies` : "En attente";
+      const status =
+        phase === "preparation" || phase === "intermission"
+          ? `Préparation : ${Math.ceil(fortressSiege.countdown)} s`
+          : phase === "victory"
+            ? "Victoire !"
+            : phase === "defeat"
+              ? "Défaite"
+              : phase === "wave"
+                ? `${fortressSiege.creatures.length} zombies`
+                : "En attente";
       const message = `Vague ${fortressSiege.wave}/10 · Cristal ${fortressSiege.crystalHealth}/800 · ${status}`;
       if (fortressStatus.textContent !== message) fortressStatus.textContent = message;
     }
