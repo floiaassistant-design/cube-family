@@ -30,8 +30,7 @@ describe("five-bastion castle", () => {
 });
 
 describe("fortress siege", () => {
-  const stand = (_x: number, _z: number, _y: number, _tall: boolean) =>
-    FORTRESS_GROUND_Y + 1;
+  const stand = (_x: number, _z: number, _y: number, _tall: boolean) => FORTRESS_GROUND_Y + 1;
   it("starts with preparation, spawns raiders and accepts combat", () => {
     const game = new FortressSiege();
     game.start();
