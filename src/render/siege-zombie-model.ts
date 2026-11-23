@@ -23,8 +23,8 @@ export class SiegeZombieModel extends CreatureModel {
     this.box(this.root, coat, 0, 1.03, 0, 0.63, 0.72, 0.35);
     this.box(this.root, rust, -0.2, 0.98, 0.181, 0.16, 0.29, 0.04);
     this.box(this.root, skin, 0, 1.56, 0.02, 0.52, 0.5, 0.5);
-    this.box(this.root, shadow, -0.165, 1.52, 0.277, 0.10, 0.09, 0.04);
-    this.box(this.root, shadow, 0.165, 1.52, 0.277, 0.10, 0.09, 0.04);
+    this.box(this.root, shadow, -0.165, 1.52, 0.277, 0.1, 0.09, 0.04);
+    this.box(this.root, shadow, 0.165, 1.52, 0.277, 0.1, 0.09, 0.04);
     this.box(this.root, dark, 0, 1.36, 0.28, 0.26, 0.07, 0.045);
     this.box(this.root, bone, -0.045, 1.355, 0.309, 0.05, 0.05, 0.02);
     this.helmet = this.box(this.root, armor, 0, 1.84, 0, 0.61, 0.24, 0.58);
