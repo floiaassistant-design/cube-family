@@ -61,7 +61,7 @@ export function fortressBlueprint(): FortressBlock[] {
     fill(86, 87, 11, 12, n, n + 1, BlockId.STONE_BRICK);
   }
   // Four large hollow towers, with covered upper platforms.
-  for (const [cx, cz] of [[10, 10], [85, 10], [10, 85], [85, 85]]) {
+  for (const [cx, cz] of [[10, 10], [85, 10], [10, 85], [85, 85]] as const) {
     for (let x = cx - 6; x <= cx + 6; x++)
       for (let z = cz - 6; z <= cz + 6; z++) {
         if (x < 0 || z < 0 || x >= 96 || z >= 96) continue;
@@ -107,7 +107,7 @@ export function fortressBlueprint(): FortressBlock[] {
     fill(79, 81, step, step, 34 + step, 35 + step, BlockId.STONE_BRICK);
   }
   // Sparse lighting in the courtyard: no new block ids needed.
-  for (const [x, z] of [[30, 30], [65, 30], [30, 65], [65, 65], [48, 81]]) {
+  for (const [x, z] of [[30, 30], [65, 30], [30, 65], [65, 65], [48, 81]] as const) {
     fill(x, x, 1, 3, z, z, BlockId.WOOD);
     put(x, 4, z, BlockId.LANTERN);
   }
