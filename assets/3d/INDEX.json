@@ -114,7 +114,8 @@
       "status": "asset_available_not_integrated",
       "previous_model_source": "assets/3d/titan-zombie-siege/titan_zombie_siege_v1.glb",
       "generator": "assets/3d/titan-zombie-siege/generer_titan_v2.mjs",
-      "design_plan": "assets/3d/titan-zombie-siege/PLAN_V2.md"
+      "design_plan": "assets/3d/titan-zombie-siege/PLAN_V2.md",
+      "preview_source": "assets/3d/titan-zombie-siege/apercu_v2.svg"
     }
   ]
 }
