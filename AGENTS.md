@@ -1,4 +1,6 @@
-# Minecraft Family
+# Cube Family
+
+**Nom public officiel : Cube Family.** Toujours employer ce nom dans l’interface, les métadonnées et les nouvelles publications. Conserver les crédits du moteur libre Lumenwild, la licence MIT, les sauvegardes et les identifiants techniques stables tant qu’une migration n’est pas validée.
 
 Cette base reprend le moteur libre de Lumenwild, © Vincent Plessy. La licence [MIT](LICENSE), les crédits et les fonctionnalités héritées sont à conserver. Le jeu web autonome est la cible prise en charge. Electron et Capacitor sont conservés pour un chantier distinct.
 

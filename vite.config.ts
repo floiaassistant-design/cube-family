@@ -39,7 +39,8 @@ function offlineServiceWorker(): Plugin {
       const source = `// Generated at build time — see vite.config.ts.
 const ROOT = self.registration.scope;
 const INDEX = new URL("index.html", ROOT).href;
-const PREFIX = "minecraft-family-pwa:" + ROOT + ":";
+const PREFIX = "cube-family-pwa:" + ROOT + ":";
+const LEGACY_PREFIX = "minecraft-family-pwa:" + ROOT + ":";
 const CACHE = PREFIX + "${version}";
 const FILES = new Set(${JSON.stringify(["./", ...files])}.map((file) => new URL(file, ROOT).href));
 
@@ -52,7 +53,7 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) => Promise.all(
-      keys.filter((key) => key.startsWith(PREFIX) && key !== CACHE).map((key) => caches.delete(key)),
+      keys.filter((key) => (key.startsWith(PREFIX) && key !== CACHE) || key.startsWith(LEGACY_PREFIX)).map((key) => caches.delete(key)),
     )).then(() => self.clients.claim()),
   );
 });

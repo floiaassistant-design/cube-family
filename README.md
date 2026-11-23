@@ -1,4 +1,4 @@
-# Minecraft Family
+# Cube Family
 
 Cette base web dérive de Lumenwild de Vincent Plessy. Voir [AGENTS.md](AGENTS.md) et la [feuille de route](docs/feuille-de-route.md). Les sections d’origine ci-dessous décrivent le jeu hérité.
 
