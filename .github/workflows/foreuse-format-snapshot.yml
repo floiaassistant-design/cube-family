@@ -1,0 +1,32 @@
+# Temporary, read-only formatting snapshot for this feature PR.
+# This file is removed from the PR after transferring the formatted text.
+name: Foreuse format snapshot
+on:
+  push:
+    branches:
+      - feature/foreuse-volante-v1
+permissions:
+  contents: read
+jobs:
+  snapshot:
+    name: Formatting snapshot
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
+        with:
+          node-version-file: .node-version
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Format changed sources locally (not pushed)
+        run: npm exec prettier -- --write src/main.ts src/game/dragon.ts src/player/controller.ts src/ui/touch-controls.ts src/style.css src/game/flight-drill.ts src/game/flight-drill.test.ts src/render/flight-drill-model.ts docs/catalogues/equipements.json docs/FOREUSE_VOLANTE.md
+      - name: Output formatted snapshots for bot review
+        run: |
+          python3 - <<'PY'
+          import json
+          paths = ["src/main.ts", "src/game/dragon.ts", "src/player/controller.ts", "src/ui/touch-controls.ts", "src/style.css", "src/game/flight-drill.ts", "src/game/flight-drill.test.ts", "src/render/flight-drill-model.ts", "docs/catalogues/equipements.json", "docs/FOREUSE_VOLANTE.md"]
+          for path in paths:
+              with open(path, encoding="utf-8") as f:
+                  encoded=json.dumps(f.read(), ensure_ascii=True)
+              for index in range(0, len(encoded), 1600):
+                  print("FMT:" + path + ":" + str(index // 1600) + ":" + encoded[index:index+1600], flush=True)
+          PY
