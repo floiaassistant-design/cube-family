@@ -1348,9 +1348,16 @@ function boot(): void {
       dragon: () => ({
         position: dragon.position,
         ready: dragonModel.ready,
-        mounted: player.riding,
+        mounted: player.currentMount === dragon,
         flying: dragon.flying,
         grounded: dragon.grounded,
+      }),
+      drill: () => ({
+        position: drill.position,
+        mounted: player.currentMount === drill,
+        flying: drill.flying,
+        drilling: drill.drilling,
+        size: drill.size,
       }),
       inventoryOpen: () => inventory.isOpen,
       gameMode: () => mode,
@@ -1461,6 +1468,7 @@ function boot(): void {
     streamer.update(player.position.x, player.position.z);
     if (time >= nextDragonSpawnTry) {
       spawnDragon();
+      spawnDrill();
       nextDragonSpawnTry = time + 1000;
     }
     player.update(dt);
@@ -1478,20 +1486,54 @@ function boot(): void {
         dragon,
         dragonPosition,
         dragonDistance,
-        player.riding,
+        player.currentMount === dragon,
       );
     }
-    const rideAvailable = controlsVisible && (player.riding || canMountDragon());
+    const drillPosition = player.currentMount === drill
+      ? player.dragonRenderPosition ?? drill.position
+      : drill.position;
+    const drillDistance = drillPosition
+      ? Math.hypot(x - drillPosition.x, z - drillPosition.z)
+      : Infinity;
+    if (drillPosition) {
+      drillModel.update(
+        player.isActive ? dt : 0,
+        drill,
+        drillPosition,
+        drillDistance,
+        player.currentMount === drill,
+      );
+    }
+    const rideAvailable = controlsVisible &&
+      (player.riding || canMountDragon() || canMountDrill());
+    const drillAvailable = controlsVisible &&
+      (player.currentMount === drill || canMountDrill());
     if (touchControls) {
       touchControls.setRide(
-        rideAvailable ? t(player.riding ? "dragonDismount" : "dragonMount") : "",
+        rideAvailable
+          ? player.currentMount === drill
+            ? t.locale === "fr" ? "Quitter la foreuse" : "Leave drill"
+            : !player.riding && canMountDrill()
+              ? t.locale === "fr" ? "Monter foreuse" : "Board drill"
+              : t(player.riding ? "dragonDismount" : "dragonMount")
+          : "",
         player.riding,
         player.flightAllowed,
       );
-      touchControls.setFlying(player.riding ? dragon.flying : player.isFlying);
+      touchControls.setDrill(player.currentMount === drill, drill.drilling, drill.size);
+      touchControls.setFlying(player.riding
+        ? (player.currentMount?.flying ?? false) : player.isFlying);
     }
     let hint = "";
-    if (controlsVisible && !rideAvailable && dragonModel.ready && dragonDistance < 18) {
+    if (drillAvailable) {
+      hint = player.currentMount === drill
+        ? t.locale === "fr"
+          ? "Foreuse " + drill.size.toString() + "×" + drill.size.toString() +
+            " · Clic pour forer · T diamètre · Espace monter · Ctrl descendre"
+          : "Drill " + drill.size.toString() + "×" + drill.size.toString() +
+            " · Click to bore · T size · Space climb · Ctrl descend"
+        : t.locale === "fr" ? "[R] Monter dans la foreuse" : "[R] Board the drill";
+    } else if (controlsVisible && !rideAvailable && dragonModel.ready && dragonDistance < 18) {
       hint = t("dragonApproachHint");
     } else if (rideAvailable && (!touch || player.riding)) {
       hint = touch
@@ -1527,6 +1569,7 @@ function boot(): void {
       }
     }
     syncGateVisuals();
+    if (siege?.active) drill.drilling = false;
     const nearbySiege =
       siege?.zombies.filter(
         (enemy) =>
@@ -1784,7 +1827,16 @@ function boot(): void {
       }
     } else if (cpu) {
       cpu.applySky(skyStateAt(clock));
-      cpu.render(clock, dragonModel.visibleModel);
+      cpu.render(
+        clock,
+        player.currentMount === drill
+          ? drillModel.visibleModel
+          : player.currentMount === dragon
+            ? dragonModel.visibleModel
+            : drillDistance < dragonDistance
+              ? drillModel.visibleModel
+              : dragonModel.visibleModel,
+      );
     }
     requestAnimationFrame(frame);
   };
