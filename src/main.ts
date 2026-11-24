@@ -637,11 +637,13 @@ function boot(): void {
   drill.onExcavate = (edits) => {
     if (mode !== "creative" || siege?.active || edits.length === 0) return;
     editStore.recordMany(edits);
-    for (const edit of edits) {
+    for (const [index, edit] of edits.entries()) {
       const previous = world.getBlock(edit.x, edit.y, edit.z);
       world.setBlock(edit.x, edit.y, edit.z, BlockId.AIR);
       chunkMeshes?.blockChanged(edit.x, edit.y, edit.z, BlockId.AIR);
-      if (previous !== BlockId.AIR) particles?.burst(edit.x, edit.y, edit.z, previous);
+      if (index === 0 && previous !== BlockId.AIR) {
+        particles?.burst(edit.x, edit.y, edit.z, previous);
+      }
     }
     sound.breakBlock(BlockId.STONE);
   };
@@ -662,7 +664,16 @@ function boot(): void {
     interaction.canPlace = (block) => !siege?.active && (!adventure || bag.count(block) > 0);
     hotbar.setCounts(adventure ? (block) => bag.count(block) : null);
     player.setFlightAllowed(!adventure);
-    if (adventure) drill.drilling = false;
+    if (adventure) {
+      drill.drilling = false;
+      if (player.currentMount === drill) {
+        drill.returnToParking();
+        const exit = drill.safeExit() ?? drill.savedRiderPosition;
+        if (exit) player.restore({ ...player.pose(), ...exit, flying: false });
+        interaction.enabled = true;
+        app.classList.remove("riding");
+      }
+    }
   };
   interaction.onPick = (id) => {
     hotbar.pick(id);
@@ -1545,7 +1556,7 @@ function boot(): void {
         player.riding,
         player.flightAllowed,
       );
-      touchControls.setDrill(player.currentMount === drill, drill.drilling, drill.size);
+      touchControls.setDrill(player.currentMount === drill, drill.drilling, drill.size, t.locale === "fr");
       touchControls.setFlying(
         player.riding ? (player.currentMount?.flying ?? false) : player.isFlying,
       );
