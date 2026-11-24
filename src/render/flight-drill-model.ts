@@ -21,6 +21,16 @@ export class FlyingDrillModel {
     const skin = new THREE.MeshBasicMaterial({ color: 0xe6af85 });
     const cloth = new THREE.MeshBasicMaterial({ color: 0x3976a6 });
 
+    // CPU fallback uses vertex colors, not material.color, for its triangle rasteriser.
+    const paint = (geometry: THREE.BufferGeometry, material: THREE.Material) => {
+      const count = geometry.getAttribute("position").count;
+      const tint = material instanceof THREE.MeshBasicMaterial ? material.color : new THREE.Color();
+      const colors = new Float32Array(count * 3);
+      for (let i = 0; i < count; i++) tint.toArray(colors, i * 3);
+      geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+      return geometry;
+    };
+
     const box = (
       parent: THREE.Group,
       x: number,
@@ -31,7 +41,7 @@ export class FlyingDrillModel {
       sz: number,
       material: THREE.Material,
     ): void => {
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), material);
+      const mesh = new THREE.Mesh(paint(new THREE.BoxGeometry(sx, sy, sz), material), material);
       mesh.position.set(x, y, z);
       parent.add(mesh);
     };
@@ -42,7 +52,7 @@ export class FlyingDrillModel {
       depth: number,
       material: THREE.Material,
     ): void => {
-      const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, depth, 8), material);
+      const mesh = new THREE.Mesh(paint(new THREE.CylinderGeometry(radius, radius, depth, 8), material), material);
       mesh.rotation.x = Math.PI / 2;
       mesh.position.z = z;
       parent.add(mesh);
@@ -77,7 +87,7 @@ export class FlyingDrillModel {
     ring(this.cutter, -1.18, 0.17, 0.3, pale);
     for (let i = 0; i < 8; i++) {
       const angle = (Math.PI * 2 * i) / 8;
-      const tooth = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.23, 0.43), steel);
+      const tooth = new THREE.Mesh(paint(new THREE.BoxGeometry(0.19, 0.23, 0.43), steel), steel);
       tooth.position.set(Math.sin(angle) * 0.68, Math.cos(angle) * 0.68, -0.49);
       tooth.rotation.z = -angle;
       this.cutter.add(tooth);
@@ -114,6 +124,7 @@ export class FlyingDrillModel {
     if (!this.root.visible) return;
     this.root.position.set(position.x, position.y, position.z);
     this.root.rotation.y = drill.yaw;
+    this.root.rotation.x = mounted ? -drill.pitch * 0.65 : 0;
     this.rider.visible = mounted;
     this.phase += dt;
     if (drill.drilling) this.cutter.rotation.z += dt * 17;
