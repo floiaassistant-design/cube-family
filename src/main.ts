@@ -115,6 +115,8 @@ declare global {
       flying: () => boolean;
       drill: () => {
         position: { x: number; y: number; z: number } | null;
+        exit: { x: number; y: number; z: number } | null;
+        yaw: number;
         mounted: boolean;
         flying: boolean;
         drilling: boolean;
@@ -1396,6 +1398,8 @@ function boot(): void {
       }),
       drill: () => ({
         position: drill.position,
+        exit: drill.safeExit(),
+        yaw: drill.yaw,
         mounted: player.currentMount === drill,
         flying: drill.flying,
         drilling: drill.drilling,
