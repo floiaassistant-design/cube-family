@@ -52,7 +52,10 @@ export class FlyingDrillModel {
       depth: number,
       material: THREE.Material,
     ): void => {
-      const mesh = new THREE.Mesh(paint(new THREE.CylinderGeometry(radius, radius, depth, 8), material), material);
+      const mesh = new THREE.Mesh(
+        paint(new THREE.CylinderGeometry(radius, radius, depth, 8), material),
+        material,
+      );
       mesh.rotation.x = Math.PI / 2;
       mesh.position.z = z;
       parent.add(mesh);

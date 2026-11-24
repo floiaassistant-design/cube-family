@@ -229,7 +229,13 @@ export class TouchControls {
     this.drillButton.hidden = !mounted;
     this.sizeButton.hidden = !mounted;
     this.drillButton.classList.toggle("active", active);
-    this.drillButton.textContent = french ? (active ? "Arrêter" : "Forer") : active ? "Stop" : "Drill";
+    this.drillButton.textContent = french
+      ? active
+        ? "Arrêter"
+        : "Forer"
+      : active
+        ? "Stop"
+        : "Drill";
     this.sizeButton.textContent = size.toString() + "×" + size.toString();
   }
 

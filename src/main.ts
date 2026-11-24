@@ -1556,7 +1556,12 @@ function boot(): void {
         player.riding,
         player.flightAllowed,
       );
-      touchControls.setDrill(player.currentMount === drill, drill.drilling, drill.size, t.locale === "fr");
+      touchControls.setDrill(
+        player.currentMount === drill,
+        drill.drilling,
+        drill.size,
+        t.locale === "fr",
+      );
       touchControls.setFlying(
         player.riding ? (player.currentMount?.flying ?? false) : player.isFlying,
       );

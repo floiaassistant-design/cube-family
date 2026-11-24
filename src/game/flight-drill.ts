@@ -104,13 +104,14 @@ export class FlyingDrill extends DragonMount {
     }
     // During boring, forward thrust follows the nose: look up to climb,
     // look down to descend. Manual ascent/descent always take precedence.
-    const steer = this.drilling && input && input.forward > 0.1
-      ? {
-          ...input,
-          jump: input.jump || this.pitch < -0.2,
-          descend: input.descend || (!input.jump && this.pitch > 0.2),
-        }
-      : input;
+    const steer =
+      this.drilling && input && input.forward > 0.1
+        ? {
+            ...input,
+            jump: input.jump || this.pitch < -0.2,
+            descend: input.descend || (!input.jump && this.pitch > 0.2),
+          }
+        : input;
     super.step(dt, steer);
   }
 }
