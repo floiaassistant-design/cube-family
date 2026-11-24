@@ -4,6 +4,7 @@ import { SoundEngine } from "./audio/sound";
 import { GAME_NAME } from "./branding";
 import { type DiscoveryId, Journal } from "./game/discoveries";
 import { DragonMount } from "./game/dragon";
+import { FlyingDrill } from "./game/flight-drill";
 import { attackDamage } from "./game/equipment";
 import { createFortressBlueprint, FORTRESS_CENTER } from "./game/siege/fortress";
 import { findFortressSite, FortressStore } from "./game/siege/fortress-store";
@@ -39,6 +40,7 @@ import { ChunkMeshManager } from "./render/chunk-mesh-manager";
 import { CreatureView } from "./render/creature-view";
 import { CpuRenderer } from "./render/cpu-renderer";
 import { DragonModel } from "./render/dragon-model";
+import { FlyingDrillModel } from "./render/flight-drill-model";
 import { environmentAt } from "./render/environment";
 import { HeldBlock } from "./render/held-block";
 import { renderEquipmentIcon } from "./render/mining-pick-art";
@@ -111,6 +113,13 @@ declare global {
       stats: () => Record<string, number | undefined>;
       hotbar: () => number[];
       flying: () => boolean;
+      drill: () => {
+        position: { x: number; y: number; z: number } | null;
+        mounted: boolean;
+        flying: boolean;
+        drilling: boolean;
+        size: number;
+      };
       dragon: () => {
         position: { x: number; y: number; z: number } | null;
         ready: boolean;
@@ -235,6 +244,7 @@ function boot(): void {
   let particles: Particles | null = null;
   let heldBlock: HeldBlock | null = null;
   let dragonModel: DragonModel;
+  let drillModel: FlyingDrillModel;
   let rain: Rain | null = null;
   let highlight: THREE.LineSegments | null = null;
   let digVeil: THREE.Mesh | null = null;
@@ -258,6 +268,7 @@ function boot(): void {
     renderer.scene.add(renderer.camera);
     const hand = new HeldBlock(renderer.camera, renderer.uniforms, directOutput());
     const dragonView = new DragonModel(renderer.scene, renderer.uniforms, directOutput());
+    const drillView = new FlyingDrillModel(renderer.scene);
     const shower = new Rain(renderer.scene, directOutput());
     renderer.onMaterialsChanged = () => {
       meshes.setMaterials({ terrain: renderer.terrainMaterial, water: renderer.waterMaterial });
@@ -268,6 +279,7 @@ function boot(): void {
     };
     heldBlock = hand;
     dragonModel = dragonView;
+    drillModel = drillView;
     rain = shower;
     highlight = new THREE.LineSegments(
       new THREE.EdgesGeometry(new THREE.BoxGeometry(1.004, 1.004, 1.004)),
@@ -297,6 +309,7 @@ function boot(): void {
     console.warn("WebGL2 unavailable, switching to the CPU raycaster:", webglError);
     cpu = new CpuRenderer(app, world, SEED);
     dragonModel = new DragonModel(null);
+    drillModel = new FlyingDrillModel(null);
   }
   const view = webgl ?? cpu;
   if (!view) throw new Error("no renderer could be created");
@@ -377,6 +390,36 @@ function boot(): void {
     dragon.spawn(dragonOrigin, terrainSurface, saved?.dragon);
   };
   spawnDragon();
+
+  // Per-world local parking; no change to the existing player save format.
+  const drillStorageKey = "voxel-world:vehicle:flying-drill:v1:" + SEED.toString();
+  const storedDrill = (() => {
+    try {
+      const raw = storage?.getItem(drillStorageKey);
+      if (!raw) return undefined;
+      const data: unknown = JSON.parse(raw);
+      if (!data || typeof data !== "object") return undefined;
+      const p = data as Record<string, unknown>;
+      if (
+        typeof p.x === "number" && Number.isFinite(p.x) &&
+        typeof p.y === "number" && Number.isFinite(p.y) &&
+        typeof p.z === "number" && Number.isFinite(p.z) &&
+        typeof p.yaw === "number" && Number.isFinite(p.yaw) &&
+        p.y > 0 && p.y < CHUNK_HEIGHT + 48
+      ) return { x: p.x, y: p.y, z: p.z, yaw: p.yaw };
+    } catch {
+      // Invalid or blocked local storage must not prevent game launch.
+    }
+    return undefined;
+  })();
+  const drill = new FlyingDrill(world);
+  const drillOrigin = storedDrill ?? { x: startX + 6, z: startZ + 6 };
+  const spawnDrill = (): void => {
+    const p = player.position;
+    if (drill.position || Math.hypot(p.x - drillOrigin.x, p.z - drillOrigin.z) > 35) return;
+    drill.spawn(drillOrigin, terrainSurface, storedDrill);
+  };
+  spawnDrill();
   if (!saved && dragon.position) {
     const pose = player.pose();
     const yaw = Math.atan2(pose.x - dragon.position.x, pose.z - dragon.position.z);
