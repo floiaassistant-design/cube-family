@@ -62,6 +62,7 @@ export interface TouchControlHandlers {
   readonly onInventory: () => void;
   readonly onToggleFly: () => void;
   readonly onRide: () => void;
+  readonly onDrillRide?: () => void;
   readonly onToggleDrill?: () => void;
   readonly onCycleDrill?: () => void;
 }
@@ -93,6 +94,7 @@ export class TouchControls {
   private readonly flyButton: HTMLDivElement;
   private readonly placeButton: HTMLDivElement;
   private readonly rideButton: HTMLButtonElement;
+  private readonly drillRideButton: HTMLButtonElement;
   private readonly drillButton: HTMLButtonElement;
   private readonly sizeButton: HTMLButtonElement;
   private readonly touches = new Map<number, ActiveTouch>();
@@ -140,6 +142,14 @@ export class TouchControls {
       if (this.handlers.isActive()) this.handlers.onRide();
     });
 
+    this.drillRideButton = document.createElement("button");
+    this.drillRideButton.type = "button";
+    this.drillRideButton.className = "touch-button touch-drill-ride";
+    this.drillRideButton.hidden = true;
+    this.drillRideButton.addEventListener("click", () => {
+      if (this.handlers.isActive()) this.handlers.onDrillRide?.();
+    });
+
     this.drillButton = document.createElement("button");
     this.drillButton.type = "button";
     this.drillButton.className = "touch-button touch-drill";
@@ -180,6 +190,7 @@ export class TouchControls {
     this.topBar.append(
       this.drillButton,
       this.sizeButton,
+      this.drillRideButton,
       this.rideButton,
       this.makeButton("touch-inventory", "▦", {
         press: () => {
@@ -223,6 +234,11 @@ export class TouchControls {
     this.rideButton.hidden = label === "";
     this.flyButton.style.display = flightAllowed && !mounted ? "flex" : "none";
     this.placeButton.style.display = mounted ? "none" : "flex";
+  }
+
+  setDrillRide(label: string): void {
+    if (this.drillRideButton.textContent !== label) this.drillRideButton.textContent = label;
+    this.drillRideButton.hidden = label === "";
   }
 
   setDrill(mounted: boolean, active: boolean, size: number, french = true): void {
