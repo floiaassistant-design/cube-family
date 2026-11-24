@@ -597,6 +597,10 @@ export class PlayerController {
     return this.dragon !== null;
   }
 
+  get currentMount(): DragonMount | null {
+    return this.dragon;
+  }
+
   get dragonRenderPosition(): Vec3 | null {
     return this.dragon?.interpolatedPosition(this.rideAlpha) ?? null;
   }
@@ -626,7 +630,10 @@ export class PlayerController {
       const input = this.currentInput();
       this.accumulator = Math.min(this.accumulator + dt, TICK * MAX_TICKS_PER_FRAME);
       while (this.accumulator >= TICK) {
-        dragon.step(TICK, this.inputEnabled ? { ...input, yaw: this.yaw } : null);
+        dragon.step(
+          TICK,
+          this.inputEnabled ? { ...input, yaw: this.yaw, pitch: this.pitch } : null,
+        );
         this.accumulator -= TICK;
       }
       this.rideAlpha = this.accumulator / TICK;

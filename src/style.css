@@ -938,8 +938,20 @@ kbd {
   font: 600 13px var(--font);
 }
 
-.touch-top .touch-ride[hidden] {
+.touch-top .touch-ride[hidden],
+.touch-top .touch-drill-ride[hidden],
+.touch-top .touch-drill[hidden],
+.touch-top .touch-drill-size[hidden] {
   display: none;
+}
+
+.touch-top .touch-drill,
+.touch-top .touch-drill-ride,
+.touch-top .touch-drill-size {
+  width: auto;
+  min-width: 50px;
+  padding: 0 7px;
+  font: 600 12px var(--font);
 }
 
 .touch-fly,
