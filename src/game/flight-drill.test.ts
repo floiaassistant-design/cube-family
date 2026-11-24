@@ -46,8 +46,15 @@ describe("creative flying drill", () => {
     expect(drill.cycleSize()).toBe(5);
     expect(drill.cycleSize()).toBe(1);
     expect(drill.cycleSize()).toBe(3);
+    // A loaded wall is actually cleared; no blind edits outside loaded chunks.
+    for (let x = 6; x <= 10; x++) {
+      for (let y = 21; y <= 23; y++) world.setBlock(x, y, 6, BlockId.STONE);
+    }
     const batches: number[] = [];
-    drill.onExcavate = (edits) => batches.push(edits.length);
+    drill.onExcavate = (edits) => {
+      batches.push(edits.length);
+      for (const edit of edits) world.setBlock(edit.x, edit.y, edit.z, edit.id);
+    };
     drill.drilling = true;
     const input = {
       forward: 0,
@@ -59,6 +66,8 @@ describe("creative flying drill", () => {
       sprint: false,
     };
     for (let i = 0; i < 30; i++) drill.step(1 / 120, input);
+    expect(batches.length).toBeGreaterThan(0);
     expect(batches.every((count) => count <= 8)).toBe(true);
+    expect(world.getBlock(8, 22, 6)).toBe(BlockId.AIR);
   });
 });
