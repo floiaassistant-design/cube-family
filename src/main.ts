@@ -626,7 +626,19 @@ function boot(): void {
       celebrate(journal.built(edit.id));
     }
   };
-  interaction.occupiedByEntity = (x, y, z) => dragon.occupiesBlock(x, y, z);
+  interaction.occupiedByEntity = (x, y, z) =>
+    dragon.occupiesBlock(x, y, z) || drill.occupiesBlock(x, y, z);
+  drill.onExcavate = (edits) => {
+    if (mode !== "creative" || siege?.active || edits.length === 0) return;
+    editStore.recordMany(edits);
+    for (const edit of edits) {
+      const previous = world.getBlock(edit.x, edit.y, edit.z);
+      world.setBlock(edit.x, edit.y, edit.z, BlockId.AIR);
+      chunkMeshes?.blockChanged(edit.x, edit.y, edit.z, BlockId.AIR);
+      if (previous !== BlockId.AIR) particles?.burst(edit.x, edit.y, edit.z, previous);
+    }
+    sound.breakBlock(BlockId.STONE);
+  };
   interaction.onDigTick = (block) => {
     sound.step(block);
     if (heldEquipment !== null) swingHand();
@@ -644,6 +656,7 @@ function boot(): void {
     interaction.canPlace = (block) => !siege?.active && (!adventure || bag.count(block) > 0);
     hotbar.setCounts(adventure ? (block) => bag.count(block) : null);
     player.setFlightAllowed(!adventure);
+    if (adventure) drill.drilling = false;
   };
   interaction.onPick = (id) => {
     hotbar.pick(id);
@@ -664,9 +677,22 @@ function boot(): void {
   let nextStrike = 20;
 
   const persist = (): void => {
-    if (player.riding) dragon.recordParking();
+    if (player.currentMount === dragon) dragon.recordParking();
+    if (player.currentMount === drill) drill.recordParking();
+    const parking = drill.parking;
+    if (parking) {
+      try {
+        storage?.setItem(drillStorageKey, JSON.stringify(parking));
+      } catch {
+        // Storage may be unavailable; gameplay remains in memory.
+      }
+    }
     const pose = player.pose();
-    const safeReturn = player.riding ? dragon.savedRiderPosition : undefined;
+    const safeReturn = player.currentMount === dragon
+      ? dragon.savedRiderPosition
+      : player.currentMount === drill
+        ? drill.savedRiderPosition
+        : undefined;
     storePlayerSave(storage, SEED, {
       ...pose,
       ...(safeReturn ? { ...safeReturn, flying: false } : {}),
@@ -819,20 +845,25 @@ function boot(): void {
   };
 
   const canMountDragon = (): boolean => dragonModel.ready && dragon.canMount(player.position);
+  const canMountDrill = (): boolean =>
+    mode === "creative" && drillModel.ready && drill.canMount(player.position);
 
   const toggleRide = (): boolean => {
     if (!player.isActive || inventory.isOpen) return false;
     if (player.riding) {
+      drill.drilling = false;
       if (player.dismount()) {
         interaction.enabled = true;
         app.classList.remove("riding");
         persist();
       } else {
-        hud.announce(t(dragon.grounded ? "dragonExitBlocked" : "dragonLandingRequired"));
+        const ride = player.currentMount;
+        hud.announce(t(ride?.grounded ? "dragonExitBlocked" : "dragonLandingRequired"));
       }
       return true;
     }
-    if (!dragonModel.ready || !player.mount(dragon)) return false;
+    const mount = canMountDrill() ? drill : canMountDragon() ? dragon : null;
+    if (!mount || !player.mount(mount)) return false;
     interaction.enabled = false;
     app.classList.add("riding");
     return true;
@@ -1081,6 +1112,7 @@ function boot(): void {
     menu.markStarted();
   };
   player.onPause = () => {
+    drill.drilling = false;
     inventory.hide();
     interaction.enabled = !player.riding;
     menu.show("main");
