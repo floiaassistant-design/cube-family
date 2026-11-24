@@ -880,10 +880,12 @@ function boot(): void {
           player.lookBy(dx, dy);
         },
         onBreak: () => {
-          interaction.breakTargetedBlock();
+          if (player.currentMount === drill) drill.drilling = !drill.drilling;
+          else interaction.breakTargetedBlock();
         },
         onPlace: () => {
-          interaction.placeTargetedBlock();
+          if (player.currentMount === drill) drill.cycleSize();
+          else interaction.placeTargetedBlock();
         },
         onPause: () => {
           player.releaseControl();
@@ -895,6 +897,12 @@ function boot(): void {
           player.toggleFlight();
         },
         onRide: toggleRide,
+        onToggleDrill: () => {
+          if (player.currentMount === drill) drill.drilling = !drill.drilling;
+        },
+        onCycleDrill: () => {
+          if (player.currentMount === drill) drill.cycleSize();
+        },
       })
     : null;
   let touchVisible = false;
@@ -1154,8 +1162,44 @@ function boot(): void {
     return false;
   };
 
+  document.addEventListener("mousedown", (event) => {
+    if (event.button === 0 && player.currentMount === drill && player.isActive) {
+      drill.drilling = true;
+    }
+  });
+  document.addEventListener("mouseup", (event) => {
+    if (event.button === 0 && player.currentMount === drill) drill.drilling = false;
+  });
+  window.addEventListener("blur", () => { drill.drilling = false; });
+
   window.addEventListener("keydown", (e) => {
     if (e.repeat) return;
+    if (player.isActive && !inventory.isOpen && player.currentMount === drill) {
+      if (e.code === "KeyT") {
+        drill.cycleSize();
+        e.preventDefault();
+        return;
+      }
+      if (e.code === "KeyJ") {
+        drill.drilling = !drill.drilling;
+        e.preventDefault();
+        return;
+      }
+    }
+    if (e.code === "KeyP" && player.isActive && !inventory.isOpen &&
+        !player.riding && mode === "creative") {
+      spawnDrill();
+      const exit = drill.safeExit();
+      if (exit) {
+        streamer.warmUp(exit.x, exit.z, WARMUP_RADIUS_CHUNKS);
+        player.restore({ ...player.pose(), ...exit, flying: false });
+        hud.announce(t.locale === "fr" ? "Foreuse retrouvée. R pour monter." : "Drill located. Press R to mount.");
+      } else {
+        hud.announce(t.locale === "fr" ? "Foreuse indisponible : cherche un terrain dégagé." : "Drill unavailable: find open ground.");
+      }
+      e.preventDefault();
+      return;
+    }
     // A desktop pointer-lock player can open the mini-game panel with M.
     // F is reserved for flying in PlayerController; G fires event arrows.
     if (e.code === "KeyM" && player.isActive && !inventory.isOpen && mode === "creative") {
@@ -1203,6 +1247,7 @@ function boot(): void {
   });
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
+      drill.drilling = false;
       persist();
       sound.setPaused(true);
     } else if (player.isActive) {
@@ -1399,8 +1444,14 @@ function boot(): void {
             );
           }
           if (pad.lookX !== 0 || pad.lookY !== 0) player.lookBy(pad.lookX, pad.lookY);
-          if (pad.breakBlock) interaction.breakTargetedBlock();
-          if (pad.placeBlock) interaction.placeTargetedBlock();
+          if (pad.breakBlock) {
+            if (player.currentMount === drill) drill.drilling = !drill.drilling;
+            else interaction.breakTargetedBlock();
+          }
+          if (pad.placeBlock) {
+            if (player.currentMount === drill) drill.cycleSize();
+            else interaction.placeTargetedBlock();
+          }
           if (pad.hotbarStep !== 0) hotbar.cycle(pad.hotbarStep);
           if (pad.toggleFlight && !toggleRide()) player.toggleFlight();
         }
