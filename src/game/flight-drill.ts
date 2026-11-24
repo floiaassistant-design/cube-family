@@ -67,6 +67,7 @@ export class FlyingDrill extends DragonMount {
   private readonly drillWorld: World;
   private accumulator = 0;
   drilling = false;
+  pitch = 0;
   size: DrillSize = 3;
   onExcavate: ((edits: readonly DrillEdit[]) => void) | undefined;
 
@@ -86,6 +87,7 @@ export class FlyingDrill extends DragonMount {
   }
 
   override step(dt: number, input: DrillInput | null): void {
+    if (input) this.pitch = Math.max(-1.1, Math.min(1.1, input.pitch ?? this.pitch));
     this.accumulator += dt;
     if (this.drilling && input && this.position && this.accumulator >= 0.12) {
       this.accumulator = 0;
@@ -100,6 +102,15 @@ export class FlyingDrill extends DragonMount {
     } else if (!this.drilling || !input) {
       this.accumulator = 0;
     }
-    super.step(dt, input);
+    // During boring, forward thrust follows the nose: look up to climb,
+    // look down to descend. Manual ascent/descent always take precedence.
+    const steer = this.drilling && input && input.forward > 0.1
+      ? {
+          ...input,
+          jump: input.jump || this.pitch < -0.2,
+          descend: input.descend || (!input.jump && this.pitch > 0.2),
+        }
+      : input;
+    super.step(dt, steer);
   }
 }
