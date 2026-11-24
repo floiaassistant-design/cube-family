@@ -907,6 +907,64 @@ try {
   }
   await dragonPhone.browserContext().close();
 
+  // The drill is a separate creative vehicle: it must not steal the dragon's
+  // historic ride button. Exercise real touchscreen controls and world edits.
+  const drillPhone = await openPage("drill-phone", pageUrl(733, "quality=low&view=4"), {
+    width: 390,
+    height: 844,
+    deviceScaleFactor: 1,
+    isMobile: true,
+    hasTouch: true,
+  });
+  await waitForWorld(drillPhone, 9);
+  await drillPhone.tap("#play-button");
+  const drillParking = await until(drillPhone, () => window.__mc.drill().exit !== null);
+  report("the flying drill finds safe parking in Creative", drillParking);
+  if (drillParking) {
+    await drillPhone.evaluate(() => {
+      const exit = window.__mc.drill().exit;
+      if (exit) window.__mc.teleport(exit.x, exit.y, exit.z, 0, 0);
+    });
+    const boardVisible = await until(drillPhone, () => {
+      const button = document.querySelector(".touch-drill-ride");
+      return button && button.getBoundingClientRect().width > 0;
+    });
+    report("the flying drill has its own touch boarding button", boardVisible);
+    if (boardVisible) {
+      await drillPhone.tap(".touch-drill-ride");
+      const mountedDrill = await until(drillPhone, () => window.__mc.drill().mounted);
+      report("the pilot can board the flying drill on a touch screen", mountedDrill);
+      if (mountedDrill) {
+        const stage = await drillPhone.evaluate(() => {
+          const state = window.__mc.drill();
+          const p = state.position;
+          const yaw = state.yaw;
+          const cell = {
+            x: Math.floor(p.x - Math.sin(yaw) * 2.15),
+            y: Math.floor(p.y + 1.25),
+            z: Math.floor(p.z - Math.cos(yaw) * 2.15),
+          };
+          window.__mc.setBlock(cell.x, cell.y, cell.z, 3);
+          return cell;
+        });
+        await drillPhone.tap(".touch-drill");
+        const excavated = await until(
+          drillPhone,
+          (cell) =>
+            window.__mc.drill().drilling &&
+            window.__mc.blockAt(cell.x, cell.y, cell.z) === 0,
+          stage,
+        );
+        report("the drill cuts a stone voxel with the touch boring control", excavated);
+        await drillPhone.tap(".touch-drill-size");
+        const resized = await until(drillPhone, () => window.__mc.drill().size === 5);
+        report("the drill changes from a 3x3 to a 5x5 tunnel on touch", resized);
+        await drillPhone.tap(".touch-drill");
+      }
+    }
+  }
+  await drillPhone.browserContext().close();
+
   // =====================================================================
   // 6. Installed build: boots with the network gone
   // =====================================================================
