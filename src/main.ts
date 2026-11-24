@@ -1551,10 +1551,10 @@ function boot(): void {
         player.currentMount === drill,
       );
     }
-    const dragonAvailable = controlsVisible &&
-      (player.currentMount === dragon || (!player.riding && canMountDragon()));
-    const drillAvailable = controlsVisible &&
-      (player.currentMount === drill || (!player.riding && canMountDrill()));
+    const dragonAvailable =
+      controlsVisible && (player.currentMount === dragon || (!player.riding && canMountDragon()));
+    const drillAvailable =
+      controlsVisible && (player.currentMount === drill || (!player.riding && canMountDrill()));
     const rideAvailable = dragonAvailable || drillAvailable;
     if (touchControls) {
       touchControls.setRide(
@@ -1565,8 +1565,12 @@ function boot(): void {
       touchControls.setDrillRide(
         drillAvailable
           ? t.locale === "fr"
-            ? player.currentMount === drill ? "Quitter foreuse" : "Monter foreuse"
-            : player.currentMount === drill ? "Leave drill" : "Board drill"
+            ? player.currentMount === drill
+              ? "Quitter foreuse"
+              : "Monter foreuse"
+            : player.currentMount === drill
+              ? "Leave drill"
+              : "Board drill"
           : "",
       );
       touchControls.setDrill(

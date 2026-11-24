@@ -951,8 +951,7 @@ try {
         const excavated = await until(
           drillPhone,
           (cell) =>
-            window.__mc.drill().drilling &&
-            window.__mc.blockAt(cell.x, cell.y, cell.z) === 0,
+            window.__mc.drill().drilling && window.__mc.blockAt(cell.x, cell.y, cell.z) === 0,
           stage,
         );
         report("the drill cuts a stone voxel with the touch boring control", excavated);
