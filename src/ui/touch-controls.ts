@@ -225,11 +225,11 @@ export class TouchControls {
     this.placeButton.style.display = mounted ? "none" : "flex";
   }
 
-  setDrill(mounted: boolean, active: boolean, size: number): void {
+  setDrill(mounted: boolean, active: boolean, size: number, french = true): void {
     this.drillButton.hidden = !mounted;
     this.sizeButton.hidden = !mounted;
     this.drillButton.classList.toggle("active", active);
-    this.drillButton.textContent = active ? "Arrêter" : "Forer";
+    this.drillButton.textContent = french ? (active ? "Arrêter" : "Forer") : active ? "Stop" : "Drill";
     this.sizeButton.textContent = size.toString() + "×" + size.toString();
   }
 
