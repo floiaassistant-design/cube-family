@@ -32,12 +32,12 @@ export interface DragonInput {
   readonly forward: number;
   readonly right: number;
   readonly yaw: number;
+  readonly pitch?: number;
   readonly jump: boolean;
   readonly descend: boolean;
   readonly sprint: boolean;
 }
 
-const bodyBounds = (position: Vec3) => aabbFromFeetPosition(position, BODY_WIDTH, BODY_HEIGHT);
 
 export class DragonMount {
   private readonly world: World;
@@ -50,6 +50,10 @@ export class DragonMount {
 
   constructor(world: World) {
     this.world = world;
+  }
+
+  protected bodyBounds(position: Vec3) {
+    return aabbFromFeetPosition(position, BODY_WIDTH, BODY_HEIGHT);
   }
 
   get position(): Vec3 | null {
@@ -101,13 +105,13 @@ export class DragonMount {
     this.world.getBlock(x, y, z) === BlockId.WATER;
 
   private hasDryFooting(position: Vec3): boolean {
-    const slab = bodyBounds({ ...position, y: position.y - 0.08 });
+    const slab = this.bodyBounds({ ...position, y: position.y - 0.08 });
     return aabbIntersectsSolid({ min: slab.min, max: { ...slab.max, y: position.y } }, this.solid);
   }
 
   private canPark(position: Vec3): boolean {
     return (
-      !aabbIntersectsSolid(bodyBounds(position), this.obstacle) && this.hasDryFooting(position)
+      !aabbIntersectsSolid(this.bodyBounds(position), this.obstacle) && this.hasDryFooting(position)
     );
   }
 
@@ -219,7 +223,7 @@ export class DragonMount {
 
   occupiesBlock(x: number, y: number, z: number): boolean {
     if (!this.position) return false;
-    const { min, max } = bodyBounds(this.position);
+    const { min, max } = this.bodyBounds(this.position);
     return x < max.x && x + 1 > min.x && y < max.y && y + 1 > min.y && z < max.z && z + 1 > min.z;
   }
 
@@ -283,7 +287,7 @@ export class DragonMount {
     if (
       state.onGround &&
       input?.jump &&
-      !aabbIntersectsSolid(bodyBounds({ ...p, y: p.y + 0.05 }), this.obstacle)
+      !aabbIntersectsSolid(this.bodyBounds({ ...p, y: p.y + 0.05 }), this.obstacle)
     ) {
       this.recordParking();
       this.flying = true;
@@ -326,7 +330,7 @@ export class DragonMount {
     const dx = velocity.x * dt;
     const dz = velocity.z * dt;
     const move = (from: Vec3, dy: number) =>
-      moveAndCollide(from, velocity, dx, dy, dz, this.obstacle, bodyBounds);
+      moveAndCollide(from, velocity, dx, dy, dz, this.obstacle, (point) => this.bodyBounds(point));
     let next = move(p, velocity.y * dt);
     if (
       !this.flying &&
@@ -336,7 +340,7 @@ export class DragonMount {
         Math.abs(next.velocity.z - velocity.z) > 1e-4)
     ) {
       const raised = { ...p, y: p.y + 1.001 };
-      if (!aabbIntersectsSolid(bodyBounds(raised), this.obstacle)) {
+      if (!aabbIntersectsSolid(this.bodyBounds(raised), this.obstacle)) {
         const stepped = move(raised, -1.06);
         if (
           stepped.onGround &&
