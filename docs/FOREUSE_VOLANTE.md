@@ -15,11 +15,12 @@ zone stable, comme avec le dragon.
 
 - **P** : rejoindre la foreuse depuis le mode Libre, si une zone de débarquement
   sûre est disponible (ne fait pas apparaître une nouvelle machine).
-- **R** : monter / descendre si le véhicule est accessible.
+- **R** : monter sur le dragon voisin ou descendre de la monture actuelle.
+- **Y** : monter dans la foreuse voisine ou en descendre.
 - **Clic gauche maintenu** : forer ; **J** : activer / arrêter le forage continu.
 - **T** : changer le diamètre entre 1 × 1, 3 × 3 et 5 × 5 blocs.
-- **Tactile** : boutons « Forer » et diamètre dans la barre supérieure, en plus
-  des boutons de vol et de montée/descente.
+- **Tactile** : boutons séparés pour monter sur le dragon ou dans la foreuse,
+  puis boutons « Forer » et diamètre en complément des commandes de vol.
 - **Manette** : action casser pour basculer le forage et action poser pour le diamètre.
 
 Le foret tourne pendant le forage. Le réacteur arrière et les stabilisateurs latéraux
