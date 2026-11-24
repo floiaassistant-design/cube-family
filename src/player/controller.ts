@@ -630,7 +630,10 @@ export class PlayerController {
       const input = this.currentInput();
       this.accumulator = Math.min(this.accumulator + dt, TICK * MAX_TICKS_PER_FRAME);
       while (this.accumulator >= TICK) {
-        dragon.step(TICK, this.inputEnabled ? { ...input, yaw: this.yaw, pitch: this.pitch } : null);
+        dragon.step(
+          TICK,
+          this.inputEnabled ? { ...input, yaw: this.yaw, pitch: this.pitch } : null,
+        );
         this.accumulator -= TICK;
       }
       this.rideAlpha = this.accumulator / TICK;

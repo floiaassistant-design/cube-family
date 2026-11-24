@@ -38,7 +38,6 @@ export interface DragonInput {
   readonly sprint: boolean;
 }
 
-
 export class DragonMount {
   private readonly world: World;
   private state: PlayerPhysicsState | null = null;

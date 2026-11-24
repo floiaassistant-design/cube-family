@@ -23,16 +23,25 @@ export class FlyingDrillModel {
 
     const box = (
       parent: THREE.Group,
-      x: number, y: number, z: number,
-      sx: number, sy: number, sz: number,
+      x: number,
+      y: number,
+      z: number,
+      sx: number,
+      sy: number,
+      sz: number,
       material: THREE.Material,
     ): void => {
       const mesh = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), material);
       mesh.position.set(x, y, z);
       parent.add(mesh);
     };
-    const ring = (parent: THREE.Group, z: number, radius: number, depth: number,
-      material: THREE.Material): void => {
+    const ring = (
+      parent: THREE.Group,
+      z: number,
+      radius: number,
+      depth: number,
+      material: THREE.Material,
+    ): void => {
       const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, depth, 8), material);
       mesh.rotation.x = Math.PI / 2;
       mesh.position.z = z;

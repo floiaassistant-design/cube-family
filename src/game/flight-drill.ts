@@ -16,12 +16,7 @@ export interface DrillEdit {
 }
 
 /** A cross-section perpendicular to the drill's heading, even on steep climbs. */
-export function drillTargets(
-  center: Vec3,
-  yaw: number,
-  pitch: number,
-  size: DrillSize,
-): Vec3[] {
+export function drillTargets(center: Vec3, yaw: number, pitch: number, size: DrillSize): Vec3[] {
   const tilt = Math.max(-1.35, Math.min(1.35, pitch));
   const forward = forwardVector(yaw);
   const right = rightVector(yaw);

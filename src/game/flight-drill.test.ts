@@ -28,10 +28,12 @@ describe("creative flying drill", () => {
     world.setBlock(8, 22, 6, BlockId.DIAMOND_ORE);
     world.setBlock(9, 22, 6, BlockId.WATER);
     const edits = planDrilling(world, { x: 8.5, y: 21, z: 8.5 }, 0, 0, 3);
-    expect(edits.some((cell) => world.getBlock(cell.x, cell.y, cell.z) === BlockId.DIAMOND_ORE))
-      .toBe(true);
-    expect(edits.some((cell) => world.getBlock(cell.x, cell.y, cell.z) === BlockId.WATER))
-      .toBe(false);
+    expect(
+      edits.some((cell) => world.getBlock(cell.x, cell.y, cell.z) === BlockId.DIAMOND_ORE),
+    ).toBe(true);
+    expect(edits.some((cell) => world.getBlock(cell.x, cell.y, cell.z) === BlockId.WATER)).toBe(
+      false,
+    );
     expect(planDrilling(world, { x: 8.5, y: -5, z: 8.5 }, 0, 0, 5)).toEqual([]);
     expect(planDrilling(world, { x: 160, y: 21, z: 160 }, 0, 0, 5)).toEqual([]);
   });
@@ -47,7 +49,15 @@ describe("creative flying drill", () => {
     const batches: number[] = [];
     drill.onExcavate = (edits) => batches.push(edits.length);
     drill.drilling = true;
-    const input = { forward: 0, right: 0, yaw: 0, pitch: 0, jump: false, descend: false, sprint: false };
+    const input = {
+      forward: 0,
+      right: 0,
+      yaw: 0,
+      pitch: 0,
+      jump: false,
+      descend: false,
+      sprint: false,
+    };
     for (let i = 0; i < 30; i++) drill.step(1 / 120, input);
     expect(batches.every((count) => count <= 8)).toBe(true);
   });

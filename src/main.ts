@@ -401,12 +401,18 @@ function boot(): void {
       if (!data || typeof data !== "object") return undefined;
       const p = data as Record<string, unknown>;
       if (
-        typeof p.x === "number" && Number.isFinite(p.x) &&
-        typeof p.y === "number" && Number.isFinite(p.y) &&
-        typeof p.z === "number" && Number.isFinite(p.z) &&
-        typeof p.yaw === "number" && Number.isFinite(p.yaw) &&
-        p.y > 0 && p.y < CHUNK_HEIGHT + 48
-      ) return { x: p.x, y: p.y, z: p.z, yaw: p.yaw };
+        typeof p.x === "number" &&
+        Number.isFinite(p.x) &&
+        typeof p.y === "number" &&
+        Number.isFinite(p.y) &&
+        typeof p.z === "number" &&
+        Number.isFinite(p.z) &&
+        typeof p.yaw === "number" &&
+        Number.isFinite(p.yaw) &&
+        p.y > 0 &&
+        p.y < CHUNK_HEIGHT + 48
+      )
+        return { x: p.x, y: p.y, z: p.z, yaw: p.yaw };
     } catch {
       // Invalid or blocked local storage must not prevent game launch.
     }
@@ -688,11 +694,12 @@ function boot(): void {
       }
     }
     const pose = player.pose();
-    const safeReturn = player.currentMount === dragon
-      ? dragon.savedRiderPosition
-      : player.currentMount === drill
-        ? drill.savedRiderPosition
-        : undefined;
+    const safeReturn =
+      player.currentMount === dragon
+        ? dragon.savedRiderPosition
+        : player.currentMount === drill
+          ? drill.savedRiderPosition
+          : undefined;
     storePlayerSave(storage, SEED, {
       ...pose,
       ...(safeReturn ? { ...safeReturn, flying: false } : {}),
@@ -1170,7 +1177,9 @@ function boot(): void {
   document.addEventListener("mouseup", (event) => {
     if (event.button === 0 && player.currentMount === drill) drill.drilling = false;
   });
-  window.addEventListener("blur", () => { drill.drilling = false; });
+  window.addEventListener("blur", () => {
+    drill.drilling = false;
+  });
 
   window.addEventListener("keydown", (e) => {
     if (e.repeat) return;
@@ -1186,16 +1195,29 @@ function boot(): void {
         return;
       }
     }
-    if (e.code === "KeyP" && player.isActive && !inventory.isOpen &&
-        !player.riding && mode === "creative") {
+    if (
+      e.code === "KeyP" &&
+      player.isActive &&
+      !inventory.isOpen &&
+      !player.riding &&
+      mode === "creative"
+    ) {
       spawnDrill();
       const exit = drill.safeExit();
       if (exit) {
         streamer.warmUp(exit.x, exit.z, WARMUP_RADIUS_CHUNKS);
         player.restore({ ...player.pose(), ...exit, flying: false });
-        hud.announce(t.locale === "fr" ? "Foreuse retrouvée. R pour monter." : "Drill located. Press R to mount.");
+        hud.announce(
+          t.locale === "fr"
+            ? "Foreuse retrouvée. R pour monter."
+            : "Drill located. Press R to mount.",
+        );
       } else {
-        hud.announce(t.locale === "fr" ? "Foreuse indisponible : cherche un terrain dégagé." : "Drill unavailable: find open ground.");
+        hud.announce(
+          t.locale === "fr"
+            ? "Foreuse indisponible : cherche un terrain dégagé."
+            : "Drill unavailable: find open ground.",
+        );
       }
       e.preventDefault();
       return;
@@ -1489,9 +1511,10 @@ function boot(): void {
         player.currentMount === dragon,
       );
     }
-    const drillPosition = player.currentMount === drill
-      ? player.dragonRenderPosition ?? drill.position
-      : drill.position;
+    const drillPosition =
+      player.currentMount === drill
+        ? (player.dragonRenderPosition ?? drill.position)
+        : drill.position;
     const drillDistance = drillPosition
       ? Math.hypot(x - drillPosition.x, z - drillPosition.z)
       : Infinity;
@@ -1504,35 +1527,47 @@ function boot(): void {
         player.currentMount === drill,
       );
     }
-    const rideAvailable = controlsVisible &&
-      (player.riding || canMountDragon() || canMountDrill());
-    const drillAvailable = controlsVisible &&
-      (player.currentMount === drill || canMountDrill());
+    const rideAvailable = controlsVisible && (player.riding || canMountDragon() || canMountDrill());
+    const drillAvailable = controlsVisible && (player.currentMount === drill || canMountDrill());
     if (touchControls) {
       touchControls.setRide(
         rideAvailable
           ? player.currentMount === drill
-            ? t.locale === "fr" ? "Quitter la foreuse" : "Leave drill"
+            ? t.locale === "fr"
+              ? "Quitter la foreuse"
+              : "Leave drill"
             : !player.riding && canMountDrill()
-              ? t.locale === "fr" ? "Monter foreuse" : "Board drill"
+              ? t.locale === "fr"
+                ? "Monter foreuse"
+                : "Board drill"
               : t(player.riding ? "dragonDismount" : "dragonMount")
           : "",
         player.riding,
         player.flightAllowed,
       );
       touchControls.setDrill(player.currentMount === drill, drill.drilling, drill.size);
-      touchControls.setFlying(player.riding
-        ? (player.currentMount?.flying ?? false) : player.isFlying);
+      touchControls.setFlying(
+        player.riding ? (player.currentMount?.flying ?? false) : player.isFlying,
+      );
     }
     let hint = "";
     if (drillAvailable) {
-      hint = player.currentMount === drill
-        ? t.locale === "fr"
-          ? "Foreuse " + drill.size.toString() + "×" + drill.size.toString() +
-            " · Clic pour forer · T diamètre · Espace monter · Ctrl descendre"
-          : "Drill " + drill.size.toString() + "×" + drill.size.toString() +
-            " · Click to bore · T size · Space climb · Ctrl descend"
-        : t.locale === "fr" ? "[R] Monter dans la foreuse" : "[R] Board the drill";
+      hint =
+        player.currentMount === drill
+          ? t.locale === "fr"
+            ? "Foreuse " +
+              drill.size.toString() +
+              "×" +
+              drill.size.toString() +
+              " · Clic pour forer · T diamètre · Espace monter · Ctrl descendre"
+            : "Drill " +
+              drill.size.toString() +
+              "×" +
+              drill.size.toString() +
+              " · Click to bore · T size · Space climb · Ctrl descend"
+          : t.locale === "fr"
+            ? "[R] Monter dans la foreuse"
+            : "[R] Board the drill";
     } else if (controlsVisible && !rideAvailable && dragonModel.ready && dragonDistance < 18) {
       hint = t("dragonApproachHint");
     } else if (rideAvailable && (!touch || player.riding)) {
