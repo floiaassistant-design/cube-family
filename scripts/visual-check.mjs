@@ -16,6 +16,7 @@
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import puppeteer from "puppeteer";
+import { auditTouchViewports } from "./device-layout-check.mjs";
 
 const args = process.argv.slice(2);
 function argValue(flag, fallback) {
@@ -831,6 +832,8 @@ try {
     mobilePaused.mode === "idle" && mobilePaused.hotbar.includes(18),
     `mode=${mobilePaused.mode}`,
   );
+  // Reuse the same touch session to test responsive UI navigation at four device sizes.
+  await auditTouchViewports(mobilePage, report, until);
   await mobilePage.close();
 
   const dragonPhone = await openPage(
@@ -903,6 +906,63 @@ try {
     }
   }
   await dragonPhone.browserContext().close();
+
+  // The drill is a separate creative vehicle: it must not steal the dragon's
+  // historic ride button. Exercise real touchscreen controls and world edits.
+  const drillPhone = await openPage("drill-phone", pageUrl(733, "quality=low&view=4"), {
+    width: 390,
+    height: 844,
+    deviceScaleFactor: 1,
+    isMobile: true,
+    hasTouch: true,
+  });
+  await waitForWorld(drillPhone, 9);
+  await drillPhone.tap("#play-button");
+  const drillParking = await until(drillPhone, () => window.__mc.drill().exit !== null);
+  report("the flying drill finds safe parking in Creative", drillParking);
+  if (drillParking) {
+    await drillPhone.evaluate(() => {
+      const exit = window.__mc.drill().exit;
+      if (exit) window.__mc.teleport(exit.x, exit.y, exit.z, 0, 0);
+    });
+    const boardVisible = await until(drillPhone, () => {
+      const button = document.querySelector(".touch-drill-ride");
+      return button && button.getBoundingClientRect().width > 0;
+    });
+    report("the flying drill has its own touch boarding button", boardVisible);
+    if (boardVisible) {
+      await drillPhone.tap(".touch-drill-ride");
+      const mountedDrill = await until(drillPhone, () => window.__mc.drill().mounted);
+      report("the pilot can board the flying drill on a touch screen", mountedDrill);
+      if (mountedDrill) {
+        const stage = await drillPhone.evaluate(() => {
+          const state = window.__mc.drill();
+          const p = state.position;
+          const yaw = state.yaw;
+          const cell = {
+            x: Math.floor(p.x - Math.sin(yaw) * 2.15),
+            y: Math.floor(p.y + 1.25),
+            z: Math.floor(p.z - Math.cos(yaw) * 2.15),
+          };
+          window.__mc.setBlock(cell.x, cell.y, cell.z, 3);
+          return cell;
+        });
+        await drillPhone.tap(".touch-drill");
+        const excavated = await until(
+          drillPhone,
+          (cell) =>
+            window.__mc.drill().drilling && window.__mc.blockAt(cell.x, cell.y, cell.z) === 0,
+          stage,
+        );
+        report("the drill cuts a stone voxel with the touch boring control", excavated);
+        await drillPhone.tap(".touch-drill-size");
+        const resized = await until(drillPhone, () => window.__mc.drill().size === 5);
+        report("the drill changes from a 3x3 to a 5x5 tunnel on touch", resized);
+        await drillPhone.tap(".touch-drill");
+      }
+    }
+  }
+  await drillPhone.browserContext().close();
 
   // =====================================================================
   // 6. Installed build: boots with the network gone
@@ -1230,17 +1290,151 @@ try {
       JSON.stringify(siegeDebug),
     );
     if (siegeStarted) {
+      const closedSiegeGates = await until(
+        fortressPage,
+        () => {
+          const raw = window.localStorage.getItem("voxel-world:fortress:v1:2026");
+          if (!raw) return false;
+          const site = JSON.parse(raw);
+          return (
+            window.__mc.blockAt(site.x + 47, site.y + 3, site.z + 2) === 14 &&
+            window.__mc.blockAt(site.x + 47, site.y + 3, site.z + 15) === 14 &&
+            window.__mc.siege()?.front === "south"
+          );
+        },
+        undefined,
+        10000,
+      );
+      report("south gatehouse and inner door are solid only during the siege", closedSiegeGates);
+      await fortressPage.click('#siege-panel button[aria-controls="siege-armory"]');
+      const shopVisible = await until(
+        fortressPage,
+        () =>
+          document.querySelector("#siege-armory")?.hidden === false &&
+          document.querySelectorAll("#siege-armory [data-offer]").length === 5 &&
+          window.__mc.siege()?.armory.coins === 100,
+      );
+      report("fortress armory is available during preparation with starting coins", shopVisible);
+      if (shopVisible) {
+        await fortressPage.click('#siege-armory [data-offer="sword"]');
+        const purchased = await until(
+          fortressPage,
+          () =>
+            window.__mc.siege()?.armory.swordTier === 1 && window.__mc.siege()?.armory.coins === 0,
+        );
+        report("buying a siege sword spends coins and increases its rank", purchased);
+      }
       await fortressPage.keyboard.press("KeyX");
       const stopped = await until(fortressPage, () => window.__mc.siege()?.phase === "idle");
+      const restoredGate = await until(fortressPage, () => {
+        const raw = window.localStorage.getItem("voxel-world:fortress:v1:2026");
+        if (!raw) return false;
+        const site = JSON.parse(raw);
+        return (
+          window.__mc.blockAt(site.x + 47, site.y + 3, site.z + 2) === 0 &&
+          window.__mc.blockAt(site.x + 47, site.y + 3, site.z + 15) === 0
+        );
+      });
+      report("stopping the siege restores both doors without permanent damage", restoredGate);
       await fortressPage.keyboard.press("KeyN");
       const restarted = await until(
         fortressPage,
         () => window.__mc.siege()?.phase === "preparation",
       );
       report("keyboard controls can stop and restart the fortress waves", stopped && restarted);
+      const freshShop = await fortressPage.evaluate(() => {
+        const report = window.__mc.siege();
+        return report?.armory.coins === 100 && report?.armory.swordTier === 0;
+      });
+      report("a new siege run resets only temporary shop purchases", freshShop);
     }
   }
   await fortressPage.browserContext().close();
+
+  // Named-world menu must preserve old saves and open a fresh Adventure world.
+  const library = await openPage("world-library", pageUrl(991291, "quality=low&view=4"));
+  await waitForWorld(library, 5);
+  await library.click("#world-button");
+  const legacyListed = await library.evaluate(
+    () =>
+      document.querySelectorAll(".world-card").length >= 1 &&
+      document.querySelector(".world-card.current h3")?.textContent === "World 991291",
+  );
+  report("world library lists the current legacy-compatible save", legacyListed);
+  await library.type('.world-screen input[aria-label="World name"]', "Family castle");
+  await library.type(
+    '.world-screen input[placeholder="Seed (optional, random if blank)"]',
+    "991292",
+  );
+  await library.select('.world-screen select[aria-label="Game mode"]', "adventure");
+  await library.click(".world-screen .seed-form .primary");
+  const openedNew = await until(
+    library,
+    () => window.__mc?.seed === 991292 && window.__mc?.gameMode() === "adventure",
+    undefined,
+    15000,
+  );
+  report("creating a named Adventure world opens its unique seed", openedNew);
+  if (openedNew) {
+    await library.click("#world-button");
+    const savesKept = await library.evaluate(() => {
+      const registry = JSON.parse(window.localStorage.getItem("cube-family:world-registry:v1"));
+      return (
+        registry.worlds.some((w) => w.seed === 991291) &&
+        registry.worlds.some((w) => w.seed === 991292 && w.name === "Family castle") &&
+        document.querySelectorAll(".world-card").length >= 2 &&
+        Boolean(window.localStorage.getItem("voxel-world:player:v2:991291"))
+      );
+    });
+    report("world library keeps the earlier save after creating a second world", savesKept);
+    const transfer = await library.evaluate(() => {
+      const input = document.querySelector('.world-transfer input[type="file"]');
+      if (!input) return false;
+      const archive = {
+        format: "cube-family-world",
+        version: 1,
+        world: { seed: 991293, name: "Restored forest", mode: "adventure" },
+        saves: {
+          player: JSON.stringify({
+            x: 5,
+            y: 70,
+            z: 5,
+            yaw: 0,
+            pitch: 0,
+            flying: false,
+            time: 24,
+            hotbar: [],
+            slot: 0,
+            mode: "adventure",
+          }),
+          edits: "{}",
+          fortress: null,
+        },
+      };
+      Object.defineProperty(input, "files", {
+        configurable: true,
+        value: [
+          new window.File([JSON.stringify(archive)], "backup.json", { type: "application/json" }),
+        ],
+      });
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      return true;
+    });
+    const restored =
+      transfer &&
+      (await until(library, () => {
+        const registry = JSON.parse(window.localStorage.getItem("cube-family:world-registry:v1"));
+        return (
+          registry.worlds.some(
+            (world) => world.seed === 991293 && world.name === "Restored forest",
+          ) &&
+          window.localStorage.getItem("voxel-world:edits:v2:991293") === "{}" &&
+          document.querySelectorAll(".world-card").length >= 3
+        );
+      }));
+    report("importing a valid world backup adds a third playable world", Boolean(restored));
+  }
+  await library.browserContext().close();
 
   // Boot the real production build with local storage denied by the browser.
   // Only the test build should expose the debug API used above.

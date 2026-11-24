@@ -59,6 +59,14 @@ export default defineConfig(
     },
   },
   {
+    // Standalone Node.js generators for the model library.
+    files: ["assets/3d/**/generer_*.mjs"],
+    extends: [tseslint.configs.disableTypeChecked],
+    languageOptions: {
+      globals: { process: "readonly", URL: "readonly" },
+    },
+  },
+  {
     // The Electron main/preload scripts: CommonJS, Node globals.
     files: ["desktop/**/*.cjs"],
     extends: [tseslint.configs.disableTypeChecked],

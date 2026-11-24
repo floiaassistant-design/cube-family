@@ -13,6 +13,8 @@ PC et mobile, plutôt que de maintenir des versions du gameplay divergentes.
 
 - `src/main.ts` : démarrage et coordination, sans y concentrer toute
   la logique métier des nouveautés.
+- `src/world/world-registry.ts` : liste locale des mondes nommés, découverte non destructive des anciennes sauvegardes, création à graine unique, renommage et suppression explicite hors monde actif. Les fichiers player/edits/forteresse restent identifiés par graine ; les mondes en ligne exigent un stockage serveur distinct.
+- `src/world/world-transfer.ts` : export JSON local et import contrôlé des sauvegardes de joueur, modifications du terrain et forteresse ; refuse les graines occupées et limite la taille des fichiers. Aucun envoi réseau.
 - `src/world/` : génération, blocs, chunks, sauvegardes et formats stables.
 - `src/player/` et `src/input/` : déplacements, physiques et commandes.
 - `src/game/` : règles des créatures, montures, équipement, recettes et combats.
@@ -24,7 +26,7 @@ PC et mobile, plutôt que de maintenir des versions du gameplay divergentes.
 - `assets/3d/` : fichiers de modèles, fiches, scripts et `INDEX.json`.
 - `docs/catalogues/` : listes descriptives des créatures et équipements.
 - `desktop/` et `mobile/` : emballages natifs, pas des forks du moteur.
-- `scripts/` et `.github/workflows/` : vérifications et contrôle qualité.
+- `scripts/` et `.github/workflows/` : vérifications et contrôle qualité, dont `scripts/device-layout-check.mjs` pour les formats tactiles simulés. Le statut des plateformes et limites des émulations sont consignés dans [TESTS_MULTISUPPORT.md](TESTS_MULTISUPPORT.md).
 
 ## Règles de conception
 
@@ -87,5 +89,7 @@ PC et mobile, plutôt que de maintenir des versions du gameplay divergentes.
 - `src/ui/siege-panel.ts` fournit les commandes clavier, souris et tactile. `src/main.ts` se limite à raccorder les systèmes.
 - `src/world/edit-store.ts` enregistre les plans en une seule sauvegarde et protège les modifications déjà effectuées par le joueur.
 - Le tir à l'arc du mini-jeu est une mécanique temporaire de l'événement, indépendante de l'inventaire général ; un objet et des recettes durables seraient un chantier séparé.
+- `src/game/siege/armory.ts` gère les pièces temporaires, tarifs et améliorations des armes de siège. `src/ui/siege-armory-panel.ts` affiche les offres localisées. Les achats sont autorisés seulement entre les vagues ; ils ne créent pas d'objets persistants ni de modèles 3D. Voir [la fiche d'armurerie](FORTERESSE_ARMURERIE.md).
 - La phase actuelle est solo. Le multijoueur du moteur principal devra disposer d'une autorité serveur et synchroniser joueurs, vagues, zombies, projectiles et dégâts avant toute annonce de mode cinq joueurs.
+- `src/game/siege/assault.ts` définit un front unique au sud, les formations de hordes et les portes destructibles. `src/game/siege/gate-overlay.ts` synchronise des blocs temporaires pour les portes avec le streaming, le rendu et les collisions sans enregistrer leur destruction. Voir [Assaut massif au sud](FORTERESSE_ASSAUT_SUD.md).
 - Le site public et la version GitHub sont deux états distincts ; Work assurera la publication après validation des tests.

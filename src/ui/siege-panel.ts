@@ -1,4 +1,6 @@
 import type { SiegeReport } from "../game/siege/session";
+import type { ArmoryPurchase } from "../game/siege/armory";
+import { SiegeArmoryPanel } from "./siege-armory-panel";
 
 export interface SiegePanelCallbacks {
   readonly build: () => void;
@@ -7,6 +9,7 @@ export interface SiegePanelCallbacks {
   readonly stop: () => void;
   readonly shoot: () => void;
   readonly repair: () => void;
+  readonly buy: (item: ArmoryPurchase) => void;
 }
 
 export interface SiegePanelState {
@@ -28,6 +31,8 @@ export class SiegePanel {
   private readonly stopButton: HTMLButtonElement;
   private readonly shootButton: HTMLButtonElement;
   private readonly repairButton: HTMLButtonElement;
+  private readonly armoryButton: HTMLButtonElement;
+  private readonly armoryPanel: SiegeArmoryPanel;
   private readonly french: boolean;
 
   constructor(parent: HTMLElement, callbacks: SiegePanelCallbacks, french: boolean) {
@@ -65,12 +70,21 @@ export class SiegePanel {
       french ? "Réparer (H) : 5 éliminations" : "Repair (H): 5 kills",
       callbacks.repair,
     );
+    this.armoryPanel = new SiegeArmoryPanel(callbacks.buy, french);
+    this.armoryButton = button(french ? "Armurerie" : "Armory", () => {
+      this.armoryPanel.toggle();
+      this.armoryButton.setAttribute("aria-expanded", this.armoryPanel.isOpen.toString());
+    });
+    this.armoryButton.setAttribute("aria-controls", "siege-armory");
+    this.armoryButton.setAttribute("aria-expanded", "false");
     this.root.append(
       this.title,
       this.reportText,
       this.buildButton,
       this.visitButton,
       this.startButton,
+      this.armoryButton,
+      this.armoryPanel.root,
       this.shootButton,
       this.repairButton,
       this.stopButton,
@@ -83,7 +97,10 @@ export class SiegePanel {
     const { report, playing, nearby, creative, hasFortress } = state;
     const show = playing && (hasFortress || creative);
     if (this.root.hidden === show) this.root.hidden = !show;
-    if (!show) return;
+    if (!show) {
+      this.armoryPanel.close();
+      return;
+    }
     const active =
       report?.phase === "preparation" ||
       report?.phase === "wave" ||
@@ -92,6 +109,11 @@ export class SiegePanel {
     this.visitButton.hidden = !hasFortress || nearby || active;
     this.startButton.hidden = !hasFortress || !nearby || active;
     this.stopButton.hidden = !active;
+    this.armoryButton.hidden = !hasFortress || !nearby;
+    const shopPhase = report?.phase === "preparation" || report?.phase === "intermission";
+    if (!hasFortress || !nearby || report?.phase === "wave") this.armoryPanel.close();
+    this.armoryPanel.update(report, shopPhase);
+    this.armoryButton.setAttribute("aria-expanded", this.armoryPanel.isOpen.toString());
     this.shootButton.hidden = report?.phase !== "wave";
     this.repairButton.hidden = report?.phase !== "intermission";
     this.repairButton.disabled =
@@ -128,6 +150,21 @@ export class SiegePanel {
       status = `${phase} ${report.wave.toString()}/${report.totalWaves.toString()} · ${this.french ? "Cristal" : "Crystal"} ${report.crystal.toString()}/${report.maxCrystal.toString()} · ${this.french ? "Flèches" : "Arrows"} ${report.arrows.toString()} · ${this.french ? "Élim." : "Kills"} ${report.kills.toString()}`;
       if (report.phase !== "wave") status += ` · ${report.timer.toString()}s`;
       else status += ` · ${report.pending.toString()} ${this.french ? "restants" : "remaining"}`;
+    }
+    if (report && hasFortress) {
+      status += this.french
+        ? ` · ${report.armory.coins} pièces`
+        : ` · ${report.armory.coins} coins`;
+    }
+    if (
+      report?.phase === "wave" ||
+      report?.phase === "preparation" ||
+      report?.phase === "intermission"
+    ) {
+      const gateLabel = this.french ? "Assaut sud" : "South assault";
+      const intact = (health: number): string =>
+        health > 0 ? health.toString() : this.french ? "brisée" : "breached";
+      status += ` · ${gateLabel} · ${this.french ? "Ext" : "Outer"} ${intact(report.outerGate.health)}/${report.outerGate.maxHealth} · ${this.french ? "Int" : "Inner"} ${intact(report.innerGate.health)}/${report.innerGate.maxHealth}`;
     }
     // The browser captures the mouse in first-person mode. The panel is
     // clickable with a mouse only after the player frees the cursor using M.

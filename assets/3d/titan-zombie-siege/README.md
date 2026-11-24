@@ -1,40 +1,29 @@
-# Titan zombie de siege — Cube Family
+# Titan zombie de siège — Cube Family
 
-**Statut : asset V2 pret pour revue ; non integre au jeu, site non modifie.**
+**Statut : modèle 3D de bibliothèque. L’intégration au jeu reste à faire.**
 
-## Apercu du vrai modele
+Boss voxel original conçu pour les grandes vagues de la Forteresse des Cinq Bastions.
 
-[Voir la projection face et trois-quarts de la V2](apercu_v2.svg) — image SVG obtenue par projection des triangles du fichier GLB; elle ne remplace pas un test en moteur 3D.
+## Modèle V2
 
-## Version V2 (concept de siege detaille)
+- `titan_zombie_siege_v2.glb` (glTF 2.0) contient les couleurs, normales, matériaux et animations. Le modèle se charge localement avec `GLTFLoader`.
+- Poing droit en pierre, plaques de fer rouillé, tabard bordeaux, yeux verts et cœur rouge émissif.
+- Silhouette d’environ 14 m, axe Y vertical, avant vers +Z et pieds près de Y=0.
+- 178 volumes décoratifs, 23 nœuds et 19 meshes. Les neuf pièces articulées et les cinq clips `Idle`, `Walk`, `Smash`, `Roar` et `Death` de la V1 sont conservés.
+- Repères conservés : `ImpactAnchor` pour la frappe, `HeadTarget` pour la visée et `HealthBarAnchor` pour la barre de vie.
+- [Plan de construction](PLAN_V2.md) et [projection de face et de trois quarts](apercu_v2.svg).
 
-- Fichier : `titan_zombie_siege_v2.glb` (GLB 2.0, couleur et animations integrees).
-- Source : `generer_titan_v2.mjs`, qui transforme **sans perte de l'original** la V1 presente dans ce dossier. Reproductible avec Node.js et sans paquet externe.
-- Plan de construction : [PLAN_V2.md](PLAN_V2.md).
-- Esthetique : poing droit gigantesque en pierre, plaques de fer rouille, tissu bordeaux, yeux verts lumineux, noyau rouge emissif, piques et chaines.
-- Morphologie : silhouette d'environ **14 metres**, axes Y vertical et +Z vers l'avant.
-- Animations : `Idle`, `Walk`, `Smash`, `Roar`, `Death` (pivots de V1 conserves).
-- Modifications : 178 volumes decoratifs repartis sur 10 meshes supplementaires; 23 noeuds / 19 meshes au total.
+## Reproduire le modèle
 
-**Reproduire :**
+Le générateur lit le fichier `titan_zombie_siege_v1.glb` conservé dans ce dossier. Il écrit la V2 et requiert seulement Node.js.
 
 ```bash
 node assets/3d/titan-zombie-siege/generer_titan_v2.mjs
 ```
 
-La planche d'illustration initiale indiquait 24 m; **ce chiffre est errone** et ne doit pas servir d'echelle au jeu.
+## Intégration au jeu
 
-## Version V1 conservee
-
-`titan_zombie_siege_v1.glb` reste disponible pour retour arriere; ses articulations, marqueurs et ses 5 animations glTF sont reutilises dans la V2.
-
-## Integration ulterieure (ChatGPT Work)
-
-1. Lire `AGENTS.md` et `docs/ARCHITECTURE.md`, verifier les regles du mini-jeu de la forteresse.
-2. Charger `titan_zombie_siege_v2.glb` comme ressource locale dans Three.js via `GLTFLoader` et piloter les clips par `AnimationMixer`.
-3. Integrer le boss a la simulation du siege dans `src/game/siege/`, separe du monde normal.
-4. Utiliser `ImpactAnchor` pour synchroniser une attaque telegraphiee sur une porte et `Core_WeakPoint` pour la zone sensible. Rien de cela n'est code par ce modele.
-5. Definir des collisions simples, les degats, l'IA, l'apparition, les sons et le fallback de rendu CPU.
-6. Tester clavier/souris, tactile, sauvegardes, hors ligne et performances, puis PR et validation avant publication.
-
-Le dossier est une bibliotheque d'assets, **pas une apparition automatique dans le jeu**.
+1. Charger le GLB localement et piloter les clips via `AnimationMixer`.
+2. Développer le comportement dans un module dédié de `src/game/siege/`, avec apparition lors des grosses vagues en mode Libre.
+3. Télégraphier les attaques sur les portes du front de la forteresse. Synchroniser les dégâts sur `ImpactAnchor` et utiliser `Core_WeakPoint` pour la zone sensible.
+4. Définir les collisions, les sons et le rendu CPU. Vérifier les commandes tactiles, les sauvegardes et les performances pendant un siège.

@@ -10,16 +10,16 @@ La version V1 est preservee. La V2 enrichit le meme rig et les memes animations,
 
 ## Plan cote (unite du monde en metres)
 
-| Zone | Repere pratique | Forme et composants |
-| --- | --- | --- |
-| Pieds et semelles | Y = 0 a 1,5 m | bottes en pierre/metal, plaques de tibia et rivets |
-| Jambes | Y = 1,5 a 5,3 m | deux articulations independantes `Leg_Left` et `Leg_Right` |
-| Bassin et tabard | Y = 4 a 6,5 m | ceinture, pans de tissu bordeaux, insigne de forteresse |
-| Torse et coeur | Y = 6,5 a 10,5 m | plaques rouillees, cotes brisees, point faible rouge vers Y = 8 m |
-| Epaules | Y = 9,6 a 11,1 m | epaulettes asymetriques, boucles et chaines |
-| Bras de siege | poing droit vers Y = 3,5 a 7 m | enormes blocs de pierre, cerclages oxydes et fissures |
-| Tete / machoire | Y = 10 a 14 m | crane voxel, yeux verts luminescents, mandibule mobile |
-| Dos | Y = 8 a 13 m | piques osseuses, armature et plaques de metal |
+| Zone              | Repere pratique                | Forme et composants                                               |
+| ----------------- | ------------------------------ | ----------------------------------------------------------------- |
+| Pieds et semelles | Y = 0 a 1,5 m                  | bottes en pierre/metal, plaques de tibia et rivets                |
+| Jambes            | Y = 1,5 a 5,3 m                | deux articulations independantes `Leg_Left` et `Leg_Right`        |
+| Bassin et tabard  | Y = 4 a 6,5 m                  | ceinture, pans de tissu bordeaux, insigne de forteresse           |
+| Torse et coeur    | Y = 6,5 a 10,5 m               | plaques rouillees, cotes brisees, point faible rouge vers Y = 8 m |
+| Epaules           | Y = 9,6 a 11,1 m               | epaulettes asymetriques, boucles et chaines                       |
+| Bras de siege     | poing droit vers Y = 3,5 a 7 m | enormes blocs de pierre, cerclages oxydes et fissures             |
+| Tete / machoire   | Y = 10 a 14 m                  | crane voxel, yeux verts luminescents, mandibule mobile            |
+| Dos               | Y = 8 a 13 m                   | piques osseuses, armature et plaques de metal                     |
 
 - **Axe Y** : vertical, pieds au niveau 0.
 - **Axe +Z** : avant du monstre.
@@ -30,15 +30,15 @@ La version V1 est preservee. La V2 enrichit le meme rig et les memes animations,
 
 ## Palette et materiaux
 
-| Surface | Couleurs indicatives | Traitement |
-| --- | --- | --- |
-| Peau de zombie | #65795D / #829777 / #465D49 | vert grise, usure mousse |
-| Tissu | #6A2734 / #8E3942 | bordeaux fonce, bords dechires |
-| Plaques rouillees | #995031 / #D27B42 | oxydation et rivets |
-| Roche du poing | #706A6C / #9B9291 | brique fissuree, pans decales |
-| Os et cotes | #C7BEB0 / #B8AD9E | dents, piques, armature |
-| Yeux | #D4FD4A | surface emissive verte |
-| Noyau du torse | #F23D57 / #FF8090 | gemme rouge emissive |
+| Surface           | Couleurs indicatives        | Traitement                     |
+| ----------------- | --------------------------- | ------------------------------ |
+| Peau de zombie    | #65795D / #829777 / #465D49 | vert grise, usure mousse       |
+| Tissu             | #6A2734 / #8E3942           | bordeaux fonce, bords dechires |
+| Plaques rouillees | #995031 / #D27B42           | oxydation et rivets            |
+| Roche du poing    | #706A6C / #9B9291           | brique fissuree, pans decales  |
+| Os et cotes       | #C7BEB0 / #B8AD9E           | dents, piques, armature        |
+| Yeux              | #D4FD4A                     | surface emissive verte         |
+| Noyau du torse    | #F23D57 / #FF8090           | gemme rouge emissive           |
 
 Les couleurs sont integrees au GLB ; pas de texture distante ni de reseau.
 

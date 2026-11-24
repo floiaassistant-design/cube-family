@@ -6,17 +6,17 @@ Cette base reprend le moteur libre de Lumenwild, © Vincent Plessy. La licence [
 
 ## Architecture
 
-| Chemin                                 | Responsabilité                                                                                     |
-| -------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `src/main.ts`                          | Amorçage, orchestration des systèmes, boucle de jeu et cycle de sauvegarde                         |
-| `src/world/`                           | Monde déterministe par graine, chunks, génération en workers, modifications et sauvegardes locales |
-| `src/player/`, `src/input/`            | Contrôleur, collisions, rayon d’interaction, commandes clavier, souris et manette                  |
-| `src/render/`                          | Three.js/WebGL2, maillage en workers, qualité adaptative et rendu CPU de secours                   |
-| `src/ui/`, `src/i18n.ts`, `src/audio/` | Interface, tactile, textes français et anglais, audio procédural                                   |
-| `src/game/`                            | Inventaire, fabrication et découvertes du mode Aventure existant                                   |
-| `vite.config.ts`, `public/`            | Compilation statique, métadonnées PWA et service worker généré                                     |
-| `desktop/`, `mobile/`                  | Enveloppes Electron et Capacitor conservées à titre expérimental                                   |
-| `scripts/`, `.github/workflows/`       | Vérifications du jeu dans Chromium et CI de vérification uniquement                                |
+| Chemin                                 | Responsabilité                                                                                               |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `src/main.ts`                          | Amorçage, orchestration des systèmes, boucle de jeu et cycle de sauvegarde                                   |
+| `src/world/`                           | Monde déterministe par graine, chunks, génération en workers, modifications, registre et sauvegardes locales |
+| `src/player/`, `src/input/`            | Contrôleur, collisions, rayon d’interaction, commandes clavier, souris et manette                            |
+| `src/render/`                          | Three.js/WebGL2, maillage en workers, qualité adaptative et rendu CPU de secours                             |
+| `src/ui/`, `src/i18n.ts`, `src/audio/` | Interface, tactile, textes français et anglais, audio procédural                                             |
+| `src/game/`                            | Inventaire, fabrication et découvertes du mode Aventure existant                                             |
+| `vite.config.ts`, `public/`            | Compilation statique, métadonnées PWA et service worker généré                                               |
+| `desktop/`, `mobile/`                  | Enveloppes Electron et Capacitor conservées à titre expérimental                                             |
+| `scripts/`, `.github/workflows/`       | Vérifications du jeu dans Chromium et CI de vérification uniquement                                          |
 
 ## Développement
 
@@ -46,6 +46,7 @@ Cette base reprend le moteur libre de Lumenwild, © Vincent Plessy. La licence [
 - Utiliser la même graine, la même scène et les mêmes profils de rendu pour comparer deux versions. Suivre les FPS, le 95e percentile du temps d’image, le délai de chargement des chunks et le tas JavaScript. Pour une séance de jeu prolongée sur appareil réel, suivre aussi la mémoire du processus et les pertes de contexte WebGL.
 - Cibles de validation proposées sur appareils réels avec le profil adapté. Viser 60 FPS sur ordinateur et au moins 30 FPS sur téléphone ou tablette en jeu actif. Documenter le matériel et vérifier que les déplacements restent fluides lorsque la génération de chunks est en cours. Traiter les mesures du rendu logiciel comme une référence de CI.
 - Tester portrait et paysage, écran à encoche, pointeur et tactile combinés, gestes simultanés avec les deux pouces, pression des boutons pendant un geste et récupération après interruption ou rotation. Garder les commandes accessibles sans clavier et éviter les contrôles qui se chevauchent.
+- Utiliser la [matrice multisupport](docs/TESTS_MULTISUPPORT.md) dans les PR touchant l'interface et garder les résultats de simulation séparés des essais physiques réels.
 - Tester au minimum Chromium sur ordinateur, Chrome sur Android et Safari sur iOS/iPadOS avant publication. Ajouter une session Firefox et une session clavier/souris AZERTY lors de toute modification des entrées ou de l’affichage.
 
 ## Instructions supplémentaires pour toute IA ou personne intervenant

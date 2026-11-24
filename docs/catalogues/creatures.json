@@ -9,10 +9,7 @@
       "kind": "animal",
       "status": "integrated_in_code",
       "asset_id": null,
-      "source_files": [
-        "src/game/wildlife.ts",
-        "src/render/cat-model.ts"
-      ],
+      "source_files": ["src/game/wildlife.ts", "src/render/cat-model.ts"],
       "notes": "Adoption et chatons dans le code. Le GLB chaton-orange de la bibliothèque est suivi séparément."
     },
     {
@@ -21,10 +18,7 @@
       "kind": "night_monster",
       "status": "integrated_in_code",
       "asset_id": null,
-      "source_files": [
-        "src/game/wildlife.ts",
-        "src/render/roamer-model.ts"
-      ],
+      "source_files": ["src/game/wildlife.ts", "src/render/roamer-model.ts"],
       "notes": "Créature hostile nocturne; modèle généré en code. Apparitions, combats et disparition à l'aube."
     },
     {
@@ -33,10 +27,7 @@
       "kind": "mount",
       "status": "integrated_in_code",
       "asset_id": "dragon-rouge",
-      "source_files": [
-        "src/game/dragon.ts",
-        "src/render/dragon-model.ts"
-      ],
+      "source_files": ["src/game/dragon.ts", "src/render/dragon-model.ts"],
       "notes": "Montée en selle et vol dans le moteur web. Vérifier les commandes et la visibilité du cavalier sur les appareils réels."
     },
     {
@@ -45,10 +36,7 @@
       "kind": "night_monster",
       "status": "integrated_in_code",
       "asset_id": null,
-      "source_files": [
-        "src/game/siege/session.ts",
-        "src/render/siege-zombie-model.ts"
-      ],
+      "source_files": ["src/game/siege/session.ts", "src/render/siege-zombie-model.ts"],
       "notes": "Ennemi exclusif à l'événement de défense en mode Libre. Modèle voxel original créé en code, vagues et combat intégrés. Distinct du modèle GLB zombie mineur, toujours en statut asset_only. Coopération à cinq non intégrée."
     },
     {
@@ -85,7 +73,7 @@
       "status": "asset_only",
       "asset_id": "titan-zombie-siege",
       "source_files": [],
-      "notes": "V2 GLB 14 m, modele articule et visuellement detaille a partir d'une illustration et d'un plan conceptuels. Cinq clips conserves, poing de siege, armure rouillee, tissus bordeaux, coeur rouge emissif. Script reproductible et PLAN_V2.md. Modele uniquement : pas de spawn, IA, collisions ou destruction de portes dans le gameplay."
+      "notes": "Modèle GLB V2 d’environ 14 m avec poing de siège, armure rouillée, tabard bordeaux et cœur rouge émissif. Les cinq animations de la V1 sont conservées. Le dossier contient le générateur et le plan V2. L’apparition, l’IA, les collisions et les dégâts aux portes relèvent d’une future intégration."
     }
   ]
 }

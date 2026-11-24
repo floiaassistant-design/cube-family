@@ -20,11 +20,7 @@
       "model_source": "assets/3d/zombie-mineur/zombie_mineur_v1.glb.gz.b64",
       "format": "base64(gzip(glb))",
       "sha256_glb": "6fcbccb73551f11ce9e26e8ef4c4a2ad03b002285d3f382fefdb207f483612ab",
-      "animations": [
-        "Idle",
-        "Walk",
-        "Attack"
-      ],
+      "animations": ["Idle", "Walk", "Attack"],
       "status": "asset_available_not_integrated"
     },
     {
@@ -35,11 +31,7 @@
       "model_source": "assets/3d/vache-brune/vache_brune_v1.glb.gz.b64",
       "format": "base64(gzip(glb))",
       "sha256_glb": "96bf955f02c5c261960be52ff9711478a735453a6abab2033f48f01f3b5b9707",
-      "animations": [
-        "Idle",
-        "Walk",
-        "Graze"
-      ],
+      "animations": ["Idle", "Walk", "Graze"],
       "status": "asset_available_not_integrated"
     },
     {
@@ -50,14 +42,7 @@
       "model_source": "assets/3d/dragon-rouge/dragon_voxel_rouge_v03.glb.gz",
       "format": "gzip(glb)",
       "sha256_glb": "e54280cc64b0f58ef69b6d2a1b57a920f91cb4b5e19edf7dbebe000776a020f9",
-      "animations": [
-        "Idle",
-        "Walk",
-        "Takeoff",
-        "Fly",
-        "Glide",
-        "Land"
-      ],
+      "animations": ["Idle", "Walk", "Takeoff", "Fly", "Glide", "Land"],
       "status": "integrated_webgl"
     },
     {
@@ -104,13 +89,7 @@
       "model_source": "assets/3d/titan-zombie-siege/titan_zombie_siege_v2.glb",
       "format": "glb",
       "git_blob_sha": "1424dd0d88f93225d82deb61a8b8a0be0660d68d",
-      "animations": [
-        "Idle",
-        "Walk",
-        "Smash",
-        "Roar",
-        "Death"
-      ],
+      "animations": ["Idle", "Walk", "Smash", "Roar", "Death"],
       "status": "asset_available_not_integrated",
       "previous_model_source": "assets/3d/titan-zombie-siege/titan_zombie_siege_v1.glb",
       "generator": "assets/3d/titan-zombie-siege/generer_titan_v2.mjs",

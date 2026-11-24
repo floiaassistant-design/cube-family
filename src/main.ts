@@ -4,9 +4,12 @@ import { SoundEngine } from "./audio/sound";
 import { GAME_NAME } from "./branding";
 import { type DiscoveryId, Journal } from "./game/discoveries";
 import { DragonMount } from "./game/dragon";
+import { FlyingDrill } from "./game/flight-drill";
 import { attackDamage } from "./game/equipment";
 import { createFortressBlueprint, FORTRESS_CENTER } from "./game/siege/fortress";
 import { findFortressSite, FortressStore } from "./game/siege/fortress-store";
+import { SiegeGateOverlay, type UpdatedGateChunk } from "./game/siege/gate-overlay";
+import type { ArmoryPurchase } from "./game/siege/armory";
 import { SiegeController, type SiegeReport } from "./game/siege/session";
 import {
   Bag,
@@ -37,6 +40,7 @@ import { ChunkMeshManager } from "./render/chunk-mesh-manager";
 import { CreatureView } from "./render/creature-view";
 import { CpuRenderer } from "./render/cpu-renderer";
 import { DragonModel } from "./render/dragon-model";
+import { FlyingDrillModel } from "./render/flight-drill-model";
 import { environmentAt } from "./render/environment";
 import { HeldBlock } from "./render/held-block";
 import { renderEquipmentIcon } from "./render/mining-pick-art";
@@ -62,6 +66,8 @@ import { BLOCKS, BlockId, isSolid } from "./world/blocks";
 import { CHUNK_HEIGHT, worldToChunk } from "./world/coords";
 import { EditStore, type KeyValueStorage } from "./world/edit-store";
 import { loadPlayerSave, storePlayerSave } from "./world/player-save";
+import { WorldRegistry } from "./world/world-registry";
+import { exportWorldArchive, importWorldArchive } from "./world/world-transfer";
 import { findPleasantSpawn } from "./world/spawn";
 import {
   type ChunkGenerator,
@@ -107,6 +113,15 @@ declare global {
       stats: () => Record<string, number | undefined>;
       hotbar: () => number[];
       flying: () => boolean;
+      drill: () => {
+        position: { x: number; y: number; z: number } | null;
+        exit: { x: number; y: number; z: number } | null;
+        yaw: number;
+        mounted: boolean;
+        flying: boolean;
+        drilling: boolean;
+        size: number;
+      };
       dragon: () => {
         position: { x: number; y: number; z: number } | null;
         ready: boolean;
@@ -177,6 +192,7 @@ function boot(): void {
     text === null ? NaN : Number.parseInt(text, 10);
   const fromUrl = parseSeed(params.get("seed"));
   const storage = getStorage();
+  const worldRegistry = new WorldRegistry(storage);
   let fromLast = NaN;
   try {
     fromLast = parseSeed(storage?.getItem(LAST_SEED_KEY) ?? null);
@@ -230,6 +246,7 @@ function boot(): void {
   let particles: Particles | null = null;
   let heldBlock: HeldBlock | null = null;
   let dragonModel: DragonModel;
+  let drillModel: FlyingDrillModel;
   let rain: Rain | null = null;
   let highlight: THREE.LineSegments | null = null;
   let digVeil: THREE.Mesh | null = null;
@@ -253,6 +270,7 @@ function boot(): void {
     renderer.scene.add(renderer.camera);
     const hand = new HeldBlock(renderer.camera, renderer.uniforms, directOutput());
     const dragonView = new DragonModel(renderer.scene, renderer.uniforms, directOutput());
+    const drillView = new FlyingDrillModel(renderer.scene);
     const shower = new Rain(renderer.scene, directOutput());
     renderer.onMaterialsChanged = () => {
       meshes.setMaterials({ terrain: renderer.terrainMaterial, water: renderer.waterMaterial });
@@ -263,6 +281,7 @@ function boot(): void {
     };
     heldBlock = hand;
     dragonModel = dragonView;
+    drillModel = drillView;
     rain = shower;
     highlight = new THREE.LineSegments(
       new THREE.EdgesGeometry(new THREE.BoxGeometry(1.004, 1.004, 1.004)),
@@ -292,6 +311,7 @@ function boot(): void {
     console.warn("WebGL2 unavailable, switching to the CPU raycaster:", webglError);
     cpu = new CpuRenderer(app, world, SEED);
     dragonModel = new DragonModel(null);
+    drillModel = new FlyingDrillModel(null);
   }
   const view = webgl ?? cpu;
   if (!view) throw new Error("no renderer could be created");
@@ -306,6 +326,7 @@ function boot(): void {
   }
 
   const editStore = new EditStore(storage, SEED);
+  let gateOverlay: SiegeGateOverlay | null = null;
   const streamer = new ChunkStreamer(world, {
     // One extra ring of data beyond what's drawn: lighting a chunk reads
     // all eight of its neighbors.
@@ -314,9 +335,11 @@ function boot(): void {
     shape: webgl ? "disc" : "square",
     meshWhenSurrounded: webgl !== null,
     onLoad: (cx, cz) => {
+      gateOverlay?.applyToLoadedChunk(world, cx, cz);
       chunkMeshes?.chunkLoaded(cx, cz);
     },
     onUnload: (cx, cz) => {
+      gateOverlay?.forgetChunk(cx, cz);
       chunkMeshes?.chunkUnloaded(cx, cz);
     },
   });
@@ -369,6 +392,42 @@ function boot(): void {
     dragon.spawn(dragonOrigin, terrainSurface, saved?.dragon);
   };
   spawnDragon();
+
+  // Per-world local parking; no change to the existing player save format.
+  const drillStorageKey = "voxel-world:vehicle:flying-drill:v1:" + SEED.toString();
+  const storedDrill = (() => {
+    try {
+      const raw = storage?.getItem(drillStorageKey);
+      if (!raw) return undefined;
+      const data: unknown = JSON.parse(raw);
+      if (!data || typeof data !== "object") return undefined;
+      const p = data as Record<string, unknown>;
+      if (
+        typeof p.x === "number" &&
+        Number.isFinite(p.x) &&
+        typeof p.y === "number" &&
+        Number.isFinite(p.y) &&
+        typeof p.z === "number" &&
+        Number.isFinite(p.z) &&
+        typeof p.yaw === "number" &&
+        Number.isFinite(p.yaw) &&
+        p.y > 0 &&
+        p.y < CHUNK_HEIGHT + 48
+      )
+        return { x: p.x, y: p.y, z: p.z, yaw: p.yaw };
+    } catch {
+      // Invalid or blocked local storage must not prevent game launch.
+    }
+    return undefined;
+  })();
+  const drill = new FlyingDrill(world);
+  const drillOrigin = storedDrill ?? { x: startX + 6, z: startZ + 6 };
+  const spawnDrill = (): void => {
+    const p = player.position;
+    if (drill.position || Math.hypot(p.x - drillOrigin.x, p.z - drillOrigin.z) > 35) return;
+    drill.spawn(drillOrigin, terrainSurface, storedDrill);
+  };
+  spawnDrill();
   if (!saved && dragon.position) {
     const pose = player.pose();
     const yaw = Math.atan2(pose.x - dragon.position.x, pose.z - dragon.position.z);
@@ -384,16 +443,46 @@ function boot(): void {
   // ---- game mode: Creative (everything, unlimited) or Adventure ----
   const modeParam = params.get("mode");
   let mode: "creative" | "adventure" =
-    modeParam === "adventure" || modeParam === "creative" ? modeParam : (saved?.mode ?? "creative");
+    modeParam === "adventure" || modeParam === "creative"
+      ? modeParam
+      : (saved?.mode ?? worldRegistry.get(SEED)?.mode ?? "creative");
+  worldRegistry.visit(SEED, mode);
   const bag = new Bag(saved?.bag);
   const fortressStore = new FortressStore(storage, SEED);
   let fortress = fortressStore.read();
+  const siegeZombieCap = cpu ? 14 : touch ? 24 : 44;
   let siege: SiegeController | null = fortress
     ? new SiegeController(
         fortress,
         (x, z) => sampleColumn(Math.floor(x), Math.floor(z)).terrainHeight,
+        siegeZombieCap,
       )
     : null;
+  if (fortress) gateOverlay = new SiegeGateOverlay(fortress);
+
+  // Batch temporary door changes into one chunk mirror and remesh per chunk.
+  // Never call editStore.record(): destruction belongs to the event only.
+  const syncGateVisuals = (): void => {
+    if (!gateOverlay) return;
+    const report = siege?.report;
+    const active = siege?.active ?? false;
+    const modified: UpdatedGateChunk[] = gateOverlay.sync(
+      world,
+      active && (report?.outerGate.health ?? 0) > 0,
+      active && (report?.innerGate.health ?? 0) > 0,
+    );
+    for (const { cx, cz } of modified) {
+      chunkMeshes?.chunkLoaded(cx, cz);
+      chunkMeshes?.updateChunk(cx, cz, true);
+      // Adjacent lighting is influenced by door blocks too.
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dz = -1; dz <= 1; dz++) {
+          if (dx === 0 && dz === 0) continue;
+          if (world.hasChunk(cx + dx, cz + dz)) chunkMeshes?.updateChunk(cx + dx, cz + dz);
+        }
+      }
+    }
+  };
   const standNear = (x: number, z: number, y: number, tall: boolean): number | null => {
     const bx = Math.floor(x);
     const bz = Math.floor(z);
@@ -545,7 +634,21 @@ function boot(): void {
       celebrate(journal.built(edit.id));
     }
   };
-  interaction.occupiedByEntity = (x, y, z) => dragon.occupiesBlock(x, y, z);
+  interaction.occupiedByEntity = (x, y, z) =>
+    dragon.occupiesBlock(x, y, z) || drill.occupiesBlock(x, y, z);
+  drill.onExcavate = (edits) => {
+    if (mode !== "creative" || siege?.active || edits.length === 0) return;
+    editStore.recordMany(edits);
+    for (const [index, edit] of edits.entries()) {
+      const previous = world.getBlock(edit.x, edit.y, edit.z);
+      world.setBlock(edit.x, edit.y, edit.z, BlockId.AIR);
+      chunkMeshes?.blockChanged(edit.x, edit.y, edit.z, BlockId.AIR);
+      if (index === 0 && previous !== BlockId.AIR) {
+        particles?.burst(edit.x, edit.y, edit.z, previous);
+      }
+    }
+    sound.breakBlock(BlockId.STONE);
+  };
   interaction.onDigTick = (block) => {
     sound.step(block);
     if (heldEquipment !== null) swingHand();
@@ -563,6 +666,16 @@ function boot(): void {
     interaction.canPlace = (block) => !siege?.active && (!adventure || bag.count(block) > 0);
     hotbar.setCounts(adventure ? (block) => bag.count(block) : null);
     player.setFlightAllowed(!adventure);
+    if (adventure) {
+      drill.drilling = false;
+      if (player.currentMount === drill) {
+        drill.returnToParking();
+        const exit = drill.safeExit() ?? drill.savedRiderPosition;
+        if (exit) player.restore({ ...player.pose(), ...exit, flying: false });
+        interaction.enabled = true;
+        app.classList.remove("riding");
+      }
+    }
   };
   interaction.onPick = (id) => {
     hotbar.pick(id);
@@ -583,9 +696,23 @@ function boot(): void {
   let nextStrike = 20;
 
   const persist = (): void => {
-    if (player.riding) dragon.recordParking();
+    if (player.currentMount === dragon) dragon.recordParking();
+    if (player.currentMount === drill) drill.recordParking();
+    const parking = drill.parking;
+    if (parking) {
+      try {
+        storage?.setItem(drillStorageKey, JSON.stringify(parking));
+      } catch {
+        // Storage may be unavailable; gameplay remains in memory.
+      }
+    }
     const pose = player.pose();
-    const safeReturn = player.riding ? dragon.savedRiderPosition : undefined;
+    const safeReturn =
+      player.currentMount === dragon
+        ? dragon.savedRiderPosition
+        : player.currentMount === drill
+          ? drill.savedRiderPosition
+          : undefined;
     storePlayerSave(storage, SEED, {
       ...pose,
       ...(safeReturn ? { ...safeReturn, flying: false } : {}),
@@ -738,24 +865,35 @@ function boot(): void {
   };
 
   const canMountDragon = (): boolean => dragonModel.ready && dragon.canMount(player.position);
+  const canMountDrill = (): boolean =>
+    mode === "creative" && drillModel.ready && drill.canMount(player.position);
 
-  const toggleRide = (): boolean => {
+  // Each mount has an explicit action. The historic dragon button must never
+  // silently mount the new vehicle when both are in reach.
+  const toggleRide = (mount: DragonMount): boolean => {
     if (!player.isActive || inventory.isOpen) return false;
     if (player.riding) {
+      if (player.currentMount !== mount) return false;
+      drill.drilling = false;
       if (player.dismount()) {
         interaction.enabled = true;
         app.classList.remove("riding");
         persist();
       } else {
-        hud.announce(t(dragon.grounded ? "dragonExitBlocked" : "dragonLandingRequired"));
+        hud.announce(t(mount.grounded ? "dragonExitBlocked" : "dragonLandingRequired"));
       }
       return true;
     }
-    if (!dragonModel.ready || !player.mount(dragon)) return false;
+    if (mount === drill ? !canMountDrill() : !canMountDragon()) return false;
+    if (!player.mount(mount)) return false;
     interaction.enabled = false;
     app.classList.add("riding");
     return true;
   };
+  const toggleDragonRide = (): boolean => toggleRide(dragon);
+  const toggleDrillRide = (): boolean => toggleRide(drill);
+  const toggleCurrentRide = (): boolean =>
+    toggleRide(player.currentMount ?? (canMountDragon() ? dragon : drill));
 
   // ---- on-screen controls for touch devices ----
   const touchControls = touch
@@ -768,10 +906,12 @@ function boot(): void {
           player.lookBy(dx, dy);
         },
         onBreak: () => {
-          interaction.breakTargetedBlock();
+          if (player.currentMount === drill) drill.drilling = !drill.drilling;
+          else interaction.breakTargetedBlock();
         },
         onPlace: () => {
-          interaction.placeTargetedBlock();
+          if (player.currentMount === drill) drill.cycleSize();
+          else interaction.placeTargetedBlock();
         },
         onPause: () => {
           player.releaseControl();
@@ -782,7 +922,14 @@ function boot(): void {
         onToggleFly: () => {
           player.toggleFlight();
         },
-        onRide: toggleRide,
+        onRide: toggleDragonRide,
+        onDrillRide: toggleDrillRide,
+        onToggleDrill: () => {
+          if (player.currentMount === drill) drill.drilling = !drill.drilling;
+        },
+        onCycleDrill: () => {
+          if (player.currentMount === drill) drill.cycleSize();
+        },
       })
     : null;
   let touchVisible = false;
@@ -847,7 +994,9 @@ function boot(): void {
     siege = new SiegeController(
       site,
       (x, z) => sampleColumn(Math.floor(x), Math.floor(z)).terrainHeight,
+      siegeZombieCap,
     );
+    gateOverlay = new SiegeGateOverlay(site);
     visitFortress();
     hud.announce(
       t.locale === "fr" ? "Forteresse construite et enregistrée." : "Fortress built and saved.",
@@ -869,6 +1018,7 @@ function boot(): void {
     );
     if (distance > 72) return;
     siege.start();
+    syncGateVisuals();
     hud.announce(
       t.locale === "fr"
         ? "Prépare-toi : attaque dans 20 secondes !"
@@ -877,6 +1027,17 @@ function boot(): void {
   };
   const repairSiege = (): void => {
     if (siege?.repair()) hud.announce(t.locale === "fr" ? "Cristal réparé !" : "Crystal repaired!");
+  };
+  const buySiege = (item: ArmoryPurchase): void => {
+    if (!siege || !fortress || !player.isActive || inventory.isOpen || player.riding) return;
+    const distance = Math.hypot(
+      player.position.x - (fortress.x + FORTRESS_CENTER),
+      player.position.z - (fortress.z + FORTRESS_CENTER),
+    );
+    if (distance > 72 || !siege.buy(item)) return;
+    hud.announce(
+      t.locale === "fr" ? "Achat effectué dans l’armurerie." : "Armory purchase complete.",
+    );
   };
   const siegePanel = new SiegePanel(
     app,
@@ -887,6 +1048,7 @@ function boot(): void {
       stop: () => siege?.stop(),
       shoot: shootSiege,
       repair: repairSiege,
+      buy: buySiege,
     },
     t.locale === "fr",
   );
@@ -896,6 +1058,23 @@ function boot(): void {
     seed: SEED,
     touch,
     t,
+    listWorlds: () => worldRegistry.list(),
+    onCreateWorld: (name, chosenMode, chosenSeed) => {
+      const entry = worldRegistry.create(name, chosenMode, chosenSeed);
+      if (!entry) return false;
+      persist();
+      const url = new URL(window.location.href);
+      url.searchParams.set("seed", entry.seed.toString());
+      window.location.href = url.toString();
+      return true;
+    },
+    onRenameWorld: (seed, name) => worldRegistry.rename(seed, name),
+    onDeleteWorld: (seed) => worldRegistry.remove(seed, SEED),
+    onExportWorld: (seed) => {
+      if (seed === SEED) persist();
+      return exportWorldArchive(storage, worldRegistry.get(seed));
+    },
+    onImportWorld: (contents) => importWorldArchive(storage, worldRegistry, contents),
     onLanguageChange: () => {
       persist();
       window.location.reload();
@@ -903,6 +1082,7 @@ function boot(): void {
     mode,
     onModeChange: (next) => {
       mode = next;
+      worldRegistry.setMode(SEED, next);
       applyMode();
       persist();
     },
@@ -915,6 +1095,7 @@ function boot(): void {
       persist();
       const url = new URL(window.location.href);
       url.searchParams.set("seed", seed.toString());
+      url.searchParams.delete("mode");
       window.location.href = url.toString();
     },
     onResetWorld: () => {
@@ -966,6 +1147,7 @@ function boot(): void {
     menu.markStarted();
   };
   player.onPause = () => {
+    drill.drilling = false;
     inventory.hide();
     interaction.enabled = !player.riding;
     menu.show("main");
@@ -1007,8 +1189,59 @@ function boot(): void {
     return false;
   };
 
+  document.addEventListener("mousedown", (event) => {
+    if (event.button === 0 && player.currentMount === drill && player.isActive) {
+      drill.drilling = true;
+    }
+  });
+  document.addEventListener("mouseup", (event) => {
+    if (event.button === 0 && player.currentMount === drill) drill.drilling = false;
+  });
+  window.addEventListener("blur", () => {
+    drill.drilling = false;
+  });
+
   window.addEventListener("keydown", (e) => {
     if (e.repeat) return;
+    if (player.isActive && !inventory.isOpen && player.currentMount === drill) {
+      if (e.code === "KeyT") {
+        drill.cycleSize();
+        e.preventDefault();
+        return;
+      }
+      if (e.code === "KeyJ") {
+        drill.drilling = !drill.drilling;
+        e.preventDefault();
+        return;
+      }
+    }
+    if (
+      e.code === "KeyP" &&
+      player.isActive &&
+      !inventory.isOpen &&
+      !player.riding &&
+      mode === "creative"
+    ) {
+      spawnDrill();
+      const exit = drill.safeExit();
+      if (exit) {
+        streamer.warmUp(exit.x, exit.z, WARMUP_RADIUS_CHUNKS);
+        player.restore({ ...player.pose(), ...exit, flying: false });
+        hud.announce(
+          t.locale === "fr"
+            ? "Foreuse retrouvée. Y pour monter."
+            : "Drill located. Press Y to mount.",
+        );
+      } else {
+        hud.announce(
+          t.locale === "fr"
+            ? "Foreuse indisponible : cherche un terrain dégagé."
+            : "Drill unavailable: find open ground.",
+        );
+      }
+      e.preventDefault();
+      return;
+    }
     // A desktop pointer-lock player can open the mini-game panel with M.
     // F is reserved for flying in PlayerController; G fires event arrows.
     if (e.code === "KeyM" && player.isActive && !inventory.isOpen && mode === "creative") {
@@ -1029,7 +1262,9 @@ function boot(): void {
         return;
       }
     }
-    if (e.code === "KeyR" && !e.altKey && !e.ctrlKey && !e.metaKey && toggleRide()) {
+    if (e.code === "KeyR" && !e.altKey && !e.ctrlKey && !e.metaKey && toggleCurrentRide()) {
+      e.preventDefault();
+    } else if (e.code === "KeyY" && !e.altKey && !e.ctrlKey && !e.metaKey && toggleDrillRide()) {
       e.preventDefault();
     } else if (e.code === "KeyE") {
       setInventory(!inventory.isOpen);
@@ -1056,6 +1291,7 @@ function boot(): void {
   });
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
+      drill.drilling = false;
       persist();
       sound.setPaused(true);
     } else if (player.isActive) {
@@ -1156,9 +1392,18 @@ function boot(): void {
       dragon: () => ({
         position: dragon.position,
         ready: dragonModel.ready,
-        mounted: player.riding,
+        mounted: player.currentMount === dragon,
         flying: dragon.flying,
         grounded: dragon.grounded,
+      }),
+      drill: () => ({
+        position: drill.position,
+        exit: drill.safeExit(),
+        yaw: drill.yaw,
+        mounted: player.currentMount === drill,
+        flying: drill.flying,
+        drilling: drill.drilling,
+        size: drill.size,
       }),
       inventoryOpen: () => inventory.isOpen,
       gameMode: () => mode,
@@ -1252,10 +1497,16 @@ function boot(): void {
             );
           }
           if (pad.lookX !== 0 || pad.lookY !== 0) player.lookBy(pad.lookX, pad.lookY);
-          if (pad.breakBlock) interaction.breakTargetedBlock();
-          if (pad.placeBlock) interaction.placeTargetedBlock();
+          if (pad.breakBlock) {
+            if (player.currentMount === drill) drill.drilling = !drill.drilling;
+            else interaction.breakTargetedBlock();
+          }
+          if (pad.placeBlock) {
+            if (player.currentMount === drill) drill.cycleSize();
+            else interaction.placeTargetedBlock();
+          }
           if (pad.hotbarStep !== 0) hotbar.cycle(pad.hotbarStep);
-          if (pad.toggleFlight && !toggleRide()) player.toggleFlight();
+          if (pad.toggleFlight && !toggleCurrentRide()) player.toggleFlight();
         }
       }
     }
@@ -1263,6 +1514,7 @@ function boot(): void {
     streamer.update(player.position.x, player.position.z);
     if (time >= nextDragonSpawnTry) {
       spawnDragon();
+      spawnDrill();
       nextDragonSpawnTry = time + 1000;
     }
     player.update(dt);
@@ -1280,20 +1532,76 @@ function boot(): void {
         dragon,
         dragonPosition,
         dragonDistance,
-        player.riding,
+        player.currentMount === dragon,
       );
     }
-    const rideAvailable = controlsVisible && (player.riding || canMountDragon());
+    const drillPosition =
+      player.currentMount === drill
+        ? (player.dragonRenderPosition ?? drill.position)
+        : drill.position;
+    const drillDistance = drillPosition
+      ? Math.hypot(x - drillPosition.x, z - drillPosition.z)
+      : Infinity;
+    if (drillPosition) {
+      drillModel.update(
+        player.isActive ? dt : 0,
+        drill,
+        drillPosition,
+        drillDistance,
+        player.currentMount === drill,
+      );
+    }
+    const dragonAvailable =
+      controlsVisible && (player.currentMount === dragon || (!player.riding && canMountDragon()));
+    const drillAvailable =
+      controlsVisible && (player.currentMount === drill || (!player.riding && canMountDrill()));
+    const rideAvailable = dragonAvailable || drillAvailable;
     if (touchControls) {
       touchControls.setRide(
-        rideAvailable ? t(player.riding ? "dragonDismount" : "dragonMount") : "",
+        dragonAvailable ? t(player.currentMount === dragon ? "dragonDismount" : "dragonMount") : "",
         player.riding,
         player.flightAllowed,
       );
-      touchControls.setFlying(player.riding ? dragon.flying : player.isFlying);
+      touchControls.setDrillRide(
+        drillAvailable
+          ? t.locale === "fr"
+            ? player.currentMount === drill
+              ? "Quitter foreuse"
+              : "Monter foreuse"
+            : player.currentMount === drill
+              ? "Leave drill"
+              : "Board drill"
+          : "",
+      );
+      touchControls.setDrill(
+        player.currentMount === drill,
+        drill.drilling,
+        drill.size,
+        t.locale === "fr",
+      );
+      touchControls.setFlying(
+        player.riding ? (player.currentMount?.flying ?? false) : player.isFlying,
+      );
     }
     let hint = "";
-    if (controlsVisible && !rideAvailable && dragonModel.ready && dragonDistance < 18) {
+    if (drillAvailable) {
+      hint =
+        player.currentMount === drill
+          ? t.locale === "fr"
+            ? "Foreuse " +
+              drill.size.toString() +
+              "×" +
+              drill.size.toString() +
+              " · Clic pour forer · T diamètre · Espace monter · Ctrl descendre"
+            : "Drill " +
+              drill.size.toString() +
+              "×" +
+              drill.size.toString() +
+              " · Click to bore · T size · Space climb · Ctrl descend"
+          : t.locale === "fr"
+            ? "[Y] Monter dans la foreuse"
+            : "[Y] Board the drill";
+    } else if (controlsVisible && !rideAvailable && dragonModel.ready && dragonDistance < 18) {
       hint = t("dragonApproachHint");
     } else if (rideAvailable && (!touch || player.riding)) {
       hint = touch
@@ -1313,12 +1621,28 @@ function boot(): void {
 
     const adventure = mode === "adventure";
     const night = timeIsNight(clock);
+    const beforeSiegeUpdate = siege?.report;
     if (player.isActive && !inventory.isOpen && !document.hidden) siege?.update(dt);
+    if (siege && fortress && beforeSiegeUpdate) {
+      const report = siege.report;
+      if (beforeSiegeUpdate.outerGate.health > 0 && report.outerGate.health === 0) {
+        sound.breakBlock(BlockId.PLANKS);
+        particles?.burst(fortress.x + 47, fortress.y + 3, fortress.z + 2, BlockId.WOOD);
+        hud.announce(t.locale === "fr" ? "Porte extérieure détruite !" : "Outer gate destroyed!");
+      }
+      if (beforeSiegeUpdate.innerGate.health > 0 && report.innerGate.health === 0) {
+        sound.breakBlock(BlockId.PLANKS);
+        particles?.burst(fortress.x + 47, fortress.y + 3, fortress.z + 15, BlockId.WOOD);
+        hud.announce(t.locale === "fr" ? "Porte intérieure détruite !" : "Inner gate destroyed!");
+      }
+    }
+    syncGateVisuals();
+    if (siege?.active) drill.drilling = false;
     const nearbySiege =
       siege?.zombies.filter(
         (enemy) =>
           Math.hypot(player.position.x - enemy.position.x, player.position.z - enemy.position.z) <
-          24,
+          68,
       ) ?? [];
     const distanceToFortress = fortress
       ? Math.hypot(
@@ -1571,7 +1895,16 @@ function boot(): void {
       }
     } else if (cpu) {
       cpu.applySky(skyStateAt(clock));
-      cpu.render(clock, dragonModel.visibleModel);
+      cpu.render(
+        clock,
+        player.currentMount === drill
+          ? drillModel.visibleModel
+          : player.currentMount === dragon
+            ? dragonModel.visibleModel
+            : drillDistance < dragonDistance
+              ? drillModel.visibleModel
+              : dragonModel.visibleModel,
+      );
     }
     requestAnimationFrame(frame);
   };
