@@ -39,7 +39,7 @@ export function drillTargets(
       const x = Math.floor(tip.x + right.x * horizontal + forward.x * s * vertical);
       const y = Math.floor(tip.y + c * vertical);
       const z = Math.floor(tip.z + right.z * horizontal + forward.z * s * vertical);
-      cells.set(x + "," + y + "," + z, { x, y, z });
+      cells.set(x.toString() + "," + y.toString() + "," + z.toString(), { x, y, z });
     }
   }
   return [...cells.values()];
