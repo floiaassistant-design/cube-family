@@ -85,12 +85,16 @@
       "id": "titan-zombie-siege",
       "type": "siege_boss",
       "folder": "assets/3d/titan-zombie-siege/",
-      "latest": "v1",
-      "model_source": "assets/3d/titan-zombie-siege/titan_zombie_siege_v1.glb",
+      "latest": "v2",
+      "model_source": "assets/3d/titan-zombie-siege/titan_zombie_siege_v2.glb",
       "format": "glb",
-      "git_blob_sha": "6c361810ab84c643318212a695925157a71e0f5f",
+      "git_blob_sha": "1424dd0d88f93225d82deb61a8b8a0be0660d68d",
       "animations": ["Idle", "Walk", "Smash", "Roar", "Death"],
-      "status": "asset_available_not_integrated"
+      "status": "asset_available_not_integrated",
+      "previous_model_source": "assets/3d/titan-zombie-siege/titan_zombie_siege_v1.glb",
+      "generator": "assets/3d/titan-zombie-siege/generer_titan_v2.mjs",
+      "design_plan": "assets/3d/titan-zombie-siege/PLAN_V2.md",
+      "preview_source": "assets/3d/titan-zombie-siege/apercu_v2.svg"
     }
   ]
 }

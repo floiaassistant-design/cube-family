@@ -73,7 +73,7 @@
       "status": "asset_only",
       "asset_id": "titan-zombie-siege",
       "source_files": [],
-      "notes": "Boss voxel original d'environ 14 m, bras de frappe massif et 5 clips glTF. Asset GLB préparé pour un assaut massif sur une face de la forteresse; IA, dégâts aux portes, collisions et apparition NON intégrés."
+      "notes": "Modèle GLB V2 d’environ 14 m avec poing de siège, armure rouillée, tabard bordeaux et cœur rouge émissif. Les cinq animations de la V1 sont conservées. Le dossier contient le générateur et le plan V2. L’apparition, l’IA, les collisions et les dégâts aux portes relèvent d’une future intégration."
     }
   ]
 }
