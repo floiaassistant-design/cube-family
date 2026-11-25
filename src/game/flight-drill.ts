@@ -135,8 +135,8 @@ export class FlyingDrill extends DragonMount {
       z: origin.z + direction.z * aimDistance,
     };
     const heading = forwardVector(yaw);
-    const back = { x: -heading.x * 0.8, y: 0.6, z: -heading.z * 0.8 };
-    const distance = this.cameraDistance(origin, back, aspect < 1 ? 8 : 6.5);
+    const back = { x: -heading.x * 0.6, y: 0.8, z: -heading.z * 0.6 };
+    const distance = this.cameraDistance(origin, back, aspect < 1 ? 8 : 7.25);
     const camera = {
       x: origin.x + back.x * distance,
       y: origin.y + back.y * distance,

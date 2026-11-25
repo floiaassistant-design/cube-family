@@ -168,19 +168,42 @@ async function colorVariety(page) {
 }
 
 async function checkDrillLamp(page, renderer) {
+  const startY = await page.evaluate(() => window.__mc.drill().position.y);
+  await page.keyboard.down("Space");
+  const clearedGround = await until(
+    page,
+    (height) => window.__mc.drill().position.y > height + 8,
+    startY,
+  );
+  await page.keyboard.up("Space");
+  if (!clearedGround) {
+    report(`${renderer} headlamp scenario clears nearby terrain`, false);
+    return;
+  }
+  await until(page, () => {
+    const y = window.__mc.drill().position.y;
+    return new Promise((resolve) =>
+      setTimeout(() => resolve(Math.abs(window.__mc.drill().position.y - y) < 0.01), 120),
+    );
+  });
   const target = await page.evaluate(() => {
     const { position, yaw } = window.__mc.drill();
     const dx = -Math.sin(yaw);
     const dz = -Math.cos(yaw);
+    const acrossX = Math.abs(dx) > Math.abs(dz);
+    const axis = acrossX ? position.x : position.z;
+    const step = acrossX ? dx : dz;
+    const layer = Math.floor(axis + step * 3);
+    const entry = (layer + (step < 0 ? 1 : 0) - axis) / step;
     const cell = {
-      x: Math.floor(position.x + dx * 3),
+      x: acrossX ? layer : Math.floor(position.x + dx * entry),
       y: Math.floor(position.y + 1.24),
-      z: Math.floor(position.z + dz * 3),
+      z: acrossX ? Math.floor(position.z + dz * entry) : layer,
     };
     for (let row = -2; row <= 3; row++) {
       for (let side = -2; side <= 2; side++) {
-        const x = cell.x + (Math.abs(dx) > Math.abs(dz) ? 0 : side);
-        const z = cell.z + (Math.abs(dx) > Math.abs(dz) ? side : 0);
+        const x = cell.x + (acrossX ? 0 : side);
+        const z = cell.z + (acrossX ? side : 0);
         window.__mc.setBlock(x, cell.y + row, z, 3);
       }
     }
@@ -248,6 +271,18 @@ async function checkDrillLamp(page, renderer) {
     `${renderer} headlamp visibly brightens the terrain`,
     brightened > 35,
     `${brightened} pixels brighter`,
+  );
+  await page.keyboard.press("KeyT");
+  await page.keyboard.press("KeyT");
+  await page.keyboard.press("KeyJ");
+  const removed = await until(
+    page,
+    (cell) => window.__mc.drill().size === 1 && window.__mc.blockAt(cell.x, cell.y, cell.z) === 0,
+    target,
+  );
+  report(
+    `${renderer} the one-block drill clears the voxel under the crosshair`,
+    centered && removed,
   );
 }
 

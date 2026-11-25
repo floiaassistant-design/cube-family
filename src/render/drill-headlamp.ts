@@ -3,7 +3,7 @@ import type { SolidQuery, Vec3 } from "../player/physics";
 import { raycastVoxels } from "../player/raycast";
 
 export const LAMP_RANGE = 18;
-export const LAMP_SLOPE = 0.54;
+export const LAMP_SLOPE = 0.7;
 export const LAMP_GRID = 7;
 export const LAMP_SHADOW_BIAS = 0.55;
 

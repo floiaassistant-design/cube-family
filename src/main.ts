@@ -1357,6 +1357,7 @@ function boot(): void {
       position: () => ({ ...player.position }),
       blockAt: (x, y, z) => world.getBlock(x, y, z),
       target: () => {
+        camera.updateMatrixWorld();
         const hit =
           player.currentMount === drill
             ? raycastVoxels(
