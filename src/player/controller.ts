@@ -601,8 +601,8 @@ export class PlayerController {
     return this.dragon;
   }
 
-  get dragonRenderPosition(): Vec3 | null {
-    return this.dragon?.interpolatedPosition(this.rideAlpha) ?? null;
+  mountRenderPosition(mount: DragonMount): Vec3 | null {
+    return this.dragon === mount ? mount.interpolatedPosition(this.rideAlpha) : mount.position;
   }
 
   mount(dragon: DragonMount): boolean {
@@ -639,7 +639,7 @@ export class PlayerController {
       this.rideAlpha = this.accumulator / TICK;
     }
     const position = dragon.position;
-    const renderPosition = this.dragonRenderPosition;
+    const renderPosition = this.mountRenderPosition(dragon);
     if (!position || !renderPosition) return;
     this.state = { position: dragon.seat(position), velocity: dragon.velocity, onGround: false };
 
