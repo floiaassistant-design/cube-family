@@ -84,7 +84,7 @@
         "src/main.ts",
         "src/ui/touch-controls.ts"
       ],
-      "notes": "Véhicule procédural original réservé au mode Libre : vol monté, réacteur, forage 1×1/3×3/5×5, commandes tactiles, sauvegarde de position de parking indépendante. Pas un GLB statique. Version en cours de validation, non publiée."
+      "notes": "Véhicule procédural réservé au mode Libre. Pilote visible, mèche orientable, réacteur et vol stationnaire, forage progressif 1×1/3×3/5×5. Accès clavier ou tactile et parking indépendant par monde."
     }
   ],
   "future_ideas": ["épées", "haches", "armures supplémentaires", "équipements propres aux montures"]

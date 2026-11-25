@@ -905,6 +905,9 @@ kbd {
   top: max(10px, env(safe-area-inset-top));
   right: max(12px, env(safe-area-inset-right));
   display: none;
+  max-width: calc(100vw - 24px);
+  justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 10px;
   z-index: 6;
 }

@@ -231,18 +231,23 @@ export class DragonMount {
     return hit ? Math.max(0, hit.distance - 0.22) : distance;
   }
 
+  protected cameraFraming(aspect: number) {
+    return { shoulder: 0.5, height: 0.6, distance: aspect < 1 ? 8.6 : 7.7 };
+  }
+
   /** A rear three-quarter view keeps the rider in front of the camera and
    * the head beyond the saddle, even when steering with the view turned. */
   mountedCamera(position: Vec3, lookYaw: number, lookPitch: number, aspect: number) {
     const seat = this.seat(position);
-    const focus = { ...seat, y: seat.y + 0.6 };
+    const framing = this.cameraFraming(aspect);
+    const focus = { ...seat, y: seat.y + framing.height };
     const relative = lookYaw - this.yaw;
     const orbit = Math.max(
       -1.08,
-      Math.min(1.08, Math.atan2(Math.sin(relative), Math.cos(relative)) + 0.5),
+      Math.min(1.08, Math.atan2(Math.sin(relative), Math.cos(relative)) + framing.shoulder),
     );
     const pitch = Math.max(-0.69, Math.min(-0.19, lookPitch - 0.42));
-    const wantedDistance = aspect < 1 ? 8.6 : 7.7;
+    const wantedDistance = framing.distance;
     const shot = (yaw: number, tilt: number) => {
       const direction = forwardVector(yaw);
       const back = {
@@ -274,6 +279,30 @@ export class DragonMount {
     return best;
   }
 
+  protected movementHeading(dt: number, input: DragonInput | null): Vec3 {
+    const forward = forwardVector(input?.yaw ?? this.yaw);
+    const right = rightVector(input?.yaw ?? this.yaw);
+    const x = forward.x * (input?.forward ?? 0) + right.x * (input?.right ?? 0);
+    const z = forward.z * (input?.forward ?? 0) + right.z * (input?.right ?? 0);
+    if (Math.hypot(x, z) > 0.025) {
+      const difference = Math.atan2(-x, -z) - this.yaw;
+      const turn = Math.atan2(Math.sin(difference), Math.cos(difference));
+      const limit = dt * (this.flying ? 2.5 : 4.5);
+      this.yaw += Math.max(-limit, Math.min(limit, turn));
+    }
+    return forwardVector(this.yaw);
+  }
+
+  protected flightVerticalTarget(
+    input: DragonInput | null,
+    moving: boolean,
+    canClimb: boolean,
+  ): number {
+    if (input?.descend) return -6.5;
+    if (input?.jump && canClimb) return 6.5;
+    return moving ? -0.8 : 0;
+  }
+
   step(dt: number, input: DragonInput | null): void {
     const state = this.state;
     if (!state) return;
@@ -292,21 +321,11 @@ export class DragonMount {
       this.flying = true;
     }
 
-    const f = forwardVector(input?.yaw ?? this.yaw);
-    const r = rightVector(input?.yaw ?? this.yaw);
     const forward = input?.forward ?? 0;
     const right = input?.right ?? 0;
     const amount = Math.min(1, Math.hypot(forward, right));
     const wantsMove = amount > 0.025;
-    if (wantsMove) {
-      const target = Math.atan2(-(f.x * forward + r.x * right), -(f.z * forward + r.z * right));
-      const difference = target - this.yaw;
-      const turn = Math.atan2(Math.sin(difference), Math.cos(difference));
-      const limit = dt * (this.flying ? 2.5 : 4.5);
-      this.yaw += Math.max(-limit, Math.min(limit, turn));
-    }
-
-    const heading = forwardVector(this.yaw);
+    const heading = this.movementHeading(dt, input);
     const speed = this.flying ? (input?.sprint ? 17 : 12) : input?.sprint ? 7.8 : 5.2;
     const ease = 1 - Math.exp(-dt * (this.flying ? 4.5 : 11));
     const velocity = {
@@ -315,13 +334,7 @@ export class DragonMount {
       z: state.velocity.z + (heading.z * speed * amount - state.velocity.z) * ease,
     };
     if (this.flying) {
-      const targetY = input?.descend
-        ? -6.5
-        : input?.jump && p.y < MAX_ALTITUDE
-          ? 6.5
-          : wantsMove
-            ? -0.8
-            : 0;
+      const targetY = this.flightVerticalTarget(input, wantsMove, p.y < MAX_ALTITUDE);
       velocity.y = state.velocity.y + (targetY - state.velocity.y) * (1 - Math.exp(-dt * 7));
       velocity.y = Math.min(velocity.y, (MAX_ALTITUDE - p.y) / dt);
     }

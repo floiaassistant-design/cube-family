@@ -245,14 +245,13 @@ export class TouchControls {
     this.drillButton.hidden = !mounted;
     this.sizeButton.hidden = !mounted;
     this.drillButton.classList.toggle("active", active);
-    this.drillButton.textContent = french
-      ? active
-        ? "Arrêter"
-        : "Forer"
-      : active
-        ? "Stop"
-        : "Drill";
-    this.sizeButton.textContent = size.toString() + "×" + size.toString();
+    const label = french ? (active ? "Arrêter" : "Forer") : active ? "Stop" : "Drill";
+    if (this.drillButton.textContent !== label) {
+      this.drillButton.textContent = label;
+      this.drillButton.setAttribute("aria-pressed", active.toString());
+    }
+    const diameter = size.toString() + "×" + size.toString();
+    if (this.sizeButton.textContent !== diameter) this.sizeButton.textContent = diameter;
   }
 
   /** Flight shows a "descend" button and lights up the wing. */
