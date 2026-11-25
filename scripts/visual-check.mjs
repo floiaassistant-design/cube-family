@@ -168,26 +168,21 @@ async function colorVariety(page) {
 }
 
 async function checkDrillLamp(page, renderer) {
-  const startY = await page.evaluate(() => window.__mc.drill().position.y);
-  await page.keyboard.down("Space");
-  const clearedGround = await until(
-    page,
-    (height) => window.__mc.drill().position.y > height + 8,
-    startY,
-  );
-  await page.keyboard.up("Space");
-  if (!clearedGround) {
-    report(`${renderer} headlamp scenario clears nearby terrain`, false);
-    return;
-  }
-  await until(page, () => {
-    const y = window.__mc.drill().position.y;
-    return new Promise((resolve) =>
-      setTimeout(() => resolve(Math.abs(window.__mc.drill().position.y - y) < 0.01), 120),
-    );
-  });
   const target = await page.evaluate(() => {
     const { position, yaw } = window.__mc.drill();
+    // Isolate the wall from generated grass, trees and adjacent terrain.
+    const foot = {
+      x: Math.floor(position.x),
+      y: Math.floor(position.y),
+      z: Math.floor(position.z),
+    };
+    for (let x = foot.x - 5; x <= foot.x + 5; x++) {
+      for (let z = foot.z - 5; z <= foot.z + 5; z++) {
+        for (let y = foot.y; y <= foot.y + 7; y++) {
+          if (window.__mc.blockAt(x, y, z) !== 0) window.__mc.setBlock(x, y, z, 0);
+        }
+      }
+    }
     const dx = -Math.sin(yaw);
     const dz = -Math.cos(yaw);
     const acrossX = Math.abs(dx) > Math.abs(dz);
