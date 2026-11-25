@@ -124,6 +124,7 @@ declare global {
       };
       dragon: () => {
         position: { x: number; y: number; z: number } | null;
+        renderedPosition: { x: number; y: number; z: number } | null;
         ready: boolean;
         mounted: boolean;
         flying: boolean;
@@ -1404,6 +1405,7 @@ function boot(): void {
       flying: () => player.isFlying,
       dragon: () => ({
         position: dragon.position,
+        renderedPosition: dragonModel.visibleModel?.position ?? null,
         ready: dragonModel.ready,
         mounted: player.currentMount === dragon,
         flying: dragon.flying,
@@ -1531,7 +1533,7 @@ function boot(): void {
       nextDragonSpawnTry = time + 1000;
     }
     player.update(dt);
-    const dragonPosition = player.dragonRenderPosition ?? dragon.position;
+    const dragonPosition = player.mountRenderPosition(dragon);
     const { x, z } = player.position;
     const dragonDistance = dragonPosition
       ? Math.hypot(x - dragonPosition.x, z - dragonPosition.z)
@@ -1548,10 +1550,7 @@ function boot(): void {
         player.currentMount === dragon,
       );
     }
-    const drillPosition =
-      player.currentMount === drill
-        ? (player.dragonRenderPosition ?? drill.position)
-        : drill.position;
+    const drillPosition = player.mountRenderPosition(drill);
     const drillDistance = drillPosition
       ? Math.hypot(x - drillPosition.x, z - drillPosition.z)
       : Infinity;

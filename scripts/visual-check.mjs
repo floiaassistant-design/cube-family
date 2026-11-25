@@ -996,6 +996,32 @@ try {
     await drillDesktop.keyboard.press("KeyJ");
     const stoppedByKey = await until(drillDesktop, () => !window.__mc.drill().drilling);
     report("J stops the drill on desktop", stoppedByKey);
+
+    const departure = await drillDesktop.evaluate(() => window.__mc.drill().position.y);
+    await drillDesktop.keyboard.down("Space");
+    const tookOff = await until(
+      drillDesktop,
+      (startY) => window.__mc.drill().flying && window.__mc.drill().position.y > startY + 1,
+      departure,
+    );
+    await drillDesktop.keyboard.up("Space");
+    const separateMounts =
+      tookOff &&
+      (await until(drillDesktop, () => {
+        const { position, renderedPosition, mounted } = window.__mc.dragon();
+        return (
+          window.__mc.renderer() === "webgl" &&
+          !mounted &&
+          position !== null &&
+          renderedPosition !== null &&
+          Math.hypot(
+            renderedPosition.x - position.x,
+            renderedPosition.y - position.y,
+            renderedPosition.z - position.z,
+          ) < 0.01
+        );
+      }));
+    report("the dragon stays at its own rendered position during drill flight", separateMounts);
   }
   await drillDesktop.browserContext().close();
 

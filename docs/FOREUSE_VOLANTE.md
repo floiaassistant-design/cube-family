@@ -27,6 +27,8 @@ zone stable, comme avec le dragon.
 Le modèle reprend la planche validée : mèche étagée à dents, coque cuivre et acier,
 pilote avec lunettes et foulard, phares et réacteur bleu. Le foret et les propulseurs
 s’animent. Les deux moteurs de rendu utilisent la même géométrie.
+Chaque monture est dessinée à sa propre position. Le lissage de la position
+s’applique à la monture pilotée.
 
 ## Règles et sécurité des mondes
 
