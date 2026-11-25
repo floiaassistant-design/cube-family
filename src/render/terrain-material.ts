@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { TileKind } from "./atlas-layout";
 import { ATMOSPHERE, CLOUDS, OUTPUT, UNPACK_VERTEX } from "./shaders/common";
+import { LAMP_GRID, LAMP_RANGE, LAMP_SHADOW_BIAS, LAMP_SLOPE } from "./drill-headlamp";
 
 /** The three materials every chunk is drawn with:
  *
@@ -99,6 +100,12 @@ const TERRAIN_FRAGMENT = /* glsl */ `
   uniform float uMinAmbient;
   uniform float uShadowStrength;
   uniform float uWet;
+  uniform bool uDrillLampOn;
+  uniform vec3 uDrillLampOrigin;
+  uniform vec3 uDrillLampDirection;
+  uniform vec3 uDrillLampRight;
+  uniform vec3 uDrillLampUp;
+  uniform float uDrillLampDepth[${(LAMP_GRID * LAMP_GRID).toString()}];
 
   ${ATMOSPHERE}
   ${CLOUDS}
@@ -120,6 +127,21 @@ const TERRAIN_FRAGMENT = /* glsl */ `
     vec3(1.0, 0.0, 0.0), vec3(-1.0, 0.0, 0.0),
     vec3(0.0, 1.0, 0.0)
   );
+
+  float drillLampAt(vec3 world, vec3 normal) {
+    vec3 delta = world - uDrillLampOrigin;
+    float along = dot(delta, uDrillLampDirection);
+    if (along <= 0.05 || along >= ${LAMP_RANGE.toFixed(1)}) return 0.0;
+    vec2 angle = vec2(dot(delta, uDrillLampRight), dot(delta, uDrillLampUp)) /
+      (along * ${LAMP_SLOPE.toFixed(2)});
+    float radius = dot(angle, angle);
+    if (radius >= 1.0) return 0.0;
+    ivec2 cell = ivec2(floor((angle + 1.0) * ${((LAMP_GRID - 1) / 2).toFixed(1)} + 0.5));
+    if (along > uDrillLampDepth[cell.y * ${LAMP_GRID.toString()} + cell.x] + ${LAMP_SHADOW_BIAS.toFixed(2)}) return 0.0;
+    float cosine = max(dot(normal, -normalize(delta)), 0.0);
+    float falloff = (1.0 - radius) * (1.0 - along / ${LAMP_RANGE.toFixed(1)});
+    return falloff * falloff * (0.24 + 0.76 * cosine);
+  }
 
   void main() {
     // Texture coordinates come straight from the position: the tile
@@ -190,6 +212,7 @@ const TERRAIN_FRAGMENT = /* glsl */ `
     vec3 torch = uBlockLight * (blkL * blkL * blkL * 1.7 + blkL * 0.05);
 
     vec3 color = albedo * ((ambient + uMinAmbient) * ao + direct + torch * mix(ao, 1.0, 0.35));
+    if (uDrillLampOn) color += albedo * vec3(2.35, 2.05, 1.62) * drillLampAt(world, n);
     // Emissive blocks mark their glowing texels with full alpha.
     if ((vFlags & 1) != 0) color += albedo * smoothstep(0.75, 1.0, tex.a) * 2.8;
 

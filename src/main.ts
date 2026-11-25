@@ -40,6 +40,7 @@ import { ChunkMeshManager } from "./render/chunk-mesh-manager";
 import { CreatureView } from "./render/creature-view";
 import { CpuRenderer } from "./render/cpu-renderer";
 import { DragonModel } from "./render/dragon-model";
+import { drillHeadlamp, LAMP_GRID } from "./render/drill-headlamp";
 import { FlyingDrillModel } from "./render/flight-drill-model";
 import { environmentAt } from "./render/environment";
 import { HeldBlock } from "./render/held-block";
@@ -106,6 +107,7 @@ declare global {
       seed: number;
       /** Freezes the clock at a day phase (0..1); null lets it run again. */
       setTime: (phase: number | null) => void;
+      setDrillLamp: (enabled: boolean) => void;
       setQuality: (level: string) => void;
       teleport: (x: number, y: number, z: number, yaw: number, pitch: number) => void;
       groundAt: (x: number, z: number) => number;
@@ -430,6 +432,10 @@ function boot(): void {
     return undefined;
   })();
   const drill = new FlyingDrill(world);
+  const lampDepth = new Float32Array(LAMP_GRID * LAMP_GRID);
+  let drillLampEnabled = true;
+  const blocksDrillLight = (x: number, y: number, z: number): boolean =>
+    !world.hasChunk(worldToChunk(x), worldToChunk(z)) || isSolid(world.getBlock(x, y, z));
   const drillOrigin = storedDrill ?? { x: startX + 6, z: startZ + 6 };
   const spawnDrill = (): void => {
     const p = player.position;
@@ -1351,7 +1357,16 @@ function boot(): void {
       position: () => ({ ...player.position }),
       blockAt: (x, y, z) => world.getBlock(x, y, z),
       target: () => {
-        const hit = interaction.raycastFromCamera();
+        camera.updateMatrixWorld();
+        const hit =
+          player.currentMount === drill
+            ? raycastVoxels(
+                camera.position,
+                camera.getWorldDirection(forward),
+                18,
+                blocksDrillLight,
+              )
+            : interaction.raycastFromCamera();
         return hit ? { x: hit.blockX, y: hit.blockY, z: hit.blockZ } : null;
       },
       pitch: () => player.eyePitch,
@@ -1367,6 +1382,9 @@ function boot(): void {
       seed: SEED,
       setTime: (phase) => {
         frozenTime = phase === null ? null : phase * DAY_LENGTH_SECONDS;
+      },
+      setDrillLamp: (enabled) => {
+        drillLampEnabled = enabled;
       },
       setQuality: (level) => {
         if (level === "low" || level === "medium" || level === "high" || level === "ultra") {
@@ -1551,6 +1569,8 @@ function boot(): void {
       );
     }
     const drillPosition = player.mountRenderPosition(drill);
+    const pilotingDrill = player.currentMount === drill;
+    app.classList.toggle("drill-aim", pilotingDrill && controlsVisible && !player.isUiOpen);
     const drillDistance = drillPosition
       ? Math.hypot(x - drillPosition.x, z - drillPosition.z)
       : Infinity;
@@ -1559,7 +1579,7 @@ function boot(): void {
       drill,
       mode === "creative" ? drillPosition : null,
       drillDistance,
-      player.currentMount === drill,
+      pilotingDrill,
     );
     const dragonAvailable =
       controlsVisible && (player.currentMount === dragon || (!player.riding && canMountDragon()));
@@ -1841,7 +1861,12 @@ function boot(): void {
       dt,
       1 - 0.64 * Math.max(environment.night, caveFactor * 0.85),
     );
+    const headlamp =
+      pilotingDrill && drillPosition && drillLampEnabled
+        ? drillHeadlamp(drillPosition, drill.yaw, drill.pitch, blocksDrillLight, lampDepth)
+        : null;
     if (webgl) {
+      webgl.setDrillHeadlamp(headlamp);
       const open = 1 - caveFactor;
       heldBlock?.setItem(heldItem);
       heldBlock?.update(
@@ -1913,6 +1938,7 @@ function boot(): void {
             : drillModel.visibleModel && drillDistance < dragonDistance
               ? drillModel.visibleModel
               : dragonModel.visibleModel,
+        headlamp,
       );
     }
     requestAnimationFrame(frame);

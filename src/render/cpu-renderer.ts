@@ -6,6 +6,7 @@ import { deriveSeed, mulberry32 } from "../world/rng";
 import type { World } from "../world/world";
 import { BLOCK_COLORS } from "./block-colors";
 import { CpuModelRenderer } from "./cpu-model";
+import { headlampAt, type DrillHeadlamp } from "./drill-headlamp";
 
 /** A complete software renderer for the voxel world on a 2D canvas,
  * smoothly upscaled. It exists so the game still runs — and still looks
@@ -206,7 +207,11 @@ export class CpuRenderer {
     }
   }
 
-  render(elapsedSeconds: number, entity: THREE.Object3D | null = null): void {
+  render(
+    elapsedSeconds: number,
+    entity: THREE.Object3D | null = null,
+    headlamp: DrillHeadlamp | null = null,
+  ): void {
     const started = performance.now();
     const data = this.image.data;
     const W = this.width;
@@ -549,9 +554,10 @@ export class CpuRenderer {
         }
 
         const lit = shade * light * (1 - AO_STRENGTH * aoAmount);
-        r = (face[0] + texel) * lit;
-        g = (face[1] + texel) * lit;
-        b = (face[2] + texel) * lit;
+        const beam = headlamp ? headlampAt(headlamp, px, py, pz, axis, entered) : 0;
+        r = (face[0] + texel) * (lit + beam * 1.35);
+        g = (face[1] + texel) * (lit + beam * 1.2);
+        b = (face[2] + texel) * (lit + beam * 0.98);
 
         // Fog toward the horizon color.
         r += (horizonR - r) * fog;

@@ -3,6 +3,8 @@ import { BlockId } from "../world/blocks";
 import { Chunk } from "../world/chunk";
 import { World } from "../world/world";
 import { FlyingDrill, planDrilling } from "./flight-drill";
+import { forwardVector } from "../player/physics";
+import { raycastVoxels } from "../player/raycast";
 
 const parking = { x: 8.5, y: 21, z: 11.5, yaw: 0 };
 const idle = { forward: 0, right: 0, yaw: 0, pitch: 0, jump: false, descend: false, sprint: false };
@@ -20,6 +22,31 @@ function setup() {
 }
 
 describe("creative flying drill", () => {
+  it("centres the camera on the voxel cut by the drill in both orientations", () => {
+    const { world, drill } = setup();
+    for (const [yaw, pitch, block] of [
+      [0, 0, { x: 8, y: 22, z: 9 }],
+      [-Math.PI / 2, 0.35, { x: 11, y: 23, z: 11 }],
+    ] as const) {
+      world.setBlock(block.x, block.y, block.z, BlockId.STONE);
+      const view = drill.mountedCamera(parking, yaw, pitch, 16 / 9);
+      const heading = forwardVector(view.yaw);
+      const ray = {
+        x: heading.x * Math.cos(view.pitch),
+        y: Math.sin(view.pitch),
+        z: heading.z * Math.cos(view.pitch),
+      };
+      const hit = raycastVoxels(
+        view.position,
+        ray,
+        15,
+        (x, y, z) => world.getBlock(x, y, z) === BlockId.STONE,
+      );
+      expect(hit && { x: hit.blockX, y: hit.blockY, z: hit.blockZ }).toEqual(block);
+      expect(planDrilling(world, parking, yaw, pitch, 1)).toEqual([{ ...block, id: BlockId.AIR }]);
+    }
+  });
+
   it("starts with the first wall, respects the bore diameter and caps edits", () => {
     const { world, drill } = setup();
     for (let x = 6; x <= 10; x++) {

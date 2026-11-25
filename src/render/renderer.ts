@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import type { Environment, Vec3Tuple } from "./environment";
+import { LAMP_GRID, type DrillHeadlamp } from "./drill-headlamp";
 import { PostPipeline } from "./post";
 import { ShadowPass } from "./shadow-pass";
 import { createSkyDome } from "./sky-dome";
@@ -199,6 +200,12 @@ export class WorldRenderer {
       uAmbientSky: vec3(),
       uAmbientGround: vec3(),
       uBlockLight: { value: new THREE.Vector3(...BLOCK_LIGHT) },
+      uDrillLampOn: { value: false },
+      uDrillLampOrigin: vec3(),
+      uDrillLampDirection: vec3(),
+      uDrillLampRight: vec3(),
+      uDrillLampUp: vec3(),
+      uDrillLampDepth: { value: new Float32Array(LAMP_GRID * LAMP_GRID) },
       uMinAmbient: { value: 0.018 },
       uShadowStrength: { value: 1 },
       uShadowMap: { value: null },
@@ -394,6 +401,17 @@ export class WorldRenderer {
   /** 0 = open air, 1 = deep underground (see the fog in shaders/common.ts). */
   setCaveFactor(factor: number): void {
     if (this.uniforms.uCave) this.uniforms.uCave.value = factor;
+  }
+
+  setDrillHeadlamp(lamp: DrillHeadlamp | null): void {
+    const u = this.uniforms;
+    if (u.uDrillLampOn) u.uDrillLampOn.value = lamp !== null;
+    if (!lamp) return;
+    setVec(u.uDrillLampOrigin, [lamp.origin.x, lamp.origin.y, lamp.origin.z]);
+    setVec(u.uDrillLampDirection, [lamp.direction.x, lamp.direction.y, lamp.direction.z]);
+    setVec(u.uDrillLampRight, [lamp.right.x, lamp.right.y, lamp.right.z]);
+    setVec(u.uDrillLampUp, [lamp.up.x, lamp.up.y, lamp.up.z]);
+    if (u.uDrillLampDepth) u.uDrillLampDepth.value = lamp.depth;
   }
 
   /** Copies the time of day into the shared uniforms. */

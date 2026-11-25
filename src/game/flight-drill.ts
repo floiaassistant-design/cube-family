@@ -16,10 +16,43 @@ export interface DrillEdit extends Vec3 {
   readonly id: typeof BlockId.AIR;
 }
 
-/** Find the first obstruction along each parallel ray across the cutter.
- * The tool clears the surface in order, even at a diagonal or on a slope. */
+/** Shared origin and basis for cutting, aiming and the mounted headlamp. */
+export function drillAxis(position: Vec3, yaw: number, pitch: number) {
+  const angle = Math.max(-MAX_PITCH, Math.min(MAX_PITCH, pitch));
+  const forward = forwardVector(yaw);
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  return {
+    origin: { ...position, y: position.y + DRILL_AXIS_HEIGHT },
+    direction: { x: forward.x * cos, y: sin, z: forward.z * cos },
+    right: rightVector(yaw),
+    up: { x: -forward.x * sin, y: cos, z: -forward.z * sin },
+  };
+}
+
+type DrillWorld = Pick<World, "hasChunk" | "getBlock">;
+
+function loaded(world: DrillWorld, x: number, y: number, z: number): boolean {
+  return y >= 1 && y < CHUNK_HEIGHT && world.hasChunk(worldToChunk(x), worldToChunk(z));
+}
+
+function firstCut(world: DrillWorld, origin: Vec3, direction: Vec3) {
+  const start = {
+    x: origin.x + direction.x * FIRST_CUT,
+    y: origin.y + direction.y * FIRST_CUT,
+    z: origin.z + direction.z * FIRST_CUT,
+  };
+  return raycastVoxels(
+    start,
+    direction,
+    DRILL_REACH - FIRST_CUT,
+    (x, y, z) => !loaded(world, x, y, z) || world.getBlock(x, y, z) !== BlockId.AIR,
+  );
+}
+
+/** Find the first obstruction along each parallel ray across the cutter. */
 export function planDrilling(
-  world: Pick<World, "hasChunk" | "getBlock">,
+  world: DrillWorld,
   position: Vec3,
   yaw: number,
   pitch: number,
@@ -27,30 +60,20 @@ export function planDrilling(
   budget = 8,
 ): DrillEdit[] {
   if (budget <= 0) return [];
-  const angle = Math.max(-MAX_PITCH, Math.min(MAX_PITCH, pitch));
-  const forward = forwardVector(yaw);
-  const right = rightVector(yaw);
-  const cos = Math.cos(angle);
-  const sin = Math.sin(angle);
-  const direction = { x: forward.x * cos, y: sin, z: forward.z * cos };
-  const up = { x: -forward.x * sin, y: cos, z: -forward.z * sin };
-  const loaded = (x: number, y: number, z: number) =>
-    y >= 1 && y < CHUNK_HEIGHT && world.hasChunk(worldToChunk(x), worldToChunk(z));
-  const obstruction = (x: number, y: number, z: number) =>
-    !loaded(x, y, z) || world.getBlock(x, y, z) !== BlockId.AIR;
+  const { origin, direction, right, up } = drillAxis(position, yaw, pitch);
   const cells = new Map<string, { edit: DrillEdit; distance: number }>();
   const radius = (size - 1) / 2;
   for (let row = -radius; row <= radius; row++) {
     for (let column = -radius; column <= radius; column++) {
-      const origin = {
-        x: position.x + right.x * column + up.x * row + direction.x * FIRST_CUT,
-        y: position.y + DRILL_AXIS_HEIGHT + up.y * row + direction.y * FIRST_CUT,
-        z: position.z + right.z * column + up.z * row + direction.z * FIRST_CUT,
+      const rayOrigin = {
+        x: origin.x + right.x * column + up.x * row,
+        y: origin.y + up.y * row,
+        z: origin.z + right.z * column + up.z * row,
       };
-      const hit = raycastVoxels(origin, direction, DRILL_REACH - FIRST_CUT, obstruction);
+      const hit = firstCut(world, rayOrigin, direction);
       if (!hit) continue;
       const { blockX: x, blockY: y, blockZ: z, distance } = hit;
-      if (!loaded(x, y, z)) continue;
+      if (!loaded(world, x, y, z)) continue;
       const block = world.getBlock(x, y, z);
       if (block === BlockId.WATER || block === BlockId.BEDROCK) continue;
       const key = `${x.toString()},${y.toString()},${z.toString()}`;
@@ -102,8 +125,29 @@ export class FlyingDrill extends DragonMount {
     return { ...position, y: position.y + 1.65 };
   }
 
-  protected override cameraFraming(aspect: number) {
-    return { shoulder: 0.78, height: -0.05, distance: aspect < 1 ? 7.7 : 6.1 };
+  override mountedCamera(position: Vec3, yaw: number, pitch: number, aspect: number) {
+    const { origin, direction } = drillAxis(position, yaw, pitch);
+    const hit = firstCut(this.drillWorld, origin, direction);
+    const aimDistance = hit ? hit.distance + FIRST_CUT + 0.02 : DRILL_REACH;
+    const aim = {
+      x: origin.x + direction.x * aimDistance,
+      y: origin.y + direction.y * aimDistance,
+      z: origin.z + direction.z * aimDistance,
+    };
+    const heading = forwardVector(yaw);
+    const back = { x: -heading.x * 0.6, y: 0.8, z: -heading.z * 0.6 };
+    const distance = this.cameraDistance(origin, back, aspect < 1 ? 8 : 7.25);
+    const camera = {
+      x: origin.x + back.x * distance,
+      y: origin.y + back.y * distance,
+      z: origin.z + back.z * distance,
+    };
+    return {
+      position: camera,
+      yaw,
+      pitch: Math.atan2(aim.y - camera.y, Math.hypot(aim.x - camera.x, aim.z - camera.z)),
+      distance,
+    };
   }
 
   protected override movementHeading(dt: number, input: DragonInput | null): Vec3 {
