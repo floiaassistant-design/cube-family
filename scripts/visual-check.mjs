@@ -937,13 +937,11 @@ try {
       report("the pilot can board the flying drill on a touch screen", mountedDrill);
       if (mountedDrill) {
         const stage = await drillPhone.evaluate(() => {
-          const p = window.__mc.drill().position;
-          const yaw = 0;
-          window.__mc.setLook(yaw, 0);
+          const { position: p, yaw } = window.__mc.drill();
           const cell = {
-            x: Math.floor(p.x),
+            x: Math.floor(p.x - Math.sin(yaw) * 2.15),
             y: Math.floor(p.y + 1.24),
-            z: Math.floor(p.z - 1.3),
+            z: Math.floor(p.z - Math.cos(yaw) * 2.15),
           };
           window.__mc.setBlock(cell.x, cell.y, cell.z, 3);
           return cell;
@@ -952,9 +950,7 @@ try {
         const excavated = await until(
           drillPhone,
           (cell) =>
-            window.__mc.drill().drilling &&
-            Math.abs(window.__mc.drill().yaw) < 0.01 &&
-            window.__mc.blockAt(cell.x, cell.y, cell.z) === 0,
+            window.__mc.drill().drilling && window.__mc.blockAt(cell.x, cell.y, cell.z) === 0,
           stage,
         );
         report("the drill cuts a stone voxel with the touch boring control", excavated);
