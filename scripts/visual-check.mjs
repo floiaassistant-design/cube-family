@@ -921,27 +921,26 @@ try {
   const drillParking = await until(drillPhone, () => window.__mc.drill().exit !== null);
   report("the flying drill finds safe parking in Creative", drillParking);
   if (drillParking) {
-    await drillPhone.evaluate(() => {
-      const exit = window.__mc.drill().exit;
-      if (exit) window.__mc.teleport(exit.x, exit.y, exit.z, 0, 0);
-    });
     const boardVisible = await until(drillPhone, () => {
       const button = document.querySelector(".touch-drill-ride");
-      return button && button.getBoundingClientRect().width > 0;
+      return (
+        button &&
+        !button.hidden &&
+        button.getBoundingClientRect().width > 0 &&
+        /Reach the drill|Board drill/.test(button.textContent)
+      );
     });
-    report("the flying drill has its own touch boarding button", boardVisible);
+    report("the flying drill is reachable from the touch toolbar", boardVisible);
     if (boardVisible) {
       await drillPhone.tap(".touch-drill-ride");
       const mountedDrill = await until(drillPhone, () => window.__mc.drill().mounted);
       report("the pilot can board the flying drill on a touch screen", mountedDrill);
       if (mountedDrill) {
         const stage = await drillPhone.evaluate(() => {
-          const state = window.__mc.drill();
-          const p = state.position;
-          const yaw = state.yaw;
+          const { position: p, yaw } = window.__mc.drill();
           const cell = {
             x: Math.floor(p.x - Math.sin(yaw) * 2.15),
-            y: Math.floor(p.y + 1.25),
+            y: Math.floor(p.y + 1.24),
             z: Math.floor(p.z - Math.cos(yaw) * 2.15),
           };
           window.__mc.setBlock(cell.x, cell.y, cell.z, 3);
@@ -959,10 +958,46 @@ try {
         const resized = await until(drillPhone, () => window.__mc.drill().size === 5);
         report("the drill changes from a 3x3 to a 5x5 tunnel on touch", resized);
         await drillPhone.tap(".touch-drill");
+        report(
+          "the touch button stops continuous boring",
+          await until(drillPhone, () => !window.__mc.drill().drilling),
+        );
+        const before = await drillPhone.evaluate(() => window.__mc.drill().position.y);
+        const ascent = await drillPhone.$eval(".touch-jump", (button) => {
+          const rect = button.getBoundingClientRect();
+          return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+        });
+        const touch = await drillPhone.touchscreen.touchStart(ascent.x, ascent.y);
+        const tookOff = await until(
+          drillPhone,
+          (y) => window.__mc.drill().flying && window.__mc.drill().position.y > y + 0.7,
+          before,
+        );
+        await touch.end();
+        report("the flying drill takes off with the touch ascent button", tookOff);
       }
     }
   }
   await drillPhone.browserContext().close();
+
+  const drillDesktop = await openPage("drill-desktop", pageUrl(733, "quality=low&view=4"));
+  await waitForWorld(drillDesktop, 9);
+  await drillDesktop.click("#play-button");
+  await until(drillDesktop, () => window.__mc.mode() !== "idle");
+  await drillDesktop.keyboard.press("KeyY");
+  const mountedOnDesktop = await until(drillDesktop, () => window.__mc.drill().mounted);
+  report("Y reaches and boards the drill from the desktop spawn", mountedOnDesktop);
+  if (mountedOnDesktop) {
+    await drillDesktop.keyboard.press("KeyJ");
+    const started = await until(drillDesktop, () => window.__mc.drill().drilling);
+    await drillDesktop.mouse.click(800, 250);
+    const latched = await drillDesktop.evaluate(() => window.__mc.drill().drilling);
+    report("a mouse release preserves continuous boring started by J", started && latched);
+    await drillDesktop.keyboard.press("KeyJ");
+    const stoppedByKey = await until(drillDesktop, () => !window.__mc.drill().drilling);
+    report("J stops the drill on desktop", stoppedByKey);
+  }
+  await drillDesktop.browserContext().close();
 
   // =====================================================================
   // 6. Installed build: boots with the network gone

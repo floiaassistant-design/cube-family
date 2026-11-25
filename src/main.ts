@@ -393,6 +393,14 @@ function boot(): void {
   };
   spawnDragon();
 
+  // ---- game mode: Creative (everything, unlimited) or Adventure ----
+  const modeParam = params.get("mode");
+  let mode: "creative" | "adventure" =
+    modeParam === "adventure" || modeParam === "creative"
+      ? modeParam
+      : (saved?.mode ?? worldRegistry.get(SEED)?.mode ?? "creative");
+  worldRegistry.visit(SEED, mode);
+
   // Per-world local parking; no change to the existing player save format.
   const drillStorageKey = "voxel-world:vehicle:flying-drill:v1:" + SEED.toString();
   const storedDrill = (() => {
@@ -424,8 +432,9 @@ function boot(): void {
   const drillOrigin = storedDrill ?? { x: startX + 6, z: startZ + 6 };
   const spawnDrill = (): void => {
     const p = player.position;
-    if (drill.position || Math.hypot(p.x - drillOrigin.x, p.z - drillOrigin.z) > 35) return;
-    drill.spawn(drillOrigin, terrainSurface, storedDrill);
+    if (mode !== "creative" || drill.position) return;
+    const origin = Math.hypot(p.x - drillOrigin.x, p.z - drillOrigin.z) <= 35 ? drillOrigin : p;
+    drill.spawn(origin, terrainSurface, origin === drillOrigin ? storedDrill : undefined);
   };
   spawnDrill();
   if (!saved && dragon.position) {
@@ -440,13 +449,6 @@ function boot(): void {
   if (saved) hotbar.select(saved.slot);
   const inventory = new Inventory(app, atlas.canvas, t);
 
-  // ---- game mode: Creative (everything, unlimited) or Adventure ----
-  const modeParam = params.get("mode");
-  let mode: "creative" | "adventure" =
-    modeParam === "adventure" || modeParam === "creative"
-      ? modeParam
-      : (saved?.mode ?? worldRegistry.get(SEED)?.mode ?? "creative");
-  worldRegistry.visit(SEED, mode);
   const bag = new Bag(saved?.bag);
   const fortressStore = new FortressStore(storage, SEED);
   let fortress = fortressStore.read();
@@ -635,7 +637,7 @@ function boot(): void {
     }
   };
   interaction.occupiedByEntity = (x, y, z) =>
-    dragon.occupiesBlock(x, y, z) || drill.occupiesBlock(x, y, z);
+    dragon.occupiesBlock(x, y, z) || (mode === "creative" && drill.occupiesBlock(x, y, z));
   drill.onExcavate = (edits) => {
     if (mode !== "creative" || siege?.active || edits.length === 0) return;
     editStore.recordMany(edits);
@@ -667,7 +669,7 @@ function boot(): void {
     hotbar.setCounts(adventure ? (block) => bag.count(block) : null);
     player.setFlightAllowed(!adventure);
     if (adventure) {
-      drill.drilling = false;
+      drill.stopDrilling();
       if (player.currentMount === drill) {
         drill.returnToParking();
         const exit = drill.safeExit() ?? drill.savedRiderPosition;
@@ -865,16 +867,15 @@ function boot(): void {
   };
 
   const canMountDragon = (): boolean => dragonModel.ready && dragon.canMount(player.position);
-  const canMountDrill = (): boolean =>
-    mode === "creative" && drillModel.ready && drill.canMount(player.position);
+  const canMountDrill = (): boolean => mode === "creative" && drill.canMount(player.position);
 
   // Each mount has an explicit action. The historic dragon button must never
   // silently mount the new vehicle when both are in reach.
   const toggleRide = (mount: DragonMount): boolean => {
-    if (!player.isActive || inventory.isOpen) return false;
+    if (!player.isActive || player.isUiOpen || inventory.isOpen) return false;
     if (player.riding) {
       if (player.currentMount !== mount) return false;
-      drill.drilling = false;
+      drill.stopDrilling();
       if (player.dismount()) {
         interaction.enabled = true;
         app.classList.remove("riding");
@@ -891,7 +892,37 @@ function boot(): void {
     return true;
   };
   const toggleDragonRide = (): boolean => toggleRide(dragon);
-  const toggleDrillRide = (): boolean => toggleRide(drill);
+  const toggleDrillRide = (): boolean => {
+    if (mode !== "creative" || !player.isActive || player.isUiOpen || inventory.isOpen)
+      return false;
+    if (player.riding || canMountDrill()) return toggleRide(drill);
+    spawnDrill();
+    const parking = drill.position;
+    if (parking) streamer.warmUp(parking.x, parking.z, 1);
+    const exit = drill.safeExit();
+    if (exit) {
+      player.restore({ ...player.pose(), ...exit, flying: false });
+      toggleRide(drill);
+    } else {
+      hud.announce(
+        t.locale === "fr"
+          ? "Cherche un terrain dégagé pour rejoindre la foreuse."
+          : "Find open ground to reach the drill.",
+      );
+    }
+    return true;
+  };
+  const toggleDrillCut = (): void => {
+    if (siege?.active) {
+      hud.announce(
+        t.locale === "fr"
+          ? "Forage suspendu pendant le siège."
+          : "Drilling is paused during the siege.",
+      );
+      return;
+    }
+    drill.toggleDrilling();
+  };
   const toggleCurrentRide = (): boolean =>
     toggleRide(player.currentMount ?? (canMountDragon() ? dragon : drill));
 
@@ -906,13 +937,9 @@ function boot(): void {
           player.lookBy(dx, dy);
         },
         onBreak: () => {
-          if (player.currentMount === drill) drill.drilling = !drill.drilling;
-          else interaction.breakTargetedBlock();
+          interaction.breakTargetedBlock();
         },
-        onPlace: () => {
-          if (player.currentMount === drill) drill.cycleSize();
-          else interaction.placeTargetedBlock();
-        },
+        onPlace: () => interaction.placeTargetedBlock(),
         onPause: () => {
           player.releaseControl();
         },
@@ -925,7 +952,7 @@ function boot(): void {
         onRide: toggleDragonRide,
         onDrillRide: toggleDrillRide,
         onToggleDrill: () => {
-          if (player.currentMount === drill) drill.drilling = !drill.drilling;
+          if (player.currentMount === drill) toggleDrillCut();
         },
         onCycleDrill: () => {
           if (player.currentMount === drill) drill.cycleSize();
@@ -1147,7 +1174,7 @@ function boot(): void {
     menu.markStarted();
   };
   player.onPause = () => {
-    drill.drilling = false;
+    drill.stopDrilling();
     inventory.hide();
     interaction.enabled = !player.riding;
     menu.show("main");
@@ -1190,55 +1217,38 @@ function boot(): void {
   };
 
   document.addEventListener("mousedown", (event) => {
-    if (event.button === 0 && player.currentMount === drill && player.isActive) {
-      drill.drilling = true;
-    }
+    if (
+      event.button === 0 &&
+      player.mode === "pointer" &&
+      !player.isUiOpen &&
+      !inventory.isOpen &&
+      !siege?.active &&
+      player.currentMount === drill
+    )
+      drill.triggerHeld = true;
   });
   document.addEventListener("mouseup", (event) => {
-    if (event.button === 0 && player.currentMount === drill) drill.drilling = false;
+    if (event.button === 0) drill.triggerHeld = false;
   });
   window.addEventListener("blur", () => {
-    drill.drilling = false;
+    drill.stopDrilling();
   });
 
   window.addEventListener("keydown", (e) => {
     if (e.repeat) return;
-    if (player.isActive && !inventory.isOpen && player.currentMount === drill) {
+    if (player.isActive && !player.isUiOpen && !inventory.isOpen && player.currentMount === drill) {
       if (e.code === "KeyT") {
         drill.cycleSize();
         e.preventDefault();
         return;
       }
       if (e.code === "KeyJ") {
-        drill.drilling = !drill.drilling;
+        toggleDrillCut();
         e.preventDefault();
         return;
       }
     }
-    if (
-      e.code === "KeyP" &&
-      player.isActive &&
-      !inventory.isOpen &&
-      !player.riding &&
-      mode === "creative"
-    ) {
-      spawnDrill();
-      const exit = drill.safeExit();
-      if (exit) {
-        streamer.warmUp(exit.x, exit.z, WARMUP_RADIUS_CHUNKS);
-        player.restore({ ...player.pose(), ...exit, flying: false });
-        hud.announce(
-          t.locale === "fr"
-            ? "Foreuse retrouvée. Y pour monter."
-            : "Drill located. Press Y to mount.",
-        );
-      } else {
-        hud.announce(
-          t.locale === "fr"
-            ? "Foreuse indisponible : cherche un terrain dégagé."
-            : "Drill unavailable: find open ground.",
-        );
-      }
+    if (e.code === "KeyP" && !player.riding && toggleDrillRide()) {
       e.preventDefault();
       return;
     }
@@ -1247,7 +1257,10 @@ function boot(): void {
     if (e.code === "KeyM" && player.isActive && !inventory.isOpen && mode === "creative") {
       e.preventDefault();
       if (player.isUiOpen) player.closeUi();
-      else player.openUi();
+      else {
+        drill.stopDrilling();
+        player.openUi();
+      }
       return;
     }
     if (player.isActive && !inventory.isOpen && mode === "creative") {
@@ -1291,7 +1304,7 @@ function boot(): void {
   });
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
-      drill.drilling = false;
+      drill.stopDrilling();
       persist();
       sound.setPaused(true);
     } else if (player.isActive) {
@@ -1498,7 +1511,7 @@ function boot(): void {
           }
           if (pad.lookX !== 0 || pad.lookY !== 0) player.lookBy(pad.lookX, pad.lookY);
           if (pad.breakBlock) {
-            if (player.currentMount === drill) drill.drilling = !drill.drilling;
+            if (player.currentMount === drill) toggleDrillCut();
             else interaction.breakTargetedBlock();
           }
           if (pad.placeBlock) {
@@ -1542,15 +1555,13 @@ function boot(): void {
     const drillDistance = drillPosition
       ? Math.hypot(x - drillPosition.x, z - drillPosition.z)
       : Infinity;
-    if (drillPosition) {
-      drillModel.update(
-        player.isActive ? dt : 0,
-        drill,
-        drillPosition,
-        drillDistance,
-        player.currentMount === drill,
-      );
-    }
+    drillModel.update(
+      player.isActive ? dt : 0,
+      drill,
+      mode === "creative" ? drillPosition : null,
+      drillDistance,
+      player.currentMount === drill,
+    );
     const dragonAvailable =
       controlsVisible && (player.currentMount === dragon || (!player.riding && canMountDragon()));
     const drillAvailable =
@@ -1562,15 +1573,15 @@ function boot(): void {
         player.riding,
         player.flightAllowed,
       );
+      const drillRideLabel =
+        player.currentMount === drill
+          ? t("drillLeave")
+          : drillAvailable
+            ? t("drillBoard")
+            : t("drillFind");
       touchControls.setDrillRide(
-        drillAvailable
-          ? t.locale === "fr"
-            ? player.currentMount === drill
-              ? "Quitter foreuse"
-              : "Monter foreuse"
-            : player.currentMount === drill
-              ? "Leave drill"
-              : "Board drill"
+        controlsVisible && mode === "creative" && (!player.riding || player.currentMount === drill)
+          ? drillRideLabel
           : "",
       );
       touchControls.setDrill(
@@ -1584,26 +1595,25 @@ function boot(): void {
       );
     }
     let hint = "";
-    if (drillAvailable) {
+    if (drillAvailable && !touch) {
       hint =
         player.currentMount === drill
-          ? t.locale === "fr"
-            ? "Foreuse " +
-              drill.size.toString() +
-              "×" +
-              drill.size.toString() +
-              " · Clic pour forer · T diamètre · Espace monter · Ctrl descendre"
-            : "Drill " +
-              drill.size.toString() +
-              "×" +
-              drill.size.toString() +
-              " · Click to bore · T size · Space climb · Ctrl descend"
-          : t.locale === "fr"
-            ? "[Y] Monter dans la foreuse"
-            : "[Y] Board the drill";
+          ? t(player.mode === "pointer" ? "drillPointerHint" : "drillDragHint", {
+              size: drill.size,
+              status: t(drill.drilling ? "drillOn" : "drillOff"),
+            })
+          : `[Y] ${t("drillBoard")}`;
+    } else if (
+      controlsVisible &&
+      !touch &&
+      mode === "creative" &&
+      !player.riding &&
+      !dragonAvailable
+    ) {
+      hint = `[Y] ${t("drillFind")}`;
     } else if (controlsVisible && !rideAvailable && dragonModel.ready && dragonDistance < 18) {
       hint = t("dragonApproachHint");
-    } else if (rideAvailable && (!touch || player.riding)) {
+    } else if (dragonAvailable && (!touch || player.riding)) {
       hint = touch
         ? t(dragon.flying ? "dragonTouchFlyingHint" : "dragonTouchTakeoffHint")
         : player.riding
@@ -1637,7 +1647,7 @@ function boot(): void {
       }
     }
     syncGateVisuals();
-    if (siege?.active) drill.drilling = false;
+    if (siege?.active) drill.stopDrilling();
     const nearbySiege =
       siege?.zombies.filter(
         (enemy) =>
@@ -1901,7 +1911,7 @@ function boot(): void {
           ? drillModel.visibleModel
           : player.currentMount === dragon
             ? dragonModel.visibleModel
-            : drillDistance < dragonDistance
+            : drillModel.visibleModel && drillDistance < dragonDistance
               ? drillModel.visibleModel
               : dragonModel.visibleModel,
       );

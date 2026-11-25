@@ -1,6 +1,5 @@
 # Foreuse volante — mode Libre
 
-**Statut : en développement sur branche GitHub ; non fusionné et non publié.**
 Identifiant de catalogue : flying-drill. Modèle voxel original construit dans le code :
 src/render/flight-drill-model.ts (pas de GLB ni de téléchargement externe).
 
@@ -9,34 +8,35 @@ src/render/flight-drill-model.ts (pas de GLB ni de téléchargement externe).
 La foreuse est un véhicule indépendant du dragon, disponible exclusivement dans le
 mode Libre (Creative). Elle peut être montée à proximité et pilotée avec les commandes
 standard des montures : ZQSD/WASD, souris, Espace pour monter, Ctrl pour descendre,
-Maj pour accélérer. La caméra suit le personnage installé dans le cockpit.
+Maj pour accélérer. La caméra suit le pilote en vue trois quarts. Le foret suit la visée, même en
+stationnaire. Les commandes arrière et latérales déplacent la machine en gardant
+le foret orienté vers la visée.
 La foreuse ne consomme pas de carburant. Le joueur ne peut descendre que sur une
 zone stable, comme avec le dragon.
 
-- **P** : rejoindre la foreuse depuis le mode Libre, si une zone de débarquement
-  sûre est disponible (ne fait pas apparaître une nouvelle machine).
-- **R** : monter sur le dragon voisin ou descendre de la monture actuelle.
-- **Y** : monter dans la foreuse voisine ou en descendre.
-- **Clic gauche maintenu** : forer ; **J** : activer / arrêter le forage continu.
-- **T** : changer le diamètre entre 1 × 1, 3 × 3 et 5 × 5 blocs.
-- **Tactile** : boutons séparés pour monter sur le dragon ou dans la foreuse,
-  puis boutons « Forer » et diamètre en complément des commandes de vol.
+- **Y** permet de rejoindre la foreuse et de monter, ou de descendre après avoir atterri.
+  **P** permet aussi de la rejoindre à pied depuis le mode Libre.
+- **J** active ou arrête le forage continu. Avec la souris verrouillée, un clic gauche
+  maintenu fore jusqu’au relâchement, indépendamment du réglage continu.
+- **T** change le diamètre entre 1 × 1, 3 × 3 et 5 × 5 blocs.
+- **Tactile** : le bouton « Rejoindre la foreuse » reste accessible en mode Libre.
+  Une fois à bord, « Forer » et « Arrêter » commandent le foret. Maintenir la
+  flèche vers le haut pour décoller et la flèche vers le bas pour atterrir.
 - **Manette** : action casser pour basculer le forage et action poser pour le diamètre.
 
-Le foret tourne pendant le forage. Le réacteur arrière et les stabilisateurs latéraux
-sont représentés par des volumes luminescents. La silhouette et le pilote sont visibles
-en vue externe, y compris dans le rendu CPU de secours lorsqu'il est affiché.
+Le modèle reprend la planche validée : mèche étagée à dents, coque cuivre et acier,
+pilote avec lunettes et foulard, phares et réacteur bleu. Le foret et les propulseurs
+s’animent. Les deux moteurs de rendu utilisent la même géométrie.
 
 ## Règles et sécurité des mondes
 
 Le forage est **progressif et borné à 8 blocs par batch**. La zone de creusement
-est une section perpendiculaire à la direction du véhicule et à son inclinaison.
+suit la visée. Chaque rayon traite d’abord le bloc rencontré sur la paroi.
 Les blocs modifiés sont enregistrés via l'EditStore existant, sans modifier les IDs
 de blocs ni le format historique des sauvegardes.
 
 Les blocs des chunks **non chargés** et les couches hors des limites verticales
-ne sont pas creusés par anticipation. L'eau est ignorée pour ne pas engendrer
-des incohérences de fluide. La mécanique ne fonctionne pas en Aventure ni pendant
+ne sont pas creusés par anticipation. L’eau et la roche mère bloquent le rayon concerné. La mécanique ne fonctionne pas en Aventure ni pendant
 une session de siège active. Le diamètre 1 × 1 est un mode de précision : le
 véhicule lui-même ne traverse pas un trou aussi étroit.
 
@@ -57,9 +57,8 @@ la mise en commun devra attendre une autorité serveur.
 La collision de monture est désormais paramétrable dans DragonMount pour permettre
 une coque plus étroite sans toucher au comportement physique du dragon.
 
-## Validation restante
+## Vérifications
 
-Exécuter lint, Prettier, TypeScript, Vitest, tests navigateur, et contrôles
-de catalogue. Puis vérifier les commandes réelles sur PC, Chrome Android et
-Safari iOS/iPadOS avant fusion/publication. Attention à la capacité de stockage
-du navigateur en cas de très longues excavations ; garder des sauvegardes exportées.
+Les tests ciblent la traversée d’une paroi, le virage à l’arrêt, le vol stationnaire,
+les limites du foret, les commandes clavier et les boutons tactiles dans Chromium.
+Tester sur appareils physiques avant de conclure sur le confort tactile et la fluidité.
