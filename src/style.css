@@ -1067,7 +1067,39 @@ kbd {
   color: var(--ink);
   pointer-events: none;
 }
-#app.hud-hidden #adventure-status {
+#first-night {
+  position: absolute;
+  top: max(82px, calc(env(safe-area-inset-top) + 72px));
+  left: max(12px, env(safe-area-inset-left));
+  z-index: 5;
+  width: min(285px, 54vw);
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--glass-strong);
+  font-size: 0.8rem;
+  line-height: 1.3;
+  color: var(--ink);
+  pointer-events: none;
+}
+#first-night-title {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--accent);
+}
+.first-night-compass:not([hidden]) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 3px;
+}
+.first-night-compass > span:first-child {
+  color: var(--accent);
+  font-size: 1.2rem;
+  line-height: 1;
+}
+#app.hud-hidden #adventure-status,
+#app.hud-hidden #first-night {
   display: none;
 }
 .secondary-link {

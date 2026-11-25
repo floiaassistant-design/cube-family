@@ -62,6 +62,7 @@ async function measureTouchHud(page) {
       hotbar: fits("#hotbar"),
       actions: fits(".touch-buttons"),
       pauseAndBag: fits(".touch-top"),
+      firstNight: fits("#first-night"),
     };
   });
 }
@@ -97,6 +98,7 @@ export async function auditTouchViewports(page, report, until) {
 
     await page.click("#play-button");
     const active = await until(page, () => window.__mc?.mode() === "drag", undefined, 10_000);
+    await page.evaluate(() => window.__mc.setMode("adventure"));
     // The controls are updated on the next animation frame, not immediately
     // in the click handler. Wait for actual visibility before measuring.
     const hudReady = await until(
@@ -107,6 +109,7 @@ export async function auditTouchViewports(page, report, until) {
         return (
           actions &&
           top &&
+          document.querySelector("#first-night")?.hidden === false &&
           getComputedStyle(actions).display !== "none" &&
           getComputedStyle(top).display !== "none"
         );
@@ -116,10 +119,11 @@ export async function auditTouchViewports(page, report, until) {
     );
     const hud = await measureTouchHud(page);
     report(
-      `responsive ${device.name}: play, hotbar, touch actions and pause fit the viewport`,
+      `responsive ${device.name}: hotbar, touch actions, pause and First Night fit the viewport`,
       active && hudReady && Object.values(hud).every(Boolean),
       JSON.stringify(hud),
     );
+    await page.evaluate(() => window.__mc.setMode("creative"));
     await page.evaluate(() => {
       const pause = document.querySelector(".touch-pause");
       if (!pause) return;
