@@ -36,6 +36,15 @@ describe("player save", () => {
     expect(loadPlayerSave(storage, 7)).toEqual(save);
   });
 
+  it("round-trips the first-night map without changing old saves", () => {
+    const storage = memory();
+    const firstNight = { step: "map", ruin: { x: -12, y: 60, z: 30 } };
+    storePlayerSave(storage, 7, { ...save, firstNight });
+    expect(loadPlayerSave(storage, 7)?.firstNight).toEqual(firstNight);
+    storePlayerSave(storage, 8, save);
+    expect(loadPlayerSave(storage, 8)?.firstNight).toBeUndefined();
+  });
+
   it("round-trips equipped items and ignores untrusted item ids", () => {
     const storage = memory();
     for (const heldEquipment of [COPPER_SWORD, WOOD_SHIELD, null] as const) {

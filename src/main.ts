@@ -6,9 +6,11 @@ import { type DiscoveryId, Journal } from "./game/discoveries";
 import { DragonMount } from "./game/dragon";
 import { FlyingDrill } from "./game/flight-drill";
 import { attackDamage } from "./game/equipment";
+import { FirstNight, isFirstNightShelter } from "./game/first-night";
+import { findWatchersRuin, WatchersRuin } from "./game/watchers-ruin";
 import { createFortressBlueprint, FORTRESS_CENTER } from "./game/siege/fortress";
 import { findFortressSite, FortressStore } from "./game/siege/fortress-store";
-import { SiegeGateOverlay, type UpdatedGateChunk } from "./game/siege/gate-overlay";
+import { SiegeGateOverlay } from "./game/siege/gate-overlay";
 import type { ArmoryPurchase } from "./game/siege/armory";
 import { SiegeController, type SiegeReport } from "./game/siege/session";
 import {
@@ -57,6 +59,7 @@ import { aabbFromFeetPosition, aabbIntersectsSolid, type Vec3 } from "./player/p
 import { raycastVoxels } from "./player/raycast";
 import { defaultSettings, type Settings, SettingsStore } from "./settings";
 import { renderBlockIcon } from "./ui/block-icon";
+import { FirstNightPanel } from "./ui/first-night-panel";
 import { Hotbar, sanitizeHotbar } from "./ui/hotbar";
 import { Hud } from "./ui/hud";
 import { Inventory, type InventoryState } from "./ui/inventory";
@@ -64,7 +67,7 @@ import { Menu } from "./ui/menu";
 import { SiegePanel } from "./ui/siege-panel";
 import { isTouchDevice, TouchControls } from "./ui/touch-controls";
 import { BLOCKS, BlockId, isSolid } from "./world/blocks";
-import { CHUNK_HEIGHT, worldToChunk } from "./world/coords";
+import { CHUNK_HEIGHT, type ChunkCoord, worldToChunk } from "./world/coords";
 import { EditStore, type KeyValueStorage } from "./world/edit-store";
 import { loadPlayerSave, storePlayerSave } from "./world/player-save";
 import { WorldRegistry } from "./world/world-registry";
@@ -144,8 +147,8 @@ declare global {
       settings: () => Record<string, string | number | boolean>;
       /** Forces the weather (overcast, rain in 0..1); null returns to the forecast. */
       setWeather: (overcast: number | null, rain?: number) => void;
-      /** Stages a scene for screenshots; not recorded as a player edit. */
-      setBlock: (x: number, y: number, z: number, id: number) => void;
+      /** Stages a test scene; pass record to persist the staged edit. */
+      setBlock: (x: number, y: number, z: number, id: number, record?: boolean) => void;
       siege: () => SiegeReport | null;
     };
   }
@@ -328,7 +331,11 @@ function boot(): void {
     app.appendChild(cpuHand);
   }
 
+  const saved = loadPlayerSave(storage, SEED);
   const editStore = new EditStore(storage, SEED);
+  const firstNight = new FirstNight(saved?.firstNight);
+  const columnHeight = (x: number, z: number): number => sampleColumn(x, z).terrainHeight;
+  let watchersRuin = firstNight.ruin ? new WatchersRuin(firstNight.ruin, columnHeight) : null;
   let gateOverlay: SiegeGateOverlay | null = null;
   const streamer = new ChunkStreamer(world, {
     // One extra ring of data beyond what's drawn: lighting a chunk reads
@@ -338,6 +345,8 @@ function boot(): void {
     shape: webgl ? "disc" : "square",
     meshWhenSurrounded: webgl !== null,
     onLoad: (cx, cz) => {
+      const chunk = world.getChunk(cx, cz);
+      if (chunk) watchersRuin?.apply(chunk, editStore);
       gateOverlay?.applyToLoadedChunk(world, cx, cz);
       chunkMeshes?.chunkLoaded(cx, cz);
     },
@@ -361,7 +370,6 @@ function boot(): void {
   streamer.attachGenerator(generator);
 
   // Start where the player left off, or somewhere pleasant.
-  const saved = loadPlayerSave(storage, SEED);
   const spawn = findPleasantSpawn(SEED);
   const startX = saved?.x ?? spawn.x;
   const startZ = saved?.z ?? spawn.z;
@@ -469,21 +477,11 @@ function boot(): void {
     : null;
   if (fortress) gateOverlay = new SiegeGateOverlay(fortress);
 
-  // Batch temporary door changes into one chunk mirror and remesh per chunk.
-  // Never call editStore.record(): destruction belongs to the event only.
-  const syncGateVisuals = (): void => {
-    if (!gateOverlay) return;
-    const report = siege?.report;
-    const active = siege?.active ?? false;
-    const modified: UpdatedGateChunk[] = gateOverlay.sync(
-      world,
-      active && (report?.outerGate.health ?? 0) > 0,
-      active && (report?.innerGate.health ?? 0) > 0,
-    );
+  const refreshChangedChunks = (modified: readonly ChunkCoord[]): void => {
     for (const { cx, cz } of modified) {
       chunkMeshes?.chunkLoaded(cx, cz);
       chunkMeshes?.updateChunk(cx, cz, true);
-      // Adjacent lighting is influenced by door blocks too.
+      // Light can travel across the chunk boundary.
       for (let dx = -1; dx <= 1; dx++) {
         for (let dz = -1; dz <= 1; dz++) {
           if (dx === 0 && dz === 0) continue;
@@ -491,6 +489,19 @@ function boot(): void {
         }
       }
     }
+  };
+  // Door destruction belongs to the event only.
+  const syncGateVisuals = (): void => {
+    if (!gateOverlay) return;
+    const report = siege?.report;
+    const active = siege?.active ?? false;
+    refreshChangedChunks(
+      gateOverlay.sync(
+        world,
+        active && (report?.outerGate.health ?? 0) > 0,
+        active && (report?.innerGate.health ?? 0) > 0,
+      ),
+    );
   };
   const standNear = (x: number, z: number, y: number, tall: boolean): number | null => {
     const bx = Math.floor(x);
@@ -586,6 +597,7 @@ function boot(): void {
     }
   };
   const hud = new Hud(app, t("digProgress"));
+  const firstNightPanel = new FirstNightPanel(app, t);
   hud.setStatsVisible(settings.values.showStats);
   const dragonHint = document.createElement("div");
   dragonHint.id = "dragon-hint";
@@ -735,8 +747,57 @@ function boot(): void {
       mode,
       bag: bag.toJSON(),
       journal: journal.toJSON(),
+      firstNight: firstNight.toJSON() ?? undefined,
       wildlife: wildlife.save(),
     });
+  };
+
+  const shelterSolid = (x: number, y: number, z: number): boolean => {
+    const block = world.getBlock(x, y, z);
+    return block !== BlockId.CAMP_BED && BLOCKS[block].sway !== "leaves" && isSolid(block);
+  };
+  const chooseRuin = () =>
+    findWatchersRuin(player.position, spawn, columnHeight, (...bounds) =>
+      editStore.hasEditsInRect(...bounds),
+    );
+  const updateFirstNight = (visible: boolean, night: boolean): void => {
+    if (mode !== "adventure" || !visible || player.riding || document.hidden) {
+      firstNightPanel.update(null);
+      return;
+    }
+    const step = firstNight.step;
+    const sheltered =
+      (step === "shelter" || step === "night") &&
+      isFirstNightShelter(player.position, shelterSolid, (x, y, z) => editStore.hasEdit(x, y, z));
+    if (firstNight.advance(bag, sheltered, night, player.position, chooseRuin)) {
+      const site = firstNight.ruin;
+      if (site && !watchersRuin) {
+        watchersRuin = new WatchersRuin(site, columnHeight);
+        for (const { cx, cz } of watchersRuin.chunks) {
+          const chunk = world.getChunk(cx, cz);
+          if (chunk) watchersRuin.apply(chunk, editStore);
+        }
+        refreshChangedChunks(watchersRuin.chunks);
+        hud.announce(t("watchersMapFound"));
+        sound.discover();
+      } else if (firstNight.step === "visited") {
+        hud.announce(t("watchersRuinFound"));
+        sound.discover();
+      }
+      persist();
+    }
+    const site = firstNight.step === "map" ? firstNight.ruin : null;
+    const dx = site ? site.x + 0.5 - player.position.x : 0;
+    const dz = site ? site.z + 0.5 - player.position.z : 0;
+    firstNightPanel.update(
+      firstNight.objective(bag, sheltered),
+      site
+        ? {
+            angle: ((player.eyeYaw - Math.atan2(-dx, -dz)) * 180) / Math.PI,
+            distance: Math.hypot(dx, dz),
+          }
+        : undefined,
+    );
   };
 
   interaction.onAttack = () => {
@@ -1458,10 +1519,11 @@ function boot(): void {
       setWeather: (overcast, amount = 0) => {
         forcedWeather = overcast === null ? null : { overcast, rain: amount };
       },
-      setBlock: (x, y, z, id) => {
+      setBlock: (x, y, z, id, record = false) => {
         if (!(id in BLOCKS) || y < 1 || y >= CHUNK_HEIGHT) return;
         world.setBlock(x, y, z, id as BlockId);
         chunkMeshes?.blockChanged(x, y, z, id);
+        if (record) editStore.record(x, y, z, id as BlockId);
       },
     };
   }
@@ -1718,6 +1780,7 @@ function boot(): void {
     }
 
     interaction.update(dt);
+    updateFirstNight(controlsVisible, night);
     const digging = interaction.digProgress;
     if (digVeil) {
       digVeil.visible = digging !== null;

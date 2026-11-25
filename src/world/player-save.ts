@@ -26,6 +26,7 @@ export interface PlayerSave {
   /** Raw saved bag and journal; validated by the classes that own them. */
   readonly bag?: unknown;
   readonly journal?: unknown;
+  readonly firstNight?: unknown;
   readonly wildlife?: unknown;
   readonly dragon?: DragonParking | undefined;
 }
@@ -73,6 +74,7 @@ export function loadPlayerSave(storage: KeyValueStorage | null, seed: number): P
       mode: p.mode === "adventure" ? "adventure" : "creative",
       bag: p.bag,
       journal: p.journal,
+      ...(p.firstNight === undefined ? {} : { firstNight: p.firstNight }),
       ...(p.wildlife === undefined ? {} : { wildlife: p.wildlife }),
       dragon: readDragon(p.dragon),
     };

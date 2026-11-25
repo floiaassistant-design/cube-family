@@ -42,6 +42,12 @@ export class EditStore {
     this.save();
   }
 
+  /** A placed block or an excavation takes precedence over generated scenery. */
+  hasEdit(x: number, y: number, z: number): boolean {
+    const cells = this.edits.get(chunkKey(worldToChunk(x), worldToChunk(z)));
+    return cells?.has(Chunk.index(worldToLocal(x), y, worldToLocal(z))) ?? false;
+  }
+
   /** Batch structure edits: persist once rather than once per voxel. */
   recordMany(edits: readonly { x: number; y: number; z: number; id: BlockId }[]): void {
     for (const edit of edits) {

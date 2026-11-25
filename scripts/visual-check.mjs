@@ -1237,6 +1237,13 @@ try {
       startMode.counts === 9,
     JSON.stringify(startMode),
   );
+  report(
+    "The First Night shows a first wood-gathering goal in Adventure",
+    await until(adventure, () => {
+      const card = document.querySelector("#first-night");
+      return !card?.hidden && card?.textContent?.includes("tree trunk");
+    }),
+  );
 
   await adventure.evaluate(() => window.__mc.setLook(0, -Math.PI / 2));
   report(
@@ -1395,6 +1402,89 @@ try {
       kept.found >= 2,
     JSON.stringify(kept),
   );
+  await adventure.click("#play-button");
+  const buildingGoal = await until(adventure, () =>
+    document.querySelector("#first-night")?.textContent?.includes("Build a roof"),
+  );
+  report("The First Night resumes after crafting the pick", buildingGoal);
+  await adventure.evaluate(() => {
+    const game = window.__mc;
+    const p = game.position();
+    const x = Math.floor(p.x) + 5;
+    const z = Math.floor(p.z) + 5;
+    const y = game.groundAt(x, z) + 3;
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -2; dz <= 1; dz++) {
+        game.setBlock(x + dx, y - 1, z + dz, 14, true);
+        game.setBlock(x + dx, y, z + dz, 0, true);
+        game.setBlock(x + dx, y + 1, z + dz, 0, true);
+        game.setBlock(x + dx, y + 2, z + dz, 14, true);
+      }
+    }
+    for (const [dx, dz] of [
+      [-1, 0],
+      [1, 0],
+      [0, -2],
+    ]) {
+      game.setBlock(x + dx, y, z + dz, 14, true);
+      game.setBlock(x + dx, y + 1, z + dz, 14, true);
+    }
+    game.setBlock(x, y, z - 1, 38, true);
+    game.teleport(x + 0.5, y + 0.02, z + 0.5, 0, -0.55);
+    game.setTime(0.52);
+  });
+  report(
+    "A player-built refuge with an open entrance qualifies before dusk",
+    await until(adventure, () =>
+      document.querySelector("#first-night")?.textContent?.includes("Shelter ready"),
+    ),
+  );
+  await adventure.evaluate(() => window.__mc.setTime(0.83));
+  const insideAtNight = await until(adventure, () =>
+    document.querySelector("#first-night")?.textContent?.includes("Stay sheltered until dawn"),
+  );
+  if (insideAtNight) {
+    await adventure.evaluate(() => {
+      const canvas = document.pointerLockElement ?? document.querySelector("#app canvas");
+      canvas?.dispatchEvent(new MouseEvent("mousedown", { button: 2, buttons: 2, bubbles: true }));
+      document.dispatchEvent(new MouseEvent("mouseup", { button: 2, bubbles: true }));
+    });
+  }
+  const gotMap =
+    insideAtNight &&
+    (await until(
+      adventure,
+      () => document.querySelector("#first-night-title")?.textContent?.includes("Watchers"),
+      undefined,
+      8_000,
+    ));
+  report("Sleeping in the refuge awards the directional map at dawn", gotMap);
+  if (gotMap) {
+    await adventure.reload({ waitUntil: "domcontentloaded" });
+    await waitForWorld(adventure, 9);
+    await adventure.click("#play-button");
+    const keptMap = await until(adventure, () =>
+      document.querySelector("#first-night-title")?.textContent?.includes("Watchers"),
+    );
+    const location = await adventure.evaluate(
+      () => JSON.parse(window.localStorage.getItem("voxel-world:player:v2:707"))?.firstNight?.ruin,
+    );
+    const visited =
+      keptMap &&
+      location &&
+      (await until(
+        adventure,
+        (ruin) => {
+          window.__mc.teleport(ruin.x + 0.5, ruin.y + 1.02, ruin.z + 0.5, 0, 0);
+          return window.__mc.blockAt(ruin.x - 1, ruin.y + 1, ruin.z - 1) === 35;
+        },
+        location,
+      ));
+    report(
+      "The map survives reload and leads to mineable copper at a streamed ruin",
+      visited && (await until(adventure, () => document.querySelector("#first-night")?.hidden)),
+    );
+  }
   await adventure.close();
 
   // A real in-world fortress smoke test: place it through the same button

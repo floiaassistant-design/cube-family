@@ -19,6 +19,7 @@ PC et mobile, plutôt que de maintenir des versions du gameplay divergentes.
 - `src/player/` et `src/input/` : déplacements, physiques et commandes.
 - `src/game/` : règles des créatures, montures, équipement, recettes et combats.
   Le module `equipment.ts` isole les nouveaux effets d'armes et de défense.
+- `src/game/first-night.ts` : objectifs et détection de l'abri de La Première Nuit. La progression et la carte sont des champs optionnels de la sauvegarde du joueur. `watchers-ruin.ts` génère la ruine au chargement des chunks en respectant les modifications du joueur. Le panneau localisé est dans `src/ui/first-night-panel.ts`.
 - `src/render/` : modèles 3D, WebGL et solution de repli CPU.
   `equipment-models.ts` charge localement les GLB d'équipements à la demande.
 - `src/ui/`, `src/i18n.ts` : HUD, menus, accès tactile et traductions.
