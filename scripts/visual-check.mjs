@@ -167,6 +167,90 @@ async function colorVariety(page) {
   }, b64);
 }
 
+async function checkDrillLamp(page, renderer) {
+  const target = await page.evaluate(() => {
+    const { position, yaw } = window.__mc.drill();
+    const dx = -Math.sin(yaw);
+    const dz = -Math.cos(yaw);
+    const cell = {
+      x: Math.floor(position.x + dx * 3),
+      y: Math.floor(position.y + 1.24),
+      z: Math.floor(position.z + dz * 3),
+    };
+    for (let row = -2; row <= 3; row++) {
+      for (let side = -2; side <= 2; side++) {
+        const x = cell.x + (Math.abs(dx) > Math.abs(dz) ? 0 : side);
+        const z = cell.z + (Math.abs(dx) > Math.abs(dz) ? side : 0);
+        window.__mc.setBlock(x, cell.y + row, z, 3);
+      }
+    }
+    window.__mc.setTime(0.98);
+    window.__mc.setWeather(0);
+    return cell;
+  });
+  const centered = await until(
+    page,
+    (expected) => {
+      const hit = window.__mc.target();
+      const crosshair = document.querySelector("#crosshair");
+      return (
+        hit?.x === expected.x &&
+        hit.y === expected.y &&
+        hit.z === expected.z &&
+        crosshair?.getBoundingClientRect().width > 0
+      );
+    },
+    target,
+  );
+  report(
+    `${renderer} drill crosshair targets the wall directly ahead`,
+    centered,
+    centered
+      ? ""
+      : JSON.stringify({ target, actual: await page.evaluate(() => window.__mc.target()) }),
+  );
+
+  async function capture(enabled) {
+    await page.evaluate(async (lampOn) => {
+      window.__mc.setDrillLamp(lampOn);
+      await new Promise((resolve) =>
+        window.requestAnimationFrame(() => window.requestAnimationFrame(resolve)),
+      );
+    }, enabled);
+    return page.screenshot({ encoding: "base64" });
+  }
+  const off = await capture(false);
+  const on = await capture(true);
+  const brightened = await page.evaluate(
+    async ({ off, on }) => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 128;
+      canvas.height = 72;
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      async function pixels(data) {
+        const image = new Image();
+        image.src = `data:image/png;base64,${data}`;
+        await image.decode();
+        ctx.drawImage(image, 0, 0, 128, 72);
+        return ctx.getImageData(44, 21, 40, 30).data;
+      }
+      const dark = await pixels(off);
+      const lit = await pixels(on);
+      let brighter = 0;
+      for (let i = 0; i < lit.length; i += 4) {
+        if (lit[i] - dark[i] > 24 && lit[i + 1] - dark[i + 1] > 20) brighter++;
+      }
+      return brighter;
+    },
+    { off, on },
+  );
+  report(
+    `${renderer} headlamp visibly brightens the terrain`,
+    brightened > 35,
+    `${brightened} pixels brighter`,
+  );
+}
+
 /** Software rendering can be slow, and the game simulates in real time —
  * so instead of sleeping a fixed time and hoping enough frames ran, wait
  * for the thing itself, with a generous ceiling. */
@@ -1024,6 +1108,34 @@ try {
     report("the dragon stays at its own rendered position during drill flight", separateMounts);
   }
   await drillDesktop.browserContext().close();
+
+  for (const renderer of ["webgl", "cpu"]) {
+    const disableWebGL = () => {
+      const original = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function patched(type, ...rest) {
+        if (String(type).startsWith("webgl")) return null;
+        return original.call(this, type, ...rest);
+      };
+    };
+    const lampPage = await openPage(
+      `${renderer}-drill-lamp`,
+      pageUrl(733, "quality=low&view=4"),
+      undefined,
+      renderer === "cpu" ? disableWebGL : undefined,
+    );
+    await waitForWorld(lampPage, 9);
+    await lampPage.click("#play-button");
+    await until(lampPage, () => window.__mc.mode() !== "idle");
+    await lampPage.keyboard.press("KeyY");
+    const mounted = await until(
+      lampPage,
+      (expected) => window.__mc.drill().mounted && window.__mc.renderer() === expected,
+      renderer,
+    );
+    if (mounted) await checkDrillLamp(lampPage, renderer);
+    else report(`${renderer} headlamp scenario can mount the drill`, false);
+    await lampPage.browserContext().close();
+  }
 
   // =====================================================================
   // 6. Installed build: boots with the network gone

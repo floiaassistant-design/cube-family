@@ -226,28 +226,23 @@ export class DragonMount {
     return x < max.x && x + 1 > min.x && y < max.y && y + 1 > min.y && z < max.z && z + 1 > min.z;
   }
 
-  private cameraDistance(origin: Vec3, direction: Vec3, distance: number): number {
+  protected cameraDistance(origin: Vec3, direction: Vec3, distance: number): number {
     const hit = raycastVoxels(origin, direction, distance, this.obstacle);
     return hit ? Math.max(0, hit.distance - 0.22) : distance;
-  }
-
-  protected cameraFraming(aspect: number) {
-    return { shoulder: 0.5, height: 0.6, distance: aspect < 1 ? 8.6 : 7.7 };
   }
 
   /** A rear three-quarter view keeps the rider in front of the camera and
    * the head beyond the saddle, even when steering with the view turned. */
   mountedCamera(position: Vec3, lookYaw: number, lookPitch: number, aspect: number) {
     const seat = this.seat(position);
-    const framing = this.cameraFraming(aspect);
-    const focus = { ...seat, y: seat.y + framing.height };
+    const focus = { ...seat, y: seat.y + 0.6 };
     const relative = lookYaw - this.yaw;
     const orbit = Math.max(
       -1.08,
-      Math.min(1.08, Math.atan2(Math.sin(relative), Math.cos(relative)) + framing.shoulder),
+      Math.min(1.08, Math.atan2(Math.sin(relative), Math.cos(relative)) + 0.5),
     );
     const pitch = Math.max(-0.69, Math.min(-0.19, lookPitch - 0.42));
-    const wantedDistance = framing.distance;
+    const wantedDistance = aspect < 1 ? 8.6 : 7.7;
     const shot = (yaw: number, tilt: number) => {
       const direction = forwardVector(yaw);
       const back = {

@@ -8,8 +8,9 @@ src/render/flight-drill-model.ts (pas de GLB ni de téléchargement externe).
 La foreuse est un véhicule indépendant du dragon, disponible exclusivement dans le
 mode Libre (Creative). Elle peut être montée à proximité et pilotée avec les commandes
 standard des montures : ZQSD/WASD, souris, Espace pour monter, Ctrl pour descendre,
-Maj pour accélérer. La caméra suit le pilote en vue trois quarts. Le foret suit la visée, même en
-stationnaire. Les commandes arrière et latérales déplacent la machine en gardant
+Maj pour accélérer. La caméra est centrée derrière la foreuse. Le viseur au milieu
+de l’écran pointe sur la première surface que le centre du foret peut atteindre,
+y compris en stationnaire. Les commandes arrière et latérales déplacent la machine en gardant
 le foret orienté vers la visée.
 La foreuse ne consomme pas de carburant. Le joueur ne peut descendre que sur une
 zone stable, comme avec le dragon.
@@ -29,6 +30,9 @@ pilote avec lunettes et foulard, phares et réacteur bleu. Le foret et les propu
 s’animent. Les deux moteurs de rendu utilisent la même géométrie.
 Chaque monture est dessinée à sa propre position. Le lissage de la position
 s’applique à la monture pilotée.
+Le phare s’allume à l’embarquement et suit le foret. Son faisceau éclaire les
+surfaces jusqu’à 18 blocs et les obstacles lui font de l’ombre. Le terrain et les
+sauvegardes sont indépendants de cet éclairage.
 
 ## Règles et sécurité des mondes
 
@@ -52,6 +56,7 @@ la mise en commun devra attendre une autorité serveur.
 - src/game/flight-drill.ts — choix du diamètre, planification de creusement,
   budget par intervalle et variante de monture
 - src/render/flight-drill-model.ts — géométrie voxel, pilote et animations
+- src/render/drill-headlamp.ts — cône lumineux et grille d’occlusion commune à WebGL et au rendu CPU
 - src/ui/touch-controls.ts — boutons tactiles dédiés
 - src/main.ts — raccordement aux systèmes existants, sauvegarde, messages et HUD
 - src/game/flight-drill.test.ts — tests purs pour les zones de creusement

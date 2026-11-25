@@ -191,7 +191,7 @@ canvas {
 #app.hud-hidden #crosshair,
 #app.hud-hidden #dig-hint,
 #app.hud-hidden #dig-progress,
-#app.riding #crosshair,
+#app.riding:not(.drill-aim) #crosshair,
 #app.hud-hidden #hotbar,
 #app.hud-hidden #toast,
 #app.hud-hidden #fps,
@@ -199,6 +199,13 @@ canvas {
 #app.hud-hidden .touch-buttons,
 #app.hud-hidden .touch-top {
   display: none !important;
+}
+
+#app.drill-aim #crosshair {
+  width: 14px;
+  height: 14px;
+  mix-blend-mode: normal;
+  filter: drop-shadow(0 1px 1px #000);
 }
 
 #dragon-hint {
