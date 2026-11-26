@@ -1,7 +1,7 @@
 import { CHUNK_HEIGHT } from "../../world/coords";
 import type { KeyValueStorage } from "../../world/edit-store";
 import { SEA_LEVEL, type ColumnProfile } from "../../world/terrain";
-import { FORTRESS_SIZE, type FortressLocation } from "./fortress";
+import { FORTRESS_CLEARANCE, FORTRESS_SIZE, type FortressLocation } from "./fortress";
 
 /** Metadata lives outside player saves: old worlds keep exactly the same save format. */
 export class FortressStore {
@@ -30,8 +30,15 @@ export class FortressStore {
       )
         return null;
       const { x, z, y } = location as unknown as FortressLocation;
-      if (y < 18 || y + 20 >= CHUNK_HEIGHT || Math.abs(x) > 1e7 || Math.abs(z) > 1e7) return null;
-      return { x, z, y };
+      if (
+        y < 18 ||
+        y + FORTRESS_CLEARANCE >= CHUNK_HEIGHT ||
+        Math.abs(x) > 1e7 ||
+        Math.abs(z) > 1e7
+      )
+        return null;
+      if (location.layout === "ravine") return { x, z, y, layout: "ravine" };
+      return location.layout === undefined ? { x, z, y } : null;
     } catch {
       return null;
     }
@@ -129,8 +136,9 @@ export function findFortressSite(
     // A plateau above sea level can bridge a shallow river or pond.
     // Requiring every one of 169 sampled columns to be dry made coastal
     // worlds practically impossible to build in.
-    if (high <= SEA_LEVEL + 4 || relief > 20 || high + 20 >= CHUNK_HEIGHT) continue;
-    const site = { x, z, y: high + 2 };
+    const y = high + 2;
+    if (high <= SEA_LEVEL + 4 || relief > 20 || y + FORTRESS_CLEARANCE >= CHUNK_HEIGHT) continue;
+    const site = { x, z, y };
     const dry = low > SEA_LEVEL + 2;
     if (dry && relief <= 7) return site;
     const score = relief + (dry ? 0 : 8);

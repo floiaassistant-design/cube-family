@@ -1,5 +1,19 @@
 # Assaut massif de la face sud — Forteresse des Cinq Bastions
 
+## Forteresse des Hautes Gorges
+
+Dans un monde Libre sans forteresse, le bouton Construire place ce nouveau plan sur un terrain vierge. Deux falaises encadrent un passage en pente. Les zombies attaquent dans l'ordre le premier rempart, le bastion médian et le dernier refuge. Le cristal devient vulnérable après la troisième brèche. Le siège se déroule au crépuscule et des lanternes éclairent le passage. Les escaliers de chaque côté des remparts donnent accès aux chemins de ronde pendant que les portes sont fermées.
+
+| Position        | Porte  | Repli après la brèche |
+| --------------- | ------ | --------------------- |
+| Premier rempart | 320 PV | Bastion médian        |
+| Bastion médian  | 240 PV | Dernier refuge        |
+| Dernier refuge  | 200 PV | Cour du cristal       |
+
+Une nouvelle partie remet les trois portes en place pour la préparation. Les parties les retirent au terme du siège sans toucher aux blocs enregistrés. Les mondes contenant les Cinq Bastions gardent leur disposition à deux portes, sans reconstruction.
+
+## Disposition historique des Cinq Bastions
+
 ## Objectif et scénario
 
 La forteresse reste dans le **même monde Libre** de Cube Family et conserve ses

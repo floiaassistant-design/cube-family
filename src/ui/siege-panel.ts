@@ -1,6 +1,7 @@
 import type { SiegeReport } from "../game/siege/session";
 import type { ArmoryPurchase } from "../game/siege/armory";
 import { SiegeArmoryPanel } from "./siege-armory-panel";
+import { ravineDefenseLine } from "./siege-briefing";
 
 export interface SiegePanelCallbacks {
   readonly build: () => void;
@@ -42,7 +43,7 @@ export class SiegePanel {
     this.root.setAttribute("aria-label", french ? "Défense de forteresse" : "Fortress defense");
     this.title = document.createElement("div");
     this.title.className = "siege-title";
-    this.title.textContent = french ? "Forteresse des Cinq Bastions" : "Five Bastions Fortress";
+
     this.reportText = document.createElement("div");
     this.reportText.className = "siege-status";
     const button = (label: string, action: () => void): HTMLButtonElement => {
@@ -101,6 +102,15 @@ export class SiegePanel {
       this.armoryPanel.close();
       return;
     }
+    const legacy = hasFortress && report && !report.keepGate;
+    const title = legacy
+      ? this.french
+        ? "Forteresse des Cinq Bastions"
+        : "Five Bastions Fortress"
+      : this.french
+        ? "Forteresse des Hautes Gorges"
+        : "High Gorge Fortress";
+    if (this.title.textContent !== title) this.title.textContent = title;
     const active =
       report?.phase === "preparation" ||
       report?.phase === "wave" ||
@@ -164,7 +174,11 @@ export class SiegePanel {
       const gateLabel = this.french ? "Assaut sud" : "South assault";
       const intact = (health: number): string =>
         health > 0 ? health.toString() : this.french ? "brisée" : "breached";
-      status += ` · ${gateLabel} · ${this.french ? "Ext" : "Outer"} ${intact(report.outerGate.health)}/${report.outerGate.maxHealth} · ${this.french ? "Int" : "Inner"} ${intact(report.innerGate.health)}/${report.innerGate.maxHealth}`;
+      if (report.keepGate) {
+        status += ` · ${ravineDefenseLine(report, this.french)}`;
+      } else {
+        status += ` · ${gateLabel} · ${this.french ? "Ext" : "Outer"} ${intact(report.outerGate.health)}/${report.outerGate.maxHealth} · ${this.french ? "Int" : "Inner"} ${intact(report.innerGate.health)}/${report.innerGate.maxHealth}`;
+      }
     }
     // The browser captures the mouse in first-person mode. The panel is
     // clickable with a mouse only after the player frees the cursor using M.
