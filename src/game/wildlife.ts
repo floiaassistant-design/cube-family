@@ -4,6 +4,8 @@ import { forwardVector, PLAYER_EYE_HEIGHT, type Vec3 } from "../player/physics";
 import { DAY_LENGTH_SECONDS, SUNSET_PHASE } from "../render/sky";
 import { CHUNK_HEIGHT } from "../world/coords";
 import { hash3 } from "../world/terrain";
+import { COW_HEIGHT, CowHerd, type Cow, type CowTerrain } from "./cows";
+import { TITAN_HEIGHT } from "./siege/session";
 
 export const MAX_HEALTH = 10;
 const MAX_PETS = 24;
@@ -32,8 +34,10 @@ export interface NightCreature {
   position: Vec3;
   health: number;
   moving: boolean;
+  readonly variant?: "miner";
+  attacking?: boolean;
 }
-export type Creature = Cat | NightCreature | SiegeZombie;
+export type Creature = Cat | Cow | NightCreature | SiegeZombie;
 
 export type CatResult = "adopted" | "purr" | "kitten" | "full" | "resting";
 export type StrikeResult = "struck" | "defeated" | "recovering";
@@ -44,6 +48,7 @@ export interface WildlifeTerrain {
   stand(x: number, z: number, y: number, tall: boolean): number | null;
   surface(x: number, z: number): number;
   clear(from: Vec3, to: Vec3): boolean;
+  readonly cattle?: CowTerrain;
 }
 
 interface WildlifeSave {
@@ -117,11 +122,13 @@ export function creatureCenter(creature: Creature): Vec3 {
       ? 0.92
       : creature.kind === "siege-zombie"
         ? creature.variant === "boss"
-          ? 1.2
+          ? TITAN_HEIGHT * 0.5
           : 0.92
-        : creature.growsIn > 0
-          ? 0.27
-          : 0.43;
+        : creature.kind === "cow"
+          ? COW_HEIGHT * 0.62
+          : creature.growsIn > 0
+            ? 0.27
+            : 0.43;
   return { ...creature.position, y: creature.position.y + height };
 }
 
@@ -130,6 +137,7 @@ export class Wildlife {
   private readonly seed: number;
   private readonly cats = new Map<string, Cat>();
   private readonly roaming = new Map<string, NightCreature>();
+  private readonly cattle: CowHerd | null;
   private tickTime = 0;
   private nextSpawn = 0;
   private nextCats = 0;
@@ -144,6 +152,7 @@ export class Wildlife {
   constructor(seed: number, terrain: WildlifeTerrain, persisted: unknown) {
     this.seed = seed;
     this.terrain = terrain;
+    this.cattle = terrain.cattle ? new CowHerd(seed, terrain.cattle) : null;
     const save = record(persisted);
     for (const cat of restoreCats(save?.cats)) this.cats.set(cat.id, cat);
     this.life = fromNumber(save?.health, 1, MAX_HEALTH, MAX_HEALTH);
@@ -161,9 +170,15 @@ export class Wildlife {
   }
 
   nearby(player: Vec3, range = 23): Creature[] {
-    return [...this.cats.values(), ...this.roaming.values()].filter(
-      (creature) => distance(player, creature.position) <= range,
-    );
+    return [
+      ...this.cats.values(),
+      ...this.roaming.values(),
+      ...(this.cattle?.values() ?? []),
+    ].filter((creature) => distance(player, creature.position) <= range);
+  }
+
+  cowOccupies(x: number, y: number, z: number): boolean {
+    return this.cattle?.occupies(x, y, z) ?? false;
   }
 
   save(): WildlifeSave {
@@ -209,6 +224,7 @@ export class Wildlife {
     active: boolean,
     protectedByCopper: boolean,
     shieldHeld = false,
+    daylight = !night,
   ): WildlifeEvent | null {
     if (!night) {
       this.roaming.clear();
@@ -225,6 +241,7 @@ export class Wildlife {
       this.spawnCats(player);
     }
     this.moveCats(player, step);
+    this.cattle?.update(step, player, daylight);
     if (night === null) return null;
     if (!night && this.life < MAX_HEALTH && this.elapsed >= this.healAt) {
       this.life++;
@@ -293,7 +310,12 @@ export class Wildlife {
     }
   }
 
-  private move(creature: Creature, destination: Vec3, speed: number, stop: number): boolean {
+  private move(
+    creature: Cat | NightCreature,
+    destination: Vec3,
+    speed: number,
+    stop: number,
+  ): boolean {
     const { x, y, z } = creature.position;
     const dx = destination.x - x;
     const dz = destination.z - z;
@@ -324,11 +346,10 @@ export class Wildlife {
       }
       creature.moving = this.move(creature, player, dt * 1.65, 0.95);
       const chest = { ...player, y: player.y + 0.8 };
-      if (
-        this.elapsed >= this.lastDamage &&
+      creature.attacking =
         distance(chest, creatureCenter(creature)) < 1.18 &&
-        this.terrain.clear(creatureCenter(creature), chest)
-      ) {
+        this.terrain.clear(creatureCenter(creature), chest);
+      if (creature.attacking && this.elapsed >= this.lastDamage) {
         this.lastDamage = this.elapsed + 1.45;
         this.healAt = this.elapsed + 5;
         const damage = incomingDamage(armored, shieldHeld);
@@ -355,13 +376,15 @@ export class Wildlife {
       // These creatures spawn outdoors, above approximately the local ground level.
       const y = this.terrain.stand(x, z, surface, true);
       if (y === null || Math.abs(player.y - y) > 9) continue;
-      const id = `roamer:${(this.nightSequence++).toString()}`;
+      const sequence = this.nightSequence++;
+      const id = `roamer:${sequence.toString()}`;
       this.roaming.set(id, {
         id,
         kind: "roamer",
         position: { x, y, z },
         health: ROAMER_MAX_HEALTH,
         moving: false,
+        ...(sequence % 2 === 0 ? { variant: "miner" } : {}),
       });
       break;
     }

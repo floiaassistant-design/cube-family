@@ -4,6 +4,8 @@ Personnage original créé pour Cube Family. Modèle en volumes 3D réels (gltf 
 
 ## État des fichiers
 
+Les volumes du V2 sont utilisés en jeu par le chat et le chaton orange en WebGL et en rendu logiciel. La marche, la queue et la tête sont animées dans `src/render/cat-model.ts`.
+
 - `chaton_voxel_v2.glb.gz.b64` : **modèle V2** en GLB compressé lossless (gzip) puis encodé en base64 pour faciliter son dépôt GitHub. **Ce n'est pas un fichier `.glb` directement chargeable.**
 - `chaton_voxel_v1.glb.gz.b64` : modèle initial V1 pour historique, si présent.
 

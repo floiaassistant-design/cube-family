@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { SoundEngine } from "./audio/sound";
 import { GAME_NAME } from "./branding";
 import { type DiscoveryId, Journal } from "./game/discoveries";
+import { COW_HEIGHT, COW_WIDTH } from "./game/cows";
 import { DragonMount } from "./game/dragon";
 import { FlyingDrill } from "./game/flight-drill";
 import { attackDamage } from "./game/equipment";
@@ -12,7 +13,7 @@ import { createFortressBlueprint, FORTRESS_CENTER } from "./game/siege/fortress"
 import { findFortressSite, FortressStore } from "./game/siege/fortress-store";
 import { SiegeGateOverlay } from "./game/siege/gate-overlay";
 import type { ArmoryPurchase } from "./game/siege/armory";
-import { SiegeController, type SiegeReport } from "./game/siege/session";
+import { SiegeController, type SiegeReport, TITAN_TARGET_RADIUS } from "./game/siege/session";
 import {
   Bag,
   COPPER_ARMOR,
@@ -528,12 +529,36 @@ function boot(): void {
       ) === null
     );
   };
+  const cowStand = (x: number, z: number, y: number): number | null => {
+    const floor = standNear(x, z, y, true);
+    if (floor === null) return null;
+    const body = aabbFromFeetPosition({ x, y: floor, z }, COW_WIDTH, COW_HEIGHT);
+    return aabbIntersectsSolid(
+      body,
+      (x, y, z) =>
+        !world.hasChunk(worldToChunk(x), worldToChunk(z)) || isSolid(world.getBlock(x, y, z)),
+    )
+      ? null
+      : floor;
+  };
   const wildlife = new Wildlife(
     SEED,
     {
       stand: standNear,
       surface: (x, z) => sampleColumn(Math.floor(x), Math.floor(z)).terrainHeight + 1,
       clear: clearSight,
+      cattle: {
+        stand: cowStand,
+        pasture: (x, z) => {
+          const bx = Math.floor(x);
+          const bz = Math.floor(z);
+          const { terrainHeight, biome } = sampleColumn(bx, bz);
+          if (biome !== Biome.PLAINS && biome !== Biome.FOREST && biome !== Biome.AUTUMN)
+            return null;
+          if (world.getBlock(bx, terrainHeight, bz) !== BlockId.GRASS) return null;
+          return cowStand(x, z, terrainHeight + 1);
+        },
+      },
     },
     saved?.wildlife,
   );
@@ -557,11 +582,13 @@ function boot(): void {
           ? 0.52
           : creature.kind === "siege-zombie"
             ? creature.variant === "boss"
-              ? 0.86
+              ? TITAN_TARGET_RADIUS
               : 0.52
-            : creature.growsIn > 0
-              ? 0.24
-              : 0.38;
+            : creature.kind === "cow"
+              ? COW_WIDTH * 0.56
+              : creature.growsIn > 0
+                ? 0.24
+                : 0.38;
       if (sight.lengthSq() - distance * distance > radius * radius) continue;
       if (!clearSight(camera.position, center)) continue;
       closest = creature;
@@ -656,7 +683,9 @@ function boot(): void {
     }
   };
   interaction.occupiedByEntity = (x, y, z) =>
-    dragon.occupiesBlock(x, y, z) || (mode === "creative" && drill.occupiesBlock(x, y, z));
+    wildlife.cowOccupies(x, y, z) ||
+    dragon.occupiesBlock(x, y, z) ||
+    (mode === "creative" && drill.occupiesBlock(x, y, z));
   drill.onExcavate = (edits) => {
     if (mode !== "creative" || siege?.active || edits.length === 0) return;
     editStore.recordMany(edits);
@@ -803,8 +832,8 @@ function boot(): void {
   interaction.onAttack = () => {
     const creature = findCreature();
     if (!creature) return false;
-    // Cats and kittens are companions and never take damage.
-    if (creature.kind === "cat") return true;
+    // Companion and passive animals are friendly.
+    if (creature.kind === "cat" || creature.kind === "cow") return true;
     if (creature.kind === "siege-zombie") {
       if (
         siege?.melee(
@@ -823,17 +852,23 @@ function boot(): void {
       swingHand();
       sound.breakBlock(BlockId.STONE);
     }
-    if (result === "struck") hud.announce(t("roamerStruck"));
+    if (result === "struck")
+      hud.announce(t(creature.variant === "miner" ? "minerStruck" : "roamerStruck"));
     if (result === "defeated") {
       bag.add(BlockId.COAL_ORE);
       nearbyCreatures = wildlife.nearby(player.position);
-      hud.announce(t("roamerFell"));
+      hud.announce(t(creature.variant === "miner" ? "minerFell" : "roamerFell"));
       persist();
     }
     return true;
   };
   interaction.onUse = (hit) => {
     const creature = findCreature();
+    if (creature?.kind === "cow") {
+      hud.announce(t("cowPat"));
+      sound.select();
+      return true;
+    }
     if (creature?.kind === "cat") {
       const feedback = {
         adopted: "catAdopted",
@@ -1755,6 +1790,7 @@ function boot(): void {
       controlsVisible,
       bag.count(COPPER_ARMOR) > 0,
       heldEquipment === WOOD_SHIELD && bag.count(WOOD_SHIELD) > 0,
+      !night,
     );
     nearbyCreatures = [...wildlife.nearby(player.position), ...nearbySiege];
     if (wildlifeEvent === "hurt") hud.announce(t("playerHurt"));
@@ -1791,11 +1827,13 @@ function boot(): void {
     }
 
     const hit = player.isActive && !inventory.isOpen ? interaction.raycastFromCamera() : null;
-    const targetedCreature =
-      adventure && controlsVisible && !player.riding && !digging ? findCreature() : null;
+    const aimedCreature = controlsVisible && !player.riding && !digging ? findCreature() : null;
+    const targetedCreature = adventure || aimedCreature?.kind === "cow" ? aimedCreature : null;
     let digHint = "";
     const use = t(padDriving ? "usePad" : touch && !player.isLocked ? "useTouch" : "useMouse");
-    if (targetedCreature?.kind === "cat") {
+    if (targetedCreature?.kind === "cow") {
+      digHint = t("cowHint", { use });
+    } else if (targetedCreature?.kind === "cat") {
       digHint = t(
         targetedCreature.growsIn > 0
           ? "catKitten"
@@ -1810,7 +1848,7 @@ function boot(): void {
       const attack = t(
         padDriving ? "attackPad" : touch && !player.isLocked ? "attackTouch" : "attackMouse",
       );
-      digHint = `${t("roamer", { life: targetedCreature.health })} · ${attack}`;
+      digHint = `${t(targetedCreature.variant === "miner" ? "miner" : "roamer", { life: targetedCreature.health })} · ${attack}`;
     } else if (adventure && hit && !digging) {
       const target = world.getBlock(hit.blockX, hit.blockY, hit.blockZ);
       if (target === BlockId.CAMP_BED) digHint = t(night ? "campSleep" : "campDay", { use });

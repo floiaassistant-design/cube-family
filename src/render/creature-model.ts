@@ -31,5 +31,5 @@ export abstract class CreatureModel {
     return node;
   }
 
-  abstract pose(time: number, phase: number, gait: number, creature: Creature): void;
+  abstract pose(time: number, phase: number, gait: number, creature: Creature, dt: number): void;
 }
