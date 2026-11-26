@@ -1487,6 +1487,43 @@ try {
   }
   await adventure.close();
 
+  const pasture = await openPage("pasture", pageUrl(2026, "mode=adventure&quality=low&view=3"));
+  await waitForWorld(pasture, 9);
+  await pasture.click("#play-button");
+  const cowNearby = () => window.__mc.creatures().some((creature) => creature.kind === "cow");
+  let cowsFound = false;
+  for (let site = 0; site < 3 && !cowsFound; site++) {
+    await pasture.evaluate((skip) => {
+      const api = window.__mc;
+      const plain = api.locate(2, skip);
+      if (plain) api.teleport(plain.x + 0.5, plain.h + 1.025, plain.z + 0.5, 0, 0);
+      api.setTime(0.3);
+    }, site);
+    cowsFound = await until(pasture, cowNearby, undefined, 6_000);
+  }
+  report("brown cows appear in a daytime Adventure pasture", cowsFound);
+  await pasture.evaluate(() => window.__mc.setTime(0.83));
+  const minerFound = await until(pasture, () =>
+    window.__mc
+      .creatures()
+      .some((creature) => creature.kind === "roamer" && creature.variant === "miner"),
+  );
+  report("the original miner zombie joins the nocturnal encounters", minerFound);
+  await pasture.evaluate(() => window.__mc.setTime(0.1));
+  report(
+    "the miner zombie disappears at dawn while the cows remain",
+    cowsFound &&
+      minerFound &&
+      (await until(pasture, () => {
+        const group = window.__mc.creatures();
+        return (
+          group.some((creature) => creature.kind === "cow") &&
+          group.every((creature) => creature.kind !== "roamer")
+        );
+      })),
+  );
+  await pasture.browserContext().close();
+
   // A real in-world fortress smoke test: place it through the same button
   // as a player, verify the crystal voxel, reload, then launch the first wave.
   // Distinct from tests of the menu or the pure siege state machine.

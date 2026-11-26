@@ -1,6 +1,6 @@
 # Zombie mineur — modèle 3D Cube Family
 
-**Statut : prêt pour intégration par ChatGPT Work ; pas encore placé dans le jeu.**
+**État en jeu** — Variante nocturne du rôdeur en mode Aventure. Le modèle et ses trois animations existent dans les deux rendus. Voir [la fiche des créatures intégrées](../../../docs/CREATURES_VOXEL.md).
 
 Monstre voxel original et familial, peau vert mousse, veste bleu ardoise, écharpe ocre, cheveux en cubes, yeux asymétriques et dents irrégulières. Modèle réalisé spécialement pour Cube Family ; aucune ressource extraite du jeu Minecraft.
 
@@ -24,7 +24,7 @@ python assets/3d/restore_glb.py assets/3d/zombie-mineur/zombie_mineur_v1.glb.gz.
 
 Le script contrôle la taille et le SHA-256, puis crée un vrai fichier `.glb`, chargeable dans Three.js avec `GLTFLoader`.
 
-## À faire dans Work
+## Mise à jour du modèle
 
 1. Lire `AGENTS.md` et inspecter le moteur Three.js existant sans remplacer son architecture.
 2. Restaurer puis charger le zombie comme une ressource locale (copie possible dans `public/models/zombie_mineur_v1.glb` après validation).
@@ -33,4 +33,4 @@ Le script contrôle la taille et le SHA-256, puis crée un vrai fichier `.glb`, 
 5. Vérifier les performances sur PC et tablette, les sauvegardes, les contrôles et le jeu hors ligne.
 6. Faire une PR avec tests ; ne pas déployer le site sans validation.
 
-Ne pas remplacer le chaton, ni les autres modèles. Ce dossier est une **bibliothèque d’assets**, pas une intégration automatique.
+Le modèle cohabite avec les chats, la vache et les rôdeurs de schiste.

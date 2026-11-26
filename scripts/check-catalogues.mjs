@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
 
 const root = process.cwd();
@@ -55,4 +56,7 @@ for (const id of assetIds) {
   assert(catalogAssetIds.has(id), `Modèle sans fiche : ${id}`);
 }
 
-console.log("Catalogues et références de modèles vérifiés.");
+execFileSync(process.execPath, ["scripts/generate-voxel-creature-assets.mjs", "--check"], {
+  stdio: "inherit",
+});
+console.log("Catalogues, modèles et animations voxel vérifiés.");

@@ -10,7 +10,7 @@
       "latest": "v2",
       "model_source": "assets/3d/chaton-orange/chaton_voxel_v2.glb.gz.b64",
       "format": "base64(gzip(glb))",
-      "status": "asset_available_not_integrated"
+      "status": "integrated_voxel_renderers"
     },
     {
       "id": "zombie-mineur",
@@ -21,7 +21,7 @@
       "format": "base64(gzip(glb))",
       "sha256_glb": "6fcbccb73551f11ce9e26e8ef4c4a2ad03b002285d3f382fefdb207f483612ab",
       "animations": ["Idle", "Walk", "Attack"],
-      "status": "asset_available_not_integrated"
+      "status": "integrated_voxel_renderers"
     },
     {
       "id": "vache-brune",
@@ -32,7 +32,7 @@
       "format": "base64(gzip(glb))",
       "sha256_glb": "96bf955f02c5c261960be52ff9711478a735453a6abab2033f48f01f3b5b9707",
       "animations": ["Idle", "Walk", "Graze"],
-      "status": "asset_available_not_integrated"
+      "status": "integrated_voxel_renderers"
     },
     {
       "id": "dragon-rouge",
@@ -90,7 +90,7 @@
       "format": "glb",
       "git_blob_sha": "1424dd0d88f93225d82deb61a8b8a0be0660d68d",
       "animations": ["Idle", "Walk", "Smash", "Roar", "Death"],
-      "status": "asset_available_not_integrated",
+      "status": "integrated_voxel_renderers",
       "previous_model_source": "assets/3d/titan-zombie-siege/titan_zombie_siege_v1.glb",
       "generator": "assets/3d/titan-zombie-siege/generer_titan_v2.mjs",
       "design_plan": "assets/3d/titan-zombie-siege/PLAN_V2.md",

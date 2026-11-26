@@ -22,6 +22,7 @@ PC et mobile, plutôt que de maintenir des versions du gameplay divergentes.
 - `src/game/first-night.ts` : objectifs et détection de l'abri de La Première Nuit. La progression et la carte sont des champs optionnels de la sauvegarde du joueur. `watchers-ruin.ts` génère la ruine au chargement des chunks en respectant les modifications du joueur. Le panneau localisé est dans `src/ui/first-night-panel.ts`.
 - `src/render/` : modèles 3D, WebGL et solution de repli CPU.
   `equipment-models.ts` charge localement les GLB d'équipements à la demande.
+  `asset-creature-model.ts` anime les volumes des GLB de la vache, du zombie mineur et du Titan dans le rendu des créatures. Leur [fiche](CREATURES_VOXEL.md) décrit la conversion et les règles d'apparition.
 - `src/ui/`, `src/i18n.ts` : HUD, menus, accès tactile et traductions.
 - `src/audio/` : sons.
 - `assets/3d/` : fichiers de modèles, fiches, scripts et `INDEX.json`.

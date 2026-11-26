@@ -5,6 +5,8 @@ import { MAX_SIEGE_ZOMBIES } from "../game/siege/session";
 import { SiegeZombieModel } from "./siege-zombie-model";
 import type { CreatureModel } from "./creature-model";
 import { RoamerModel } from "./roamer-model";
+import { MAX_COWS } from "../game/cows";
+import { AssetCreatureModel } from "./asset-creature-model";
 
 const BOX_FACES = [
   { corners: [1, 3, 7, 5], shade: 0.78 },
@@ -136,8 +138,11 @@ export class CreatureModelView {
       geometry,
       material,
       MAX_CATS * new OrangeCatModel().boxes.length +
-        MAX_NIGHT_CREATURES * new RoamerModel().boxes.length +
-        MAX_SIEGE_ZOMBIES * new SiegeZombieModel().boxes.length,
+        MAX_COWS * AssetCreatureModel.boxCount("cow") +
+        MAX_NIGHT_CREATURES *
+          Math.max(AssetCreatureModel.boxCount("miner"), new RoamerModel().boxes.length) +
+        MAX_SIEGE_ZOMBIES * new SiegeZombieModel().boxes.length +
+        AssetCreatureModel.boxCount("titan"),
     );
     this.instances.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.instances.frustumCulled = false;
@@ -178,9 +183,15 @@ export class CreatureModelView {
             ? creature.coat === 0
               ? new OrangeCatModel()
               : new CatModel(creature.coat)
-            : creature.kind === "siege-zombie"
-              ? new SiegeZombieModel()
-              : new RoamerModel(),
+            : creature.kind === "cow"
+              ? new AssetCreatureModel("cow")
+              : creature.kind === "siege-zombie"
+                ? creature.variant === "boss"
+                  ? new AssetCreatureModel("titan")
+                  : new SiegeZombieModel()
+                : creature.variant === "miner"
+                  ? new AssetCreatureModel("miner")
+                  : new RoamerModel(),
         phase,
         lastPosition: new THREE.Vector3(x, y, z),
         yaw: phase,
@@ -206,7 +217,7 @@ export class CreatureModelView {
     const turn = pose.yaw - root.rotation.y;
     root.rotation.y += Math.atan2(Math.sin(turn), Math.cos(turn)) * (1 - Math.exp(-dt * 12));
     pose.gait = THREE.MathUtils.damp(pose.gait, creature.moving ? 1 : 0, 14, dt);
-    pose.model.pose(time, pose.phase, pose.gait, creature);
+    pose.model.pose(time, pose.phase, pose.gait, creature, dt);
     root.updateMatrixWorld();
     if (!this.instances) {
       this.canvasView?.draw(ctx, pose.model, shade);

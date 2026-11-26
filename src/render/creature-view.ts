@@ -7,6 +7,7 @@ import {
 } from "../game/wildlife";
 import { CreatureModelView } from "./creature-model-view";
 import { ROAMER_HEIGHT } from "./roamer-model";
+import { TITAN_HEIGHT } from "../game/siege/session";
 
 /** Render the creatures in the world and project health bars onto the overlay. */
 export class CreatureView {
@@ -91,7 +92,11 @@ export class CreatureView {
       if (!injured || !unobstructed) continue;
 
       const { x, y, z } = creature.position;
-      this.barAnchor.set(x, y + ROAMER_HEIGHT + 0.12, z).project(this.camera);
+      const height =
+        creature.kind === "siege-zombie" && creature.variant === "boss"
+          ? TITAN_HEIGHT
+          : ROAMER_HEIGHT;
+      this.barAnchor.set(x, y + height + 0.12, z).project(this.camera);
       const barWidth = THREE.MathUtils.clamp((0.75 * focus) / depth, 12, 100);
       const left = ((this.barAnchor.x + 1) * width - barWidth) / 2;
       const top = ((1 - this.barAnchor.y) * height) / 2;

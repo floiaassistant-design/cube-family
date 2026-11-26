@@ -137,9 +137,15 @@ describe("solo zombie defense", () => {
     const session = new SiegeController(site, () => 60);
     session.start({ waves: 5, difficulty: "easy" });
     let attackTime = 1;
+    let titanCount = 0;
     for (let frame = 0; frame < 5000 && session.report.phase !== "victory"; frame++) {
       session.update(0.1);
       for (const zombie of session.zombies) {
+        if (zombie.variant === "boss") {
+          expect(session.report.wave).toBe(5);
+          expect(zombie.maxHealth).toBe(35);
+          titanCount++;
+        }
         while (zombie.health > 0) {
           attackTime += 1;
           expect(session.melee(zombie, 6, attackTime)).toBe(true);
@@ -149,6 +155,7 @@ describe("solo zombie defense", () => {
     expect(session.report.phase).toBe("victory");
     expect(session.report.wave).toBe(5);
     expect(session.report.kills).toBeGreaterThan(25);
+    expect(titanCount).toBe(1);
     expect(session.zombies).toHaveLength(0);
 
     session.start({ waves: 10, difficulty: "normal" });

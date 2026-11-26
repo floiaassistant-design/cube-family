@@ -10,7 +10,7 @@
       "status": "integrated_in_code",
       "asset_id": null,
       "source_files": ["src/game/wildlife.ts", "src/render/cat-model.ts"],
-      "notes": "Adoption et chatons dans le code. Le GLB chaton-orange de la bibliothèque est suivi séparément."
+      "notes": "Adoption et chatons dans le code. Le chat orange utilise les volumes du modèle V2 dans les deux rendus."
     },
     {
       "id": "roamer",
@@ -37,43 +37,43 @@
       "status": "integrated_in_code",
       "asset_id": null,
       "source_files": ["src/game/siege/session.ts", "src/render/siege-zombie-model.ts"],
-      "notes": "Ennemi exclusif à l'événement de défense en mode Libre. Modèle voxel original créé en code, vagues et combat intégrés. Distinct du modèle GLB zombie mineur, toujours en statut asset_only. Coopération à cinq non intégrée."
+      "notes": "Ennemi exclusif à l'événement de défense en mode Libre. Troupes ordinaires construites en code et Titan V2 pour le boss. Distinct du zombie mineur de l'Aventure."
     },
     {
       "id": "zombie-mineur",
       "name": "Zombie mineur",
       "kind": "night_monster",
-      "status": "asset_only",
+      "status": "integrated_in_code",
       "asset_id": "zombie-mineur",
-      "source_files": [],
-      "notes": "GLB préparé pour Work; aucune intégration gameplay déduite de cette présence."
+      "source_files": ["src/game/wildlife.ts", "src/render/asset-creature-model.ts"],
+      "notes": "Variante nocturne en Aventure qui poursuit et attaque comme le rôdeur de schiste. Animations Idle, Walk et Attack du GLB, butin de charbon et disparition à l'aube."
     },
     {
       "id": "vache-brune",
       "name": "Vache brune",
       "kind": "animal",
-      "status": "asset_only",
+      "status": "integrated_in_code",
       "asset_id": "vache-brune",
-      "source_files": [],
-      "notes": "GLB disponible; comportements et apparition restent à programmer."
+      "source_files": ["src/game/cows.ts", "src/render/asset-creature-model.ts"],
+      "notes": "Animal passif en Libre et Aventure. Apparaît de jour dans les prairies et les clairières, marche, broute, évite les obstacles et peut être caressé."
     },
     {
       "id": "chaton-orange",
       "name": "Chaton orange — modèle GLB",
       "kind": "animal_variant",
-      "status": "asset_only",
+      "status": "integrated_in_code",
       "asset_id": "chaton-orange",
-      "source_files": [],
-      "notes": "Modèle exporté de la bibliothèque 3D, distinct des chats déjà rendus par le moteur."
+      "source_files": ["src/render/cat-model.ts", "src/render/orange-cat-geometry.ts"],
+      "notes": "Volumes originaux du GLB V2 en WebGL et en rendu logiciel, avec animations pilotées par le moteur. Les autres pelages gardent leurs modèles."
     },
     {
       "id": "titan-zombie-siege",
       "name": "Titan zombie de siège",
       "kind": "siege_boss",
-      "status": "asset_only",
+      "status": "integrated_in_code",
       "asset_id": "titan-zombie-siege",
-      "source_files": [],
-      "notes": "Modèle GLB V2 d’environ 14 m avec poing de siège, armure rouillée, tabard bordeaux et cœur rouge émissif. Les cinq animations de la V1 sont conservées. Le dossier contient le générateur et le plan V2. L’apparition, l’IA, les collisions et les dégâts aux portes relèvent d’une future intégration."
+      "source_files": ["src/game/siege/session.ts", "src/render/asset-creature-model.ts"],
+      "notes": "Boss des vagues 5 et finale de la forteresse. Modèle V2 d'environ 4,25 blocs en jeu pour traverser les portes de 6 blocs. Le Titan attaque les portes et le cristal. Idle, Walk et Smash sont joués pendant le siège."
     }
   ]
 }

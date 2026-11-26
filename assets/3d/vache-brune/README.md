@@ -1,6 +1,6 @@
 # Vache brune voxel 3D — Cube Family
 
-**État : modèle original disponible pour intégration par ChatGPT Work. Non intégré au jeu ni publié automatiquement.**
+**État en jeu** — Vache passive en mode Aventure et en mode Libre. Le modèle, ses couleurs et ses trois animations sont reproduits dans les deux rendus. Voir [la fiche des créatures intégrées](../../../docs/CREATURES_VOXEL.md).
 
 ## Contenu
 
@@ -22,7 +22,7 @@ python assets/3d/restore_glb.py assets/3d/vache-brune/vache_brune_v1.glb.gz.b64 
 
 Le script de restauration vérifie la structure GLB, la taille et le SHA-256. Ne pas charger directement le fichier `.b64` dans Three.js.
 
-## Intégration par Work
+## Mise à jour du modèle
 
 1. Lire `AGENTS.md` et `assets/3d/OUTIL_WORK.md`. Inspecter le moteur du jeu avant toute modification.
 2. Restaurer le GLB. Charger avec `GLTFLoader` et préserver les **vertex colors**.
@@ -32,4 +32,4 @@ Le script de restauration vérifie la structure GLB, la taille et le SHA-256. Ne
 6. Préserver le chaton et le zombie mineur ; ne pas perturber les sauvegardes, l'équilibrage ni la version publique.
 7. Vérifier le chargement, les animations et les performances sur PC/tablette. Intégrer par PR avant une éventuelle publication.
 
-Ce répertoire est une **bibliothèque de ressources pour Work** : l'asset n'apparaît pas dans le jeu tant que le code du jeu n'a pas été adapté.
+Le fichier d’origine reste la référence. La marche, le repos et le broutage sont déclenchés par le troupeau local dans `src/game/cows.ts`.

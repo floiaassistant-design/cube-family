@@ -15,6 +15,8 @@ import {
 export { MAX_SIEGE_ZOMBIES } from "./assault";
 export type SiegePhase = "idle" | "preparation" | "wave" | "intermission" | "victory" | "defeat";
 export type ZombieVariant = "normal" | "runner" | "armored" | "boss";
+export const TITAN_HEIGHT = 4.25;
+export const TITAN_TARGET_RADIUS = 1.35;
 
 export interface SiegeZombie {
   readonly kind: "siege-zombie";
@@ -24,6 +26,7 @@ export interface SiegeZombie {
   readonly maxHealth: number;
   readonly variant: ZombieVariant;
   moving: boolean;
+  attacking?: boolean;
   route: SiegeRoute;
   readonly lane: number;
   readonly spread: number;
@@ -229,6 +232,7 @@ export class SiegeController {
       const target = path[enemy.waypoint];
       if (!target) {
         enemy.moving = false;
+        enemy.attacking = true;
         enemy.attackClock -= step;
         if (enemy.attackClock <= 0) {
           enemy.attackClock = 1.3;
@@ -246,6 +250,7 @@ export class SiegeController {
             : null;
       if (gate) {
         enemy.moving = false;
+        enemy.attacking = true;
         enemy.attackClock -= step;
         if (enemy.attackClock <= 0) {
           const force = enemy.variant === "boss" ? 20 : enemy.variant === "armored" ? 8 : 6;
@@ -272,6 +277,7 @@ export class SiegeController {
         enemy.position = { x, z, y: this.ground(x, z) };
       }
       enemy.moving = true;
+      enemy.attacking = false;
     }
     if (this.crystal <= 0) {
       this.phase = "defeat";
@@ -327,14 +333,22 @@ export class SiegeController {
     let selected: SiegeZombie | null = null;
     let nearest = 34;
     for (const enemy of this.enemies.values()) {
-      const center = { x: enemy.position.x, y: enemy.position.y + 0.95, z: enemy.position.z };
+      const center = {
+        x: enemy.position.x,
+        y: enemy.position.y + (enemy.variant === "boss" ? TITAN_HEIGHT * 0.5 : 0.95),
+        z: enemy.position.z,
+      };
       const dx = center.x - origin.x;
       const dy = center.y - origin.y;
       const dz = center.z - origin.z;
       const dot = (dx * direction.x + dy * direction.y + dz * direction.z) / unit;
       if (dot <= 0 || dot >= nearest) continue;
       const miss = dx * dx + dy * dy + dz * dz - dot * dot;
-      if (miss > (enemy.variant === "boss" ? 1.1 : 0.56) ** 2 || !clear(origin, center)) continue;
+      if (
+        miss > (enemy.variant === "boss" ? TITAN_TARGET_RADIUS : 0.56) ** 2 ||
+        !clear(origin, center)
+      )
+        continue;
       selected = enemy;
       nearest = dot;
     }
