@@ -2,7 +2,7 @@
 
 ## Forteresse des Hautes Gorges
 
-Dans un monde Libre sans forteresse, le bouton Construire place ce nouveau plan sur un terrain vierge. Deux falaises encadrent un passage en pente. Les zombies attaquent dans l'ordre le premier rempart, le bastion médian et le dernier refuge. Le cristal devient vulnérable après la troisième brèche. Les escaliers de chaque côté des remparts donnent accès aux chemins de ronde pendant que les portes sont fermées.
+Dans un monde Libre sans forteresse, le bouton Construire place ce nouveau plan sur un terrain vierge. Deux falaises encadrent un passage en pente. Les zombies attaquent dans l'ordre le premier rempart, le bastion médian et le dernier refuge. Le cristal devient vulnérable après la troisième brèche. Le siège se déroule au crépuscule et des lanternes éclairent le passage. Les escaliers de chaque côté des remparts donnent accès aux chemins de ronde pendant que les portes sont fermées.
 
 | Position        | Porte  | Repli après la brèche |
 | --------------- | ------ | --------------------- |

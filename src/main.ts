@@ -57,7 +57,7 @@ import { renderEquipmentIcon } from "./render/mining-pick-art";
 import { Particles } from "./render/particles";
 import { Rain } from "./render/rain";
 import { QUALITY_PROFILES, WorldRenderer } from "./render/renderer";
-import { DAY_LENGTH_SECONDS, STARTUP_PHASE, skyStateAt } from "./render/sky";
+import { DAY_LENGTH_SECONDS, STARTUP_PHASE, SUNSET_PHASE, skyStateAt } from "./render/sky";
 import { createTextureAtlas } from "./render/texture-atlas";
 import { applyWeather, type Weather, weatherAt } from "./render/weather";
 import { PlayerController } from "./player/controller";
@@ -1591,8 +1591,9 @@ function boot(): void {
     const dt = Math.min(frameDelta / 1000, 0.1); // clamp to avoid a huge step after a tab switch
     lastTime = time;
     gameTime += dt;
+    const siegeTime = fortress?.layout === "ravine" ? SUNSET_PHASE + 0.002 : 0.86;
     const clock = siege?.active
-      ? (Math.floor(gameTime / DAY_LENGTH_SECONDS) + 0.86) * DAY_LENGTH_SECONDS
+      ? (Math.floor(gameTime / DAY_LENGTH_SECONDS) + siegeTime) * DAY_LENGTH_SECONDS
       : (frozenTime ?? gameTime);
 
     // Adaptive quality: feed the real frame cadence so the renderer can

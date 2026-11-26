@@ -113,6 +113,15 @@ export function createRavineFortress(site: FortressLocation): FortressBlock[] {
     }
   }
 
+  // Braziers leave the middle of the lane clear and light each fallback.
+  for (const z of [-8, 2, 12, 20, 30, 38, 48, 56]) {
+    const base = ravineGroundOffset(z);
+    for (const x of [40, 55]) {
+      put(x, base + 1, z, BlockId.COBBLE);
+      put(x, base + 2, z, BlockId.LANTERN);
+    }
+  }
+
   const rearFloor = ravineGroundOffset(RAVINE_CRYSTAL_Z);
   fill(33, 62, 66, 69, rearFloor + 1, rearFloor + 9, BlockId.STONE_BRICK);
   for (const x of [34, 56]) {
