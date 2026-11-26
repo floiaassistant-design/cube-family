@@ -1,7 +1,7 @@
 import { BlockId } from "../../world/blocks";
 import { worldToChunk } from "../../world/coords";
 import type { World } from "../../world/world";
-import { siegeGateVoxels, type SiegeGateId } from "./assault";
+import { SIEGE_GATES, siegeGateVoxels, type SiegeGateId } from "./assault";
 import type { FortressLocation } from "./fortress";
 
 export interface UpdatedGateChunk {
@@ -15,12 +15,17 @@ export interface UpdatedGateChunk {
 export class SiegeGateOverlay {
   private readonly blocks: Record<SiegeGateId, ReturnType<typeof siegeGateVoxels>>;
   private readonly owned = new Set<string>();
-  private readonly closed: Record<SiegeGateId, boolean> = { outer: false, inner: false };
+  private readonly closed: Record<SiegeGateId, boolean> = {
+    outer: false,
+    inner: false,
+    keep: false,
+  };
 
   constructor(site: FortressLocation) {
     this.blocks = {
       outer: siegeGateVoxels(site, "outer"),
       inner: siegeGateVoxels(site, "inner"),
+      keep: siegeGateVoxels(site, "keep"),
     };
   }
 
@@ -28,7 +33,7 @@ export class SiegeGateOverlay {
    * Its owner set is cleared for that chunk, because chunks are volatile. */
   applyToLoadedChunk(world: World, cx: number, cz: number): void {
     if (!world.hasChunk(cx, cz)) return;
-    for (const gate of ["outer", "inner"] as const) {
+    for (const gate of SIEGE_GATES) {
       for (const block of this.blocks[gate]) {
         if (worldToChunk(block.x) !== cx || worldToChunk(block.z) !== cz) continue;
         this.owned.delete(this.key(block.x, block.y, block.z));
@@ -38,12 +43,14 @@ export class SiegeGateOverlay {
   }
 
   /** Once per structural change, not on every animation frame. */
-  sync(world: World, closedOuter: boolean, closedInner: boolean): UpdatedGateChunk[] {
-    if (this.closed.outer === closedOuter && this.closed.inner === closedInner) return [];
-    this.closed.outer = closedOuter;
-    this.closed.inner = closedInner;
+  sync(world: World, outer: boolean, inner: boolean, keep = false): UpdatedGateChunk[] {
+    if (this.closed.outer === outer && this.closed.inner === inner && this.closed.keep === keep)
+      return [];
+    const next = { outer, inner, keep };
     const changed = new Map<string, UpdatedGateChunk>();
-    for (const gate of ["outer", "inner"] as const) {
+    for (const gate of SIEGE_GATES) {
+      if (this.closed[gate] === next[gate]) continue;
+      this.closed[gate] = next[gate];
       for (const block of this.blocks[gate]) {
         if (!world.hasChunk(worldToChunk(block.x), worldToChunk(block.z))) continue;
         if (!this.put(world, block.x, block.y, block.z, this.closed[gate])) continue;
@@ -58,7 +65,7 @@ export class SiegeGateOverlay {
   /** Remove bookkeeping for unloaded chunks: the streaming system will
    * reconstruct the correct door state when they come back. */
   forgetChunk(cx: number, cz: number): void {
-    for (const gate of ["outer", "inner"] as const) {
+    for (const gate of SIEGE_GATES) {
       for (const block of this.blocks[gate]) {
         if (worldToChunk(block.x) === cx && worldToChunk(block.z) === cz)
           this.owned.delete(this.key(block.x, block.y, block.z));

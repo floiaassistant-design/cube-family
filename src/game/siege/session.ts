@@ -10,7 +10,9 @@ import {
   southAssaultPath,
   type GateHealth,
   type SiegeGateId,
+  type SiegeWaypoint,
 } from "./assault";
+import { RAVINE_APPROACH_Z, RAVINE_GATES, ravineGroundOffset } from "./ravine-layout";
 
 export { MAX_SIEGE_ZOMBIES } from "./assault";
 export type SiegePhase = "idle" | "preparation" | "wave" | "intermission" | "victory" | "defeat";
@@ -54,18 +56,23 @@ export interface SiegeReport {
   readonly front: typeof SIEGE_FRONT;
   readonly outerGate: GateHealth;
   readonly innerGate: GateHealth;
+  readonly keepGate?: GateHealth;
   readonly maxActiveZombies: number;
 }
 
 export class SiegeController {
   private readonly site: FortressLocation;
   private readonly sampler: (x: number, z: number) => number;
-  private readonly enemies = new Map<string, SiegeZombie>();
+  private readonly enemies = new Map<
+    string,
+    SiegeZombie & { readonly path: readonly SiegeWaypoint[] }
+  >();
   private readonly armory = new SiegeArmory();
   private readonly maxActiveZombies: number;
   private readonly gateHealth: Record<SiegeGateId, number> = {
     outer: OUTER_GATE_MAX_HEALTH,
     inner: INNER_GATE_MAX_HEALTH,
+    keep: RAVINE_GATES.keep.maxHealth,
   };
   private phase: SiegePhase = "idle";
   private wave = 0;
@@ -117,6 +124,9 @@ export class SiegeController {
       front: SIEGE_FRONT,
       outerGate: { health: this.gateHealth.outer, maxHealth: OUTER_GATE_MAX_HEALTH },
       innerGate: { health: this.gateHealth.inner, maxHealth: INNER_GATE_MAX_HEALTH },
+      ...(this.site.layout === "ravine"
+        ? { keepGate: { health: this.gateHealth.keep, maxHealth: RAVINE_GATES.keep.maxHealth } }
+        : {}),
       maxActiveZombies: this.maxActiveZombies,
     };
   }
@@ -138,6 +148,7 @@ export class SiegeController {
     this.armory.reset();
     this.gateHealth.outer = OUTER_GATE_MAX_HEALTH;
     this.gateHealth.inner = INNER_GATE_MAX_HEALTH;
+    this.gateHealth.keep = RAVINE_GATES.keep.maxHealth;
     this.lastArrow = -1;
     this.lastMelee = -1;
     this.sequence = 0;
@@ -202,6 +213,7 @@ export class SiegeController {
       moving: false,
       route,
       ...formation,
+      path,
       waypoint: 1,
       attackClock: 0,
     });
@@ -228,8 +240,7 @@ export class SiegeController {
       this.nextSpawn = 0.2;
     }
     for (const enemy of this.enemies.values()) {
-      const path = southAssaultPath(this.site, enemy.lane, enemy.spread, enemy.row);
-      const target = path[enemy.waypoint];
+      const target = enemy.path[enemy.waypoint];
       if (!target) {
         enemy.moving = false;
         enemy.attacking = true;
@@ -240,15 +251,8 @@ export class SiegeController {
         }
         continue;
       }
-      // Both wooden portcullises are actual temporary blocks in the world.
-      // Attackers stop at each passage and batter it before entering.
-      const gate: SiegeGateId | null =
-        enemy.waypoint === 2 && this.gateHealth.outer > 0
-          ? "outer"
-          : enemy.waypoint === 4 && this.gateHealth.inner > 0
-            ? "inner"
-            : null;
-      if (gate) {
+      const gate = target.gate;
+      if (gate && this.gateHealth[gate] > 0) {
         enemy.moving = false;
         enemy.attacking = true;
         enemy.attackClock -= step;
@@ -293,6 +297,12 @@ export class SiegeController {
   }
 
   private ground(x: number, z: number): number {
+    if (this.site.layout === "ravine") {
+      const localZ = Math.floor(z - this.site.z);
+      return localZ >= RAVINE_APPROACH_Z
+        ? this.site.y + ravineGroundOffset(localZ) + 1
+        : this.sampler(x, z) + 1;
+    }
     // Courtyard and approach roads belong to the fortress's level.
     if (
       x >= this.site.x - 9 &&

@@ -82,13 +82,14 @@ PC et mobile, plutôt que de maintenir des versions du gameplay divergentes.
 - [Catalogues](catalogues/README.md)
 - [Bibliothèque 3D](../assets/3d/README.md)
 
-## Mini-jeu officiel : Forteresse des Cinq Bastions
+## Mini-jeu officiel de défense de forteresse
 
-- `src/game/siege/fortress.ts` définit un plan de forteresse en voxels et les routes d'assaut sans effet de bord.
+- `src/game/siege/fortress.ts` choisit le plan à partir de la disposition sauvegardée. Les Cinq Bastions restent jouables dans les mondes qui en contiennent déjà.
+- `src/game/siege/ravine-fortress.ts` dessine la Forteresse des Hautes Gorges. `ravine-layout.ts` définit les niveaux du sol et les ouvertures utilisés par le plan, les portes du siège et le trajet des zombies.
 - `src/game/siege/fortress-store.ts` garde une référence par graine dans une clé indépendante des sauvegardes existantes et sélectionne une zone non modifiée.
 - `src/game/siege/session.ts` gère la simulation solo : préparation, vagues, adversaires, dégâts, tirs et réparations. Les autres modes ne dépendent pas de ces règles.
 - `src/render/siege-zombie-model.ts` réutilise le modèle de créatures WebGL et le rendu CPU, sans ressource distante.
-- `src/ui/siege-panel.ts` fournit les commandes clavier, souris et tactile. `src/main.ts` se limite à raccorder les systèmes.
+- `src/ui/siege-panel.ts` fournit les commandes clavier, souris et tactile. `siege-briefing.ts` affiche la ligne à défendre et indique le repli après une brèche. `src/main.ts` raccorde les systèmes.
 - `src/world/edit-store.ts` enregistre les plans en une seule sauvegarde et protège les modifications déjà effectuées par le joueur.
 - Le tir à l'arc du mini-jeu est une mécanique temporaire de l'événement, indépendante de l'inventaire général ; un objet et des recettes durables seraient un chantier séparé.
 - `src/game/siege/armory.ts` gère les pièces temporaires, tarifs et améliorations des armes de siège. `src/ui/siege-armory-panel.ts` affiche les offres localisées. Les achats sont autorisés seulement entre les vagues ; ils ne créent pas d'objets persistants ni de modèles 3D. Voir [la fiche d'armurerie](FORTERESSE_ARMURERIE.md).

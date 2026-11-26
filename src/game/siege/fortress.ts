@@ -1,11 +1,13 @@
 import { BlockId, type BlockId as Block } from "../../world/blocks";
 import { CHUNK_HEIGHT } from "../../world/coords";
+import { createRavineFortress } from "./ravine-fortress";
 
-/** One official fortress per world in v1. Position and block IDs are stable save data. */
+/** Historical locations omit the layout. Their saved voxels remain authoritative. */
 export interface FortressLocation {
   readonly x: number; // south-west corner
   readonly z: number;
   readonly y: number; // courtyard floor
+  readonly layout?: "ravine";
 }
 
 export interface FortressBlock {
@@ -26,9 +28,10 @@ export function createFortressBlueprint(site: FortressLocation): FortressBlock[]
   if (
     ![site.x, site.y, site.z].every(Number.isInteger) ||
     site.y < 18 ||
-    site.y + 20 >= CHUNK_HEIGHT
+    site.y + FORTRESS_CLEARANCE >= CHUNK_HEIGHT
   )
     throw new Error("Fortress location is outside the buildable world");
+  if (site.layout === "ravine") return createRavineFortress(site);
 
   const blocks = new Map<string, FortressBlock>();
   const put = (x: number, dy: number, z: number, id: Block): void => {

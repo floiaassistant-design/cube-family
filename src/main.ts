@@ -9,7 +9,13 @@ import { FlyingDrill } from "./game/flight-drill";
 import { attackDamage } from "./game/equipment";
 import { FirstNight, isFirstNightShelter } from "./game/first-night";
 import { findWatchersRuin, WatchersRuin } from "./game/watchers-ruin";
-import { createFortressBlueprint, FORTRESS_CENTER } from "./game/siege/fortress";
+import {
+  createFortressBlueprint,
+  FORTRESS_CENTER,
+  type FortressLocation,
+} from "./game/siege/fortress";
+import { siegeGateCenter } from "./game/siege/assault";
+import { fortressVisit } from "./game/siege/ravine-layout";
 import { findFortressSite, FortressStore } from "./game/siege/fortress-store";
 import { SiegeGateOverlay } from "./game/siege/gate-overlay";
 import type { ArmoryPurchase } from "./game/siege/armory";
@@ -66,6 +72,7 @@ import { Hud } from "./ui/hud";
 import { Inventory, type InventoryState } from "./ui/inventory";
 import { Menu } from "./ui/menu";
 import { SiegePanel } from "./ui/siege-panel";
+import { gateBreaches } from "./ui/siege-briefing";
 import { isTouchDevice, TouchControls } from "./ui/touch-controls";
 import { BLOCKS, BlockId, isSolid } from "./world/blocks";
 import { CHUNK_HEIGHT, type ChunkCoord, worldToChunk } from "./world/coords";
@@ -501,6 +508,7 @@ function boot(): void {
         world,
         active && (report?.outerGate.health ?? 0) > 0,
         active && (report?.innerGate.health ?? 0) > 0,
+        active && (report?.keepGate?.health ?? 0) > 0,
       ),
     );
   };
@@ -1074,21 +1082,21 @@ function boot(): void {
       );
       return;
     }
-    const x = fortress.x + FORTRESS_CENTER + 0.5;
-    const z = fortress.z + 26.5;
-    streamer.warmUp(x, z, WARMUP_RADIUS_CHUNKS);
-    player.restore({ ...player.pose(), x, y: fortress.y + 1.02, z, flying: false });
+    const position = fortressVisit(fortress);
+    const facing = fortress.layout === "ravine" ? { yaw: 0, pitch: -0.23 } : {};
+    streamer.warmUp(position.x, position.z, WARMUP_RADIUS_CHUNKS);
+    player.restore({ ...player.pose(), ...position, ...facing, flying: false });
     persist();
   };
   const buildFortress = (): void => {
     if (mode !== "creative" || fortress || !player.isActive || player.riding) return;
-    const site = findFortressSite(
+    const location = findFortressSite(
       player.position.x,
       player.position.z,
       sampleColumn,
       (minX, maxX, minZ, maxZ) => editStore.hasEditsInRect(minX, maxX, minZ, maxZ),
     );
-    if (!site) {
+    if (!location) {
       hud.announce(
         t.locale === "fr" ? "Aucun terrain plat libre à proximité." : "No empty level site nearby.",
       );
@@ -1096,10 +1104,11 @@ function boot(): void {
     }
     const agree = window.confirm(
       t.locale === "fr"
-        ? "Construire la forteresse de 96 × 96 blocs sur un terrain vierge voisin ?"
-        : "Build the 96 × 96 fortress on a nearby unedited site?",
+        ? "Construire la Forteresse des Hautes Gorges sur un terrain vierge voisin ?"
+        : "Build High Gorge Fortress on a nearby unedited site?",
     );
     if (!agree) return;
+    const site: FortressLocation = { ...location, layout: "ravine" };
     const edits = createFortressBlueprint(site);
     editStore.recordMany(edits);
     const loaded = new Set<string>();
@@ -1751,15 +1760,11 @@ function boot(): void {
     if (player.isActive && !inventory.isOpen && !document.hidden) siege?.update(dt);
     if (siege && fortress && beforeSiegeUpdate) {
       const report = siege.report;
-      if (beforeSiegeUpdate.outerGate.health > 0 && report.outerGate.health === 0) {
+      for (const breach of gateBreaches(beforeSiegeUpdate, report, t.locale === "fr")) {
+        const { x, y, z } = siegeGateCenter(fortress, breach.id);
         sound.breakBlock(BlockId.PLANKS);
-        particles?.burst(fortress.x + 47, fortress.y + 3, fortress.z + 2, BlockId.WOOD);
-        hud.announce(t.locale === "fr" ? "Porte extérieure détruite !" : "Outer gate destroyed!");
-      }
-      if (beforeSiegeUpdate.innerGate.health > 0 && report.innerGate.health === 0) {
-        sound.breakBlock(BlockId.PLANKS);
-        particles?.burst(fortress.x + 47, fortress.y + 3, fortress.z + 15, BlockId.WOOD);
-        hud.announce(t.locale === "fr" ? "Porte intérieure détruite !" : "Inner gate destroyed!");
+        particles?.burst(x, y, z, BlockId.WOOD);
+        hud.announce(breach.text);
       }
     }
     syncGateVisuals();

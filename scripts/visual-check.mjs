@@ -1547,14 +1547,26 @@ try {
     30000,
   );
   report("fortress can be built from Creative within the existing world", created);
+  const inspectDefenseLines = () =>
+    fortressPage.evaluate(() => {
+      const raw = window.localStorage.getItem("voxel-world:fortress:v1:2026");
+      if (!raw) return;
+      const { x, y, z } = JSON.parse(raw);
+      window.__mc.teleport(x + 47.5, y + 8, z + 32.5, 0, 0);
+    });
   if (created) {
+    await inspectDefenseLines();
     const crystalReady = await until(
       fortressPage,
       () => {
         const raw = window.localStorage.getItem("voxel-world:fortress:v1:2026");
         if (!raw) return false;
         const site = JSON.parse(raw);
-        return window.__mc.blockAt(site.x + 47, site.y + 3, site.z + 47) === 21;
+
+        return (
+          site.layout === "ravine" &&
+          window.__mc.blockAt(site.x + 47, site.y + 10, site.z + 62) === 21
+        );
       },
       undefined,
       60000,
@@ -1562,13 +1574,18 @@ try {
     report("the generated fortress has a physical central crystal block", crystalReady);
     await fortressPage.reload({ waitUntil: "domcontentloaded" });
     await waitForWorld(fortressPage, 9);
+    await inspectDefenseLines();
     const persisted = await until(
       fortressPage,
       () => {
         const raw = window.localStorage.getItem("voxel-world:fortress:v1:2026");
         if (!raw || window.__mc.siege() === null) return false;
         const site = JSON.parse(raw);
-        return window.__mc.blockAt(site.x + 47, site.y + 3, site.z + 47) === 21;
+
+        return (
+          site.layout === "ravine" &&
+          window.__mc.blockAt(site.x + 47, site.y + 10, site.z + 62) === 21
+        );
       },
       undefined,
       60000,
@@ -1627,15 +1644,19 @@ try {
           if (!raw) return false;
           const site = JSON.parse(raw);
           return (
-            window.__mc.blockAt(site.x + 47, site.y + 3, site.z + 2) === 14 &&
-            window.__mc.blockAt(site.x + 47, site.y + 3, site.z + 15) === 14 &&
+            window.__mc.blockAt(site.x + 47, site.y + 3, site.z + 8) === 14 &&
+            window.__mc.blockAt(site.x + 47, site.y + 6, site.z + 26) === 14 &&
+            window.__mc.blockAt(site.x + 47, site.y + 9, site.z + 44) === 14 &&
+            document
+              .querySelector("#siege-panel .siege-status")
+              ?.textContent.includes("1/4 First rampart") &&
             window.__mc.siege()?.front === "south"
           );
         },
         undefined,
         10000,
       );
-      report("south gatehouse and inner door are solid only during the siege", closedSiegeGates);
+      report("all three raised gates close and the first defense line is shown", closedSiegeGates);
       await fortressPage.click('#siege-panel button[aria-controls="siege-armory"]');
       const shopVisible = await until(
         fortressPage,
@@ -1661,11 +1682,12 @@ try {
         if (!raw) return false;
         const site = JSON.parse(raw);
         return (
-          window.__mc.blockAt(site.x + 47, site.y + 3, site.z + 2) === 0 &&
-          window.__mc.blockAt(site.x + 47, site.y + 3, site.z + 15) === 0
+          window.__mc.blockAt(site.x + 47, site.y + 3, site.z + 8) === 0 &&
+          window.__mc.blockAt(site.x + 47, site.y + 6, site.z + 26) === 0 &&
+          window.__mc.blockAt(site.x + 47, site.y + 9, site.z + 44) === 0
         );
       });
-      report("stopping the siege restores both doors without permanent damage", restoredGate);
+      report("stopping the siege opens all three gates without permanent damage", restoredGate);
       await fortressPage.keyboard.press("KeyN");
       const restarted = await until(
         fortressPage,
